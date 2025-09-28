@@ -49,12 +49,9 @@ class DspyRouter:
         return dspy.ChainOfThought(BugResolutionRecommendation)
 
     def generate(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Union[str, int, float, dspy.Image]]] = None,
+        self,**kwargs
     ) -> str:
-        response = self.llm(prompt=prompt, context=context)
-        return response.recommendation
+        return self.llm(**kwargs)
 
 
 class DspyLLMProvider(BaseProvider):
@@ -65,11 +62,11 @@ class DspyLLMProvider(BaseProvider):
         self.router = DspyRouter(config=config)
 
     def execute(
-        self, prompt: str, context: Optional[Dict[str, Any]] = None
+        self, **kwargs
     ) -> IntelligenceResponse:
         start = time.time()
         try:
-            result = self.router.generate(prompt=prompt, context=context)
+            result = self.router.generate(**kwargs)
             latency_ms = int((time.time() - start) * 1000)
             return IntelligenceResponse(
                 content=result,
