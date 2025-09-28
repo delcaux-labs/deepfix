@@ -1,5 +1,5 @@
 from __future__ import annotations
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union
 from enum import StrEnum
@@ -82,7 +82,7 @@ class DeepchecksParsedResult(BaseModel):
         )
 
 
-class Artifacts(BaseModel):
+class Artifacts(BaseModel,ABC):
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         pass

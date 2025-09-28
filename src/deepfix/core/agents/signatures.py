@@ -1,39 +1,44 @@
 import dspy
-from typing import List
+from typing import List, Optional, Dict
 
-from .models import Finding, Recommendation
+from .models import Analysis
 
 
 class TrainingArtifactsAnalysisSignature(dspy.Signature):
-    """Signature for training artifacts analysis"""
-    training_artifacts: str = dspy.InputField(description="Training artifacts to analyze")
-    findings: List[Finding] = dspy.OutputField(description="List of findings from analyzing training artifacts")
-    recommendations: List[Recommendation] = dspy.OutputField(description="List of recommendations based on the findings")
+    artifacts: str = dspy.InputField(description="Training artifacts to analyze")
+    analysis: List[Analysis] = dspy.OutputField(
+        description="List of Analysis elements"
+    )
+
 
 class DeepchecksArtifactsAnalysisSignature(dspy.Signature):
-    """Signature for deepchecks artifacts analysis"""
-    deepchecks_artifacts: str = dspy.InputField(description="Deepchecks artifacts to analyze")
-    findings: List[Finding] = dspy.OutputField(description="List of findings from analyzing deepchecks artifacts")
-    recommendations: List[Recommendation] = dspy.OutputField(description="List of recommendations based on the findings")
+    artifacts: str = dspy.InputField(description="Deepchecks artifacts to analyze")
+    analysis: List[Analysis] = dspy.OutputField(
+        description="List of Analysis elements"
+    )
+
 
 class DatasetArtifactsAnalysisSignature(dspy.Signature):
-    """Signature for dataset artifacts analysis"""
-    dataset_artifacts: str = dspy.InputField(description="Dataset artifacts to analyze")
-    findings: List[Finding] = dspy.OutputField(description="List of findings from analyzing dataset artifacts")
-    recommendations: List[Recommendation] = dspy.OutputField(description="List of recommendations based on the findings")
+    artifacts: str = dspy.InputField(description="Dataset artifacts to analyze")
+    analysis: List[Analysis] = dspy.OutputField(
+        description="List of Analysis elements"
+    )
+
 
 class ModelCheckpointArtifactsAnalysisSignature(dspy.Signature):
-    """Signature for model checkpoint artifacts analysis"""
-    model_checkpoint_artifacts: str = dspy.InputField(description="Model checkpoint artifacts to analyze")
-    findings: List[Finding] = dspy.OutputField(description="List of findings from analyzing model checkpoint artifacts")
-    recommendations: List[Recommendation] = dspy.OutputField(description="List of recommendations based on the findings")
+    artifacts: str = dspy.InputField(
+        description="Model checkpoint artifacts to analyze"
+    )
+    analysis: List[Analysis] = dspy.OutputField(
+        description="List of Analysis elements"
+    )
+
 
 class ArtifactsAnalysisSignature(dspy.Signature):
-    """Signature for artifacts analysis"""
-    training_analysis: str = dspy.InputField(description="Training artifacts analysis")
-    deepchecks_analysis: str = dspy.InputField(description="Deepchecks artifacts analysis")
-    dataset_analysis: str = dspy.InputField(description="Dataset artifacts analysis")
-    model_checkpoint_analysis: str = dspy.InputField(description="Model checkpoint artifacts analysis")
+    previous_analyses: Dict[str, List[Optional[Analysis]]] = dspy.InputField(
+        description="Separate analyses of artifacts from specialized agents"
+    )    
 
-    findings: List[Finding] = dspy.OutputField(description="List of findings from analyzing artifacts")
-    recommendations: List[Recommendation] = dspy.OutputField(description="List of recommendations based on the findings")
+    refined_analysis: str = dspy.OutputField(
+        description="Refined analysis of the artifacts using all the available context"
+    )

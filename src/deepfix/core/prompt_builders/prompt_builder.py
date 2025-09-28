@@ -2,7 +2,7 @@
 Main PromptBuilder class for orchestrating prompt creation from existing Pydantic models.
 """
 
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 import traceback
 
 from ...utils.logging import get_logger
@@ -17,7 +17,7 @@ from .instructions import get_instructions
 
 
 class PromptBuilder:
-    """Main class for orchestrating prompt creation from existing Pydantic models."""
+    """Main class for orchestrating prompt creation from existing Artifacts Pydantic models."""
 
     def __init__(self, config: Optional[PromptConfig] = None):
         """Initialize the PromptBuilder.
@@ -28,7 +28,7 @@ class PromptBuilder:
         """
         self.logger = get_logger(self.__class__.__name__)
         self.prompt_builders = self._initialize_prompt_builders()
-        self.config: Optional[PromptConfig] = config
+        self.config: Optional[PromptConfig] = config or PromptConfig()
 
         self.logger.info("PromptBuilder initialized successfully")
 

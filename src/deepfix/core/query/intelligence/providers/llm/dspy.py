@@ -48,9 +48,7 @@ class DspyRouter:
         )
         return dspy.ChainOfThought(BugResolutionRecommendation)
 
-    def generate(
-        self,**kwargs
-    ) -> str:
+    def generate(self, **kwargs) -> str:
         return self.llm(**kwargs)
 
 
@@ -61,9 +59,7 @@ class DspyLLMProvider(BaseProvider):
         self.config = config
         self.router = DspyRouter(config=config)
 
-    def execute(
-        self, **kwargs
-    ) -> IntelligenceResponse:
+    def execute(self, **kwargs) -> IntelligenceResponse:
         start = time.time()
         try:
             result = self.router.generate(**kwargs)
