@@ -26,6 +26,23 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+*.onnx
+*.pt
+*.pth
+*.torchscript
+
+models/
+results/
+mlruns/
+census_campaign_results/
+runs/
+models-registry/
+/logs/
+advisor_output/
+uv.lock
+
+*visualization.html
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -200,6 +217,16 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# MLflow
+mlruns/
+mlflow.db
+mlflow_data/
+mlflow_downloads/
+
+/data/
+/checkpoints/
+tmp/
 
 # Marimo
 marimo/_static/
