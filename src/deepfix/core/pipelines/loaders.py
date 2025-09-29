@@ -91,14 +91,18 @@ class LoadDatasetArtifact(LoadArtifact):
         # get artifacts
         metadata_artifact = self._load_dataset_metadata()
         deepchecks_artifact = self._load_deepchecks_artifacts()
-        arts = [metadata_artifact, deepchecks_artifact]
+        arts = []
+        if metadata_artifact is not None:
+            arts.append(metadata_artifact)
+        if deepchecks_artifact is not None:
+            arts.append(deepchecks_artifact)
         if "artifacts" in context.keys():
             context["artifacts"].extend(arts)
         else:
             context["artifacts"] = arts
         return context
 
-    def _load_dataset_metadata(self) -> DatasetArtifacts:
+    def _load_dataset_metadata(self) -> Optional[DatasetArtifacts]:
         # Dataset metadata
         artifact = self.artifact_mgr.load_artifact(
             run_id=self.run_id,
@@ -107,7 +111,7 @@ class LoadDatasetArtifact(LoadArtifact):
         )
         return artifact
 
-    def _load_deepchecks_artifacts(self) -> DeepchecksArtifacts:
+    def _load_deepchecks_artifacts(self) -> Optional[DeepchecksArtifacts]:
         mlflow_run_id = self.artifact_mgr.get_mlflow_run_id(
             self.run_id, ArtifactPath.DATASET
         )

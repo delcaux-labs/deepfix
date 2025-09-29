@@ -1,8 +1,7 @@
 import dspy
-from typing import Dict, List, Optional
+from typing import Dict
 from .base import Agent, AgentResult
 from .signatures import ArtifactsAnalysisSignature
-from .models import Analysis
 
 class CrossArtifactIntegrationAgent(Agent):
     def __init__(
@@ -13,15 +12,14 @@ class CrossArtifactIntegrationAgent(Agent):
 
     def forward(
         self,
-        previous_analyses: Dict[str, List[Optional[Analysis]]]
+        previous_analyses: Dict[str, AgentResult]
     ) -> AgentResult:
         
-        assert any(v is not None for v in previous_analyses.values()), (
-            "At least one analysis list must be provided"
-        )
+        assert len(previous_analyses) > 0, "At least one analysis must be provided"
         out = self.llm(previous_analyses=previous_analyses)
         return AgentResult(
-            agent_name=self.agent_name, analysis=out.refined_analysis
+            agent_name=self.agent_name, 
+            refined_analysis=out.refined_analysis,
         )
 
     @property

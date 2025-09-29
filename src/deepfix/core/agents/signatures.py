@@ -1,7 +1,7 @@
 import dspy
-from typing import List, Optional, Dict
+from typing import List, Dict
 
-from .models import Analysis
+from .models import Analysis, AgentResult
 
 
 class TrainingArtifactsAnalysisSignature(dspy.Signature):
@@ -35,7 +35,7 @@ class ModelCheckpointArtifactsAnalysisSignature(dspy.Signature):
 
 
 class ArtifactsAnalysisSignature(dspy.Signature):
-    previous_analyses: Dict[str, List[Optional[Analysis]]] = dspy.InputField(
+    previous_analyses: Dict[str, AgentResult] = dspy.InputField(
         description="Separate analyses of artifacts from specialized agents"
     )    
 

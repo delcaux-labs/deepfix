@@ -40,8 +40,9 @@ class Analysis(BaseModel):
 
 class AgentResult(BaseModel):
     agent_name: str
-    analysis: Union[List[Analysis], str] = None
-    analyzed_artifacts: Optional[List[str]] = None
+    analysis: List[Analysis] = Field(default=[],description="List of Analysis elements")
+    analyzed_artifacts: Optional[List[str]] = Field(default=None,description="List of artifacts analyzed by the agent")
+    refined_analysis: Optional[str] = Field(default=None,description="Refined analysis of the artifacts using all the available context")
 
 
 class AgentContext(BaseModel):

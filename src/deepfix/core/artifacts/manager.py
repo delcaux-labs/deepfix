@@ -181,7 +181,7 @@ class ArtifactsManager:
         run_id: str,
         artifact_key: Union[str, ArtifactPath],
         download_if_missing: bool = True,
-    ) -> Artifacts:
+    ) -> Optional[Artifacts]:
         artifact_key = (
             ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
@@ -189,7 +189,8 @@ class ArtifactsManager:
         )
         path = self.get_local_path(run_id, artifact_key.value, download_if_missing)
         if path is None:
-            raise ValueError(f"Artifact {artifact_key} not found for run {run_id}")
+            LOGGER.warning(f"Artifact {artifact_key} not found for run {run_id}")
+            return None
         if artifact_key == ArtifactPath.DEEPCHECKS:
             return self._load_deepchecks_artifacts(path)
         elif artifact_key == ArtifactPath.TRAINING:

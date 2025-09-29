@@ -1,21 +1,46 @@
-from typing import List, Type, Optional, Tuple, Any
+from typing import List, Type, Optional, Tuple
+from contextlib import contextmanager, nullcontext
 import dspy
-from ..config import PromptConfig
+from ..config import PromptConfig, LLMConfig
 from ..prompt_builders import PromptBuilder
 from ..artifacts import Artifacts
 from .models import AgentContext, AgentResult
 
 
 class Agent(dspy.Module):
+    def __init__(self, config: Optional[LLMConfig] = None):
+        super().__init__()
+        assert (config is None) or isinstance(config, LLMConfig), "config must be an instance of LLMConfig"
+        self._llm_config = config
+        self.agent_name = self.__class__.__name__.lower().replace("agent", "")
+
+    @contextmanager
+    def _llm_context(self):
+        if self.config is None:
+            with nullcontext():
+                yield
+            return
+        with dspy.context(
+            lm=dspy.LM(
+                model=self._llm_config.model_name,
+                cache=self._llm_config.cache,
+                api_base=self._llm_config.base_url,
+                api_key=self._llm_config.api_key,
+                temperature=self._llm_config.temperature,
+            ),
+            track_usage=self._llm_config.track_usage,
+        ):
+            yield
+    
     def forward(self, **kwargs) -> AgentResult:
         raise NotImplementedError("Subclasses must implement this method")
 
 
 class ArtifactAnalyzer(Agent):
     def __init__(
-        self, llm: dspy.Module, config_prompt_builder: Optional[PromptConfig] = None
+        self, llm: dspy.Module, config: Optional[LLMConfig] = None, config_prompt_builder: Optional[PromptConfig] = None
     ):
-        self.agent_name = self.__class__.__name__.lower().replace("agent", "")
+        super().__init__(config=config)
         self.prompt_builder = PromptBuilder(config=config_prompt_builder)
         self.llm = llm
     
@@ -26,7 +51,8 @@ class ArtifactAnalyzer(Agent):
     def _run(self, context: AgentContext) -> AgentResult:
         self._check_artifacts(context.artifacts)
         prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
-        response = self.llm(artifacts=prompt)
+        with self._llm_context():
+            response = self.llm(artifacts=prompt)
         return AgentResult(
             agent_name=self.agent_name,
             analysis=response.analysis,

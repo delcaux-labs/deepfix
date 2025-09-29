@@ -1,15 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Optional, List
+from typing import Optional, List
+import mlflow
 
-
-from .models import AgentResult, AgentContext, Artifacts
+from .models import AgentResult, AgentContext, Artifacts, TrainingDynamicsConfig
 from .artifact_analyzers import (DeepchecksArtifactsAnalyzer, 
 DatasetArtifactsAnalyzer, 
-ModelCheckpointArtifactsAnalyzer)
+ModelCheckpointArtifactsAnalyzer,
+TrainingArtifactsAnalyzer)
 from .base import ArtifactAnalyzer, Agent
 from ..pipelines import ArtifactLoadingPipeline
-from ..config import MLflowConfig,ArtifactConfig
+from ..config import MLflowConfig,ArtifactConfig, LLMConfig
 from ...utils.logging import get_logger
+from .cross_artifact_reasoning import CrossArtifactIntegrationAgent
 
 LOGGER = get_logger(__name__)
 
@@ -25,17 +27,29 @@ class ArtifactAnalysisCoordinator:
         mlflow_run_id: Optional[str]=None,
         mlflow_run_name: Optional[str]=None,
         mlflow_config: Optional[MLflowConfig]=None,
+        trace_llm_requests: bool=True,
         artifact_config: Optional[ArtifactConfig]=None,
+        llm_config: Optional[LLMConfig]=None,
+        training_dynamics_config: Optional[TrainingDynamicsConfig]=None,
+        env_file: Optional[str]=None,
     ):
         self.mlflow_config = mlflow_config
         self.artifact_config = artifact_config
+        self.llm_config = llm_config 
+        self.trace_llm_requests = trace_llm_requests
+        self.training_dynamics_config = training_dynamics_config
+
+        if llm_config is None:
+            self.llm_config = LLMConfig.load_from_env(env_file=env_file)
 
         if mlflow_config is None:
             self.mlflow_config = MLflowConfig(tracking_uri=mlflow_tracking_uri,
                                             experiment_name=mlflow_experiment_name,
                                             run_id=mlflow_run_id,
                                             run_name=mlflow_run_name,
-                                        )  
+                                            trace_dspy=trace_llm_requests
+                                        )
+
         if artifact_config is None:
             self.artifact_config = ArtifactConfig(dataset_name=dataset_name,
                                                 sqlite_path=artifact_sqlite_path,
@@ -46,31 +60,52 @@ class ArtifactAnalysisCoordinator:
                                                 download_if_missing=True,
                                                 cache_enabled=True
                                                 )
+        
+        if training_dynamics_config is None:
+            self.training_dynamics_config = TrainingDynamicsConfig()
 
         self.dataset_name = dataset_name
         self.artifacts_loader = self._initialize_artifacts_loader()
         self.analyzer_agents = self._initialize_analyzer_agents()
+        self.cross_artifact_reasoning_agent = CrossArtifactIntegrationAgent()
+
+        # Initialize tracing
+        self._initialize_tracing()
+    
+
+    def _initialize_tracing(self):
+        if self.trace_llm_requests:
+            mlflow.set_tracking_uri(self.mlflow_config.tracking_uri)
+            mlflow.set_experiment("DSPy-tracing")
+            mlflow.dspy.autolog(log_traces=True,disable=False)
+           
     
     @classmethod
-    def from_config(cls, mlflow_config: MLflowConfig, artifact_config: ArtifactConfig) -> "ArtifactAnalysisCoordinator":
-        return cls(mlflow_config=mlflow_config, artifact_config=artifact_config)
+    def from_config(cls, mlflow_config: MLflowConfig, artifact_config: ArtifactConfig, llm_config: Optional[LLMConfig] = None, env_file: Optional[str] = None) -> "ArtifactAnalysisCoordinator":
+        return cls(mlflow_config=mlflow_config, artifact_config=artifact_config, llm_config=llm_config, env_file=env_file)
     
     def _analyze_one_artifact(self, artifact: Artifacts) -> AgentResult:
         analyzer_agent = self._get_analyzer_agent(artifact)
         if analyzer_agent:
             focused_context = self._create_focused_context(artifact)
-            result = analyzer_agent(focused_context)
+            result = analyzer_agent.forward(focused_context)
             return result
 
-    def run(self,) -> AgentContext:   
+    def run(self,max_workers:int=3) -> AgentContext:   
         #1. Create context  
+        LOGGER.info(f"Creating context for dataset {self.dataset_name}...")
         context = self.create_context()
+
         #2. Analyze artifacts
         LOGGER.info(f"Analyzing {len(context.artifacts)} artifacts linked to dataset {context.dataset_name}...")
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for result in executor.map(self._analyze_one_artifact, context.artifacts):
                 context.agent_results[result.agent_name] = result
-        LOGGER.info(f"Analyzed {len(context.agent_results)} artifacts successfully.")
+
+        #3. Cross-artifact reasoning
+        LOGGER.info(f"Cross-artifact reasoning...")
+        out = self.cross_artifact_reasoning_agent.forward(previous_analyses=context.agent_results)
+        context.agent_results[out.agent_name] = out
         return context
     
     def create_context(self,) -> AgentContext:
@@ -94,9 +129,10 @@ class ArtifactAnalysisCoordinator:
 
     def _initialize_analyzer_agents(self) -> List[ArtifactAnalyzer]:
         """Initialize specialized analyzer agents."""
-        agents = [DeepchecksArtifactsAnalyzer(),
-                  DatasetArtifactsAnalyzer(),
-                  ModelCheckpointArtifactsAnalyzer()]
+        agents = [DeepchecksArtifactsAnalyzer(config=self.llm_config),
+                  DatasetArtifactsAnalyzer(config=self.llm_config),
+                  ModelCheckpointArtifactsAnalyzer(config=self.llm_config),
+                  TrainingArtifactsAnalyzer(llm_config=self.llm_config,config=self.training_dynamics_config)]
         return agents
     
     def _initialize_artifacts_loader(self)->ArtifactLoadingPipeline:
