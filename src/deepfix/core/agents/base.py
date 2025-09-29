@@ -27,7 +27,7 @@ class ArtifactAnalyzer(Agent):
 
     def _run(self, context: AgentContext) -> AgentResult:
         self._check_artifacts(context.artifacts)
-        prompt = self.prompt_builder.build_prompt(context.artifacts)
+        prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
         response = self.llm(artifacts=prompt)
         return AgentResult(
             agent_name=self.agent_name,

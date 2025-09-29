@@ -4,7 +4,6 @@ from ...utils.logging import get_logger
 from ..artifacts import (
     ArtifactsManager,
     ArtifactPath,
-    Artifacts,
     DatasetArtifacts,
     DeepchecksArtifacts,
 )

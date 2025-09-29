@@ -3,68 +3,20 @@ import numpy as np
 import os
 import dspy
 from concurrent.futures import ThreadPoolExecutor
-from .base import Agent, ArtifactAnalyzer
+from .base import ArtifactAnalyzer
 from ..artifacts import (
-    TrainingArtifacts,
     Artifacts,
     DeepchecksArtifacts,
     DatasetArtifacts,
     ModelCheckpointArtifacts,
 )
-from .models import AgentContext, AgentResult, ArtifactAnalysisConfig, Analysis
+from .models import AgentContext, AgentResult, AnalyzerTypes
 
 from .signatures import (
-    TrainingArtifactsAnalysisSignature,
     DeepchecksArtifactsAnalysisSignature,
     DatasetArtifactsAnalysisSignature,
     ModelCheckpointArtifactsAnalysisSignature,
-    ArtifactsAnalysisSignature,
 )
-
-
-class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
-    """Expert in ML training diagnostics, hyperparameter analysis, convergence patterns"""
-
-    def __init__(
-        self,
-    ):
-        llm = dspy.ChainOfThought(TrainingArtifactsAnalysisSignature)
-        super().__init__(llm=llm)
-
-    @property
-    def system_prompt(self) -> str:
-        return """You are an expert ML training diagnostics specialist with deep expertise in:
-                    - Training metrics analysis and anomaly detection
-                    - Hyperparameter optimization and configuration validation
-                    - Learning dynamics patterns and convergence analysis
-                    - Training stability assessment and debugging
-
-                    Your role is to analyze training artifacts (metrics, parameters) and provide actionable insights about:
-                    1. Training quality and convergence patterns
-                    2. Potential issues like overfitting, underfitting, or instability
-                    3. Hyperparameter optimization opportunities
-                    4. Configuration best practices and recommendations
-
-                    Analysis Focus Areas:
-                    - **Metrics Validation**: Completeness, consistency, anomaly detection
-                    - **Learning Dynamics**: Convergence patterns, stability, plateaus
-                    - **Parameter Assessment**: Hyperparameter quality, best practices
-                    - **Performance Indicators**: Training efficiency, optimization potential
-
-                    When analyzing training metadata, consider:
-                    - Loss convergence trends and stability
-                    - Training vs validation metric divergence
-                    - Learning rate schedules and optimizer effectiveness
-                    - Batch size impact on training dynamics
-                    - Model architecture appropriateness
-                    - Early stopping and regularization effectiveness
-
-                    Provide specific, actionable recommendations with clear rationale and expected impact.
-            """
-
-    @property
-    def supported_artifact_types(self) -> Tuple[Type[Artifacts]]:
-        return (TrainingArtifacts,)
 
 
 class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
@@ -122,7 +74,7 @@ class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
         """
 
     @property
-    def supported_artifact_types(self) -> Tuple[Type[Artifacts]]:
+    def supported_artifact_types(self) -> Tuple[Type[DeepchecksArtifacts]]:
         return (DeepchecksArtifacts,)
 
 
@@ -181,7 +133,7 @@ class DatasetArtifactsAnalyzer(ArtifactAnalyzer):
                 Focus on actionable insights that directly impact model training success."""
 
     @property
-    def supported_artifact_types(self) -> Tuple[Type[Artifacts]]:
+    def supported_artifact_types(self) -> Tuple[Type[DatasetArtifacts]]:
         return (DatasetArtifacts,)
 
 
@@ -241,132 +193,11 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
                 Focus on ensuring reliable model deployment and inference capability."""
 
     @property
-    def supported_artifact_types(self) -> Tuple[Type[Artifacts]]:
+    def supported_artifact_types(self) -> Tuple[Type[ModelCheckpointArtifacts]]:
         return (ModelCheckpointArtifacts,)
 
     def load_model_summary(self, path: str) -> Dict[str, Any]:
         raise NotImplementedError
 
 
-class ArtifactsAnalysisRefiner(Agent):
-    def __init__(
-        self,
-    ):
-        self.llm = dspy.ChainOfThought(ArtifactsAnalysisSignature)
-        self.agent_name = "cross_artifact_integration"
 
-    def forward(
-        self,
-        previous_analysis: Dict[str, List[Optional[Analysis]]]
-    ) -> AgentResult:
-        
-        assert any(v is not None for v in previous_analysis.values()), (
-            "At least one analysis list must be provided"
-        )
-        out = self.llm(previous_analysis=previous_analysis)
-        return AgentResult(
-            agent_name=self.agent_name, analysis=out.refined_analysis
-        )
-
-    @property
-    def system_prompt(self) -> str:
-        """You are an expert ML debugging consultant analyzing findings from multiple ML system analysis agents. Your role is to synthesize their individual findings into holistic insights that help users understand the overall health and validity of their ML experiment.
-
-        ## Your Expertise Areas:
-        - Data quality and integrity assessment
-        - Training dynamics and performance analysis
-        - Experimental validity and reproducibility
-        - Causal relationship identification
-        - Production readiness evaluation
-
-        ## Analysis Framework:
-        When reviewing agent findings, consider these key relationships:
-
-        1. **Data-Performance Correlations**:
-        - Excellent performance + poor data quality = potential data leakage
-        - Poor performance + good data quality = model/training issues
-        - Inconsistent performance + data drift = deployment risk
-
-        2. **Training-Configuration Consistency**:
-        - Aggressive hyperparameters + stable training = configuration mismatch
-        - Conservative settings + unstable training = underlying data issues
-        - Parameter changes + performance shifts = causal relationships
-
-        3. **Experimental Integrity**:
-        - Version mismatches across artifacts = invalid experiment
-        - Temporal inconsistencies = mixed experimental runs
-        - Missing artifacts = incomplete analysis
-
-        4. **Causal Chain Analysis**:
-        - Identify root causes vs. symptoms
-        - Trace problems to their origins
-        - Suggest intervention points
-
-        ## Output Requirements:
-        - Prioritize findings by severity and confidence
-        - Provide clear causal explanations when possible
-        - Suggest specific, actionable remediation steps
-        - Indicate confidence levels for all insights
-        - Highlight critical risks for production deployment
-        """
-
-
-class ArtifactAnalysisCoordinator:
-    """Main orchestrator agent that coordinates specialized analyzer agents."""
-
-    def __init__(
-        self, config: ArtifactAnalysisConfig
-    ):
-        self.config = config
-        self.analyzer_agents = self._initialize_analyzer_agents()
-        self.refiner_agent = ArtifactsAnalysisRefiner()
-    
-    def _analyze_one_artifact(self, artifact: Artifacts) -> AgentResult:
-        analyzer_agent = self._get_analyzer_agent(artifact)
-        if analyzer_agent:
-            focused_context = self._create_focused_context(artifact)
-            result = analyzer_agent(focused_context)
-            return result
-
-    def run(self, context: AgentContext) -> AgentResult:        
-        cfg_refiner = {}
-        with ThreadPoolExecutor() as executor:
-            for result in executor.map(self._analyze_one_artifact, context.artifacts):
-                context.agent_results[result.agent_name] = result
-                cfg_refiner[result.agent_name] = result.analysis
-
-        refined_analysis = self.refiner_agent(previous_analyses=cfg_refiner)
-
-        return AgentResult(
-            agent_name="artifact_analysis",
-            analysis=refined_analysis.refined_analysis
-        )
-    
-    def _get_analyzer_agent(self, artifact: Artifacts) -> ArtifactAnalyzer:
-        for analyzer_agent in self.analyzer_agents.values():
-            if analyzer_agent.supports_artifact(artifact):
-                return analyzer_agent
-        raise ValueError(f"No analyzer agent found for artifact of type: {type(artifact)}")
-    
-    def _create_focused_context(self, artifact: Artifacts) -> AgentContext:
-        return AgentContext(
-            artifacts=[artifact],
-        )
-
-    def _initialize_analyzer_agents(self) -> Dict[str, "ArtifactAnalyzer"]:
-        """Initialize specialized analyzer agents."""
-        agents = {}
-
-        if "training" in self.config.enabled_analyzers:
-            agents["training"] = TrainingArtifactsAnalyzer()
-
-        if "deepchecks" in self.config.enabled_analyzers:
-            agents["deepchecks"] = DeepchecksArtifactsAnalyzer()
-
-        if "dataset" in self.config.enabled_analyzers:
-            agents["dataset"] = DatasetArtifactsAnalyzer()
-
-        if "model_checkpoint" in self.config.enabled_analyzers:
-            agents["model_checkpoint"] = ModelCheckpointArtifactsAnalyzer()
-
-        return agents

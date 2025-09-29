@@ -221,6 +221,7 @@ class MLflowManager:
         return params
 
     def get_deepchecks_artifacts(self) -> DeepchecksArtifacts:
+        assert self.run_id is not None, "Run ID is not set"
         LOGGER.info(f"Downloading deepchecks artifacts for run {self.run_id}")
         deepchecks = self.client.download_artifacts(
             self.run_id, ArtifactPath.DEEPCHECKS.value, dst_path=self.dwnd_dir
@@ -265,6 +266,7 @@ class MLflowManager:
             return path
 
     def get_training_artifacts(self) -> TrainingArtifacts:
+        assert self.run_id is not None, "Run ID is not set"
         LOGGER.info(f"Downloading training artifacts for run {self.run_id}")
         training = self.client.download_artifacts(
             self.run_id, ArtifactPath.TRAINING.value, dst_path=self.dwnd_dir
@@ -283,6 +285,7 @@ class MLflowManager:
         )
 
     def add_artifact(self, artifact_key: str, local_path: str) -> None:
+        assert self.run_id is not None, "Run ID is not set"
         LOGGER.info(f"Adding artifact {artifact_key} for run {self.run_id}")
         self.client.log_artifact(
             run_id=self.run_id, artifact_path=artifact_key, local_path=local_path
