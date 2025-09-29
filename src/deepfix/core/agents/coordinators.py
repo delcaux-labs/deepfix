@@ -2,15 +2,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, List
 
 
-from .models import AgentResult, AnalyzerTypes,AgentContext, Artifacts
+from .models import AgentResult, AgentContext, Artifacts
 from .artifact_analyzers import (DeepchecksArtifactsAnalyzer, 
 DatasetArtifactsAnalyzer, 
 ModelCheckpointArtifactsAnalyzer)
 from .base import ArtifactAnalyzer, Agent
-from ..pipelines import Pipeline
-from ..pipelines.loaders import LoadDeepchecksArtifacts, LoadModelCheckpoint, LoadTrainingArtifact, LoadDatasetArtifact
-from ..config import MLflowConfig
-from ...integrations import MLflowManager
+from ..pipelines import ArtifactLoadingPipeline
+from ..config import MLflowConfig,ArtifactConfig
 from ...utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -20,23 +18,42 @@ class ArtifactAnalysisCoordinator:
 
     def __init__(
         self,
-        artifact_sqlite_path: str,
-        dataset_name: str,
-        mlflow_tracking_uri: str,
+        artifact_sqlite_path: Optional[str]=None,
+        dataset_name: Optional[str]=None,
+        mlflow_tracking_uri: Optional[str]=None,
         mlflow_experiment_name: Optional[str]=None,
         mlflow_run_id: Optional[str]=None,
         mlflow_run_name: Optional[str]=None,
+        mlflow_config: Optional[MLflowConfig]=None,
+        artifact_config: Optional[ArtifactConfig]=None,
     ):
-        self.analyzer_agents = self._initialize_analyzer_agents()
-        self.mlflow_config = MLflowConfig(
-            tracking_uri=mlflow_tracking_uri,
-            experiment_name=mlflow_experiment_name,
-            run_id=mlflow_run_id,
-            run_name=mlflow_run_name,
-        )
-        self.artifact_sqlite_path = artifact_sqlite_path
+        self.mlflow_config = mlflow_config
+        self.artifact_config = artifact_config
+
+        if mlflow_config is None:
+            self.mlflow_config = MLflowConfig(tracking_uri=mlflow_tracking_uri,
+                                            experiment_name=mlflow_experiment_name,
+                                            run_id=mlflow_run_id,
+                                            run_name=mlflow_run_name,
+                                        )  
+        if artifact_config is None:
+            self.artifact_config = ArtifactConfig(dataset_name=dataset_name,
+                                                sqlite_path=artifact_sqlite_path,
+                                                load_dataset_metadata=True,
+                                                load_checks=True,
+                                                load_model_checkpoint=True,
+                                                load_training=True,
+                                                download_if_missing=True,
+                                                cache_enabled=True
+                                                )
+
         self.dataset_name = dataset_name
         self.artifacts_loader = self._initialize_artifacts_loader()
+        self.analyzer_agents = self._initialize_analyzer_agents()
+    
+    @classmethod
+    def from_config(cls, mlflow_config: MLflowConfig, artifact_config: ArtifactConfig) -> "ArtifactAnalysisCoordinator":
+        return cls(mlflow_config=mlflow_config, artifact_config=artifact_config)
     
     def _analyze_one_artifact(self, artifact: Artifacts) -> AgentResult:
         analyzer_agent = self._get_analyzer_agent(artifact)
@@ -46,9 +63,9 @@ class ArtifactAnalysisCoordinator:
             return result
 
     def run(self,) -> AgentContext:   
-        # Create context  
+        #1. Create context  
         context = self.create_context()
-        # Analyze artifacts
+        #2. Analyze artifacts
         LOGGER.info(f"Analyzing {len(context.artifacts)} artifacts linked to dataset {context.dataset_name}...")
         with ThreadPoolExecutor() as executor:
             for result in executor.map(self._analyze_one_artifact, context.artifacts):
@@ -82,17 +99,9 @@ class ArtifactAnalysisCoordinator:
                   ModelCheckpointArtifactsAnalyzer()]
         return agents
     
-    def _initialize_artifacts_loader(self)->Pipeline:
-        mlflow_manager = MLflowManager.from_config(self.mlflow_config)
-        cfg = dict(mlflow_manager=mlflow_manager, 
-                artifact_sqlite_path=self.artifact_sqlite_path
-                )
-        steps = [LoadDeepchecksArtifacts(**cfg),
-                LoadModelCheckpoint(**cfg),
-                LoadTrainingArtifact(**cfg),
-                LoadDatasetArtifact(dataset_name=self.dataset_name,**cfg)
-        ]
-        return Pipeline(steps=steps)
+    def _initialize_artifacts_loader(self)->ArtifactLoadingPipeline:
+        return ArtifactLoadingPipeline.from_config(mlflow_config=self.mlflow_config, 
+                                                    artifact_config=self.artifact_config)
 
 
 class AgentCoordinator:

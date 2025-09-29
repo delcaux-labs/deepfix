@@ -1,9 +1,6 @@
 from typing import Optional
 from .base import Step
-from ..advisor.result import AdvisorResult
-from ..advisor.errors import IntelligenceError
 import time
-import traceback
 from ..query.intelligence.models import IntelligenceConfig
 from ..query.intelligence.client import IntelligenceClient
 from ...utils.logging import get_logger
@@ -25,7 +22,7 @@ class Query(Step):
         context["advisor_result"] = result
         return result
 
-    def execute_query(self, prompt: str) -> AdvisorResult:
+    def execute_query(self, prompt: str):
         """
         Execute query using configured intelligence provider.
 
@@ -33,6 +30,10 @@ class Query(Step):
             prompt: Generated prompt to execute
             result: Result object to update with response information
         """
+        # Local import to avoid circular dependency
+        from ..advisor.result import AdvisorResult
+        from ..advisor.errors import IntelligenceError
+        
         start_time = time.time()
         result = AdvisorResult(run_id=self.run_id)
 
@@ -51,10 +52,11 @@ class Query(Step):
             result.intelligence_execution_time = time.time() - start_time
 
             LOGGER.info(
-                f"Query executed successfully in {result.intelligence_execution_time:.2f} seconds"
+                "Query executed successfully in %.2f seconds",
+                result.intelligence_execution_time
             )
-            LOGGER.debug(f"Response length: {result.response_length} characters")
+            LOGGER.debug("Response length: %d characters", result.response_length)
             return result
 
         except Exception as e:
-            raise IntelligenceError(f"Query execution failed: {e}")
+            raise IntelligenceError(f"Query execution failed: {e}") from e

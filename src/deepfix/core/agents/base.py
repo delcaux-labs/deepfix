@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import List, Type, Optional, Tuple, Any
 import dspy
 from ..config import PromptConfig
@@ -7,10 +6,9 @@ from ..artifacts import Artifacts
 from .models import AgentContext, AgentResult
 
 
-class Agent(dspy.Module, ABC):
-    @abstractmethod
+class Agent(dspy.Module):
     def forward(self, **kwargs) -> AgentResult:
-        pass
+        raise NotImplementedError("Subclasses must implement this method")
 
 
 class ArtifactAnalyzer(Agent):

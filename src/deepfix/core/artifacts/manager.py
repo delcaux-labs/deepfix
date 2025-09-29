@@ -22,6 +22,7 @@ from .datamodel import (
     ModelCheckpointArtifacts,
 )
 from ...utils.logging import get_logger
+from ..config import MLflowConfig
 
 LOGGER = get_logger(__name__)
 
@@ -37,6 +38,12 @@ class ArtifactsManager:
         self.repo = ArtifactRepository(sqlite_path)
         self.checksum = ChecksumService()
         self.mlflow: MLflowManager = mlflow_manager
+    
+    @classmethod
+    def from_config(cls, mlflow_config: MLflowConfig, sqlite_path: str) -> 'ArtifactsManager':
+        from ...integrations import MLflowManager
+        mlflow_manager = MLflowManager.from_config(mlflow_config)
+        return cls(mlflow_manager=mlflow_manager, sqlite_path=sqlite_path)
 
     def register_artifact(
         self,
@@ -239,7 +246,38 @@ class ArtifactsManager:
         status: Optional[ArtifactStatus] = None,
     ) -> List[ArtifactRecord]:
         return self.repo.list_by_run(run_id, prefix=prefix, status=status)
+    
+    def _delete_dataset_artifact(self, dataset_name: str, checks:bool=False) -> Optional[bool]:        
+        # delete dataset artifact
+        record = self.repo.get(dataset_name, ArtifactPath.DATASET.value)
+        if record is None:
+            return False            
+        mlflow_run_id = "" + record.mlflow_run_id
+        success = self.repo.delete(run_id=dataset_name, artifact_key=ArtifactPath.DATASET.value)
+        if record.local_path:
+            self.remove_local_artifact(record.local_path)
+        # delete deepchecks artifact
+        if checks:            
+            record_checks = self.repo.get(mlflow_run_id, ArtifactPath.DEEPCHECKS.value)
+            success = success or self.repo.delete(run_id=mlflow_run_id, artifact_key=ArtifactPath.DEEPCHECKS.value)
+            if record_checks.local_path:
+                self.remove_local_artifact(record_checks.local_path)
+        # delete run
+        self.mlflow.delete_run(mlflow_run_id)
 
+        return success
+    
+    def remove_local_artifact(self, local_path:str) -> Optional[bool]:
+        p = Path(local_path)
+        if p.exists():
+            if p.is_file():
+                p.unlink()
+            else:
+                shutil.rmtree(p)
+            return True
+        else:
+            return False
+        
     def delete_artifact(
         self, run_id: str, artifact_key: Union[str, ArtifactPath]
     ) -> Optional[bool]:
@@ -248,16 +286,19 @@ class ArtifactsManager:
             if isinstance(artifact_key, str)
             else artifact_key
         )
-        rec = self.repo.get(run_id, artifact_key)
-        if not rec or not rec.local_path:
+        if artifact_key == ArtifactPath.DATASET:
+            return self._delete_dataset_artifact(run_id, checks=True)
+        rec = self.repo.get(run_id, artifact_key.value)
+        if rec is None:
             LOGGER.warning(
                 f"Artifact {artifact_key.value} not found for for run_id: {run_id}"
             )
             return None
-        p = Path(rec.local_path)
-        if p.exists():
-            if p.is_file():
-                p.unlink()
-            else:
-                shutil.rmtree(p)
+        if rec.local_path:
+            p = Path(rec.local_path)
+            if p.exists():
+                if p.is_file():
+                    p.unlink()
+                else:
+                    shutil.rmtree(p)
         return self.repo.delete(run_id, artifact_key.value)

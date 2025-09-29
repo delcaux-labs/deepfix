@@ -43,7 +43,7 @@ class TrainLoggingPipeline(Pipeline):
 
         mlflow_manager = MLflowManager(
             tracking_uri=mlflow_tracking_uri,
-            create_if_not_exists=True,
+            create_run_if_not_exists=True,
             experiment_name=experiment_name,
             run_id=run_id,
             run_name=run_name,
@@ -126,7 +126,7 @@ class ChecksPipeline(Pipeline):
             mlflow_manager = MLflowManager(
                 tracking_uri=mlflow_tracking_uri
                 or DefaultPaths.MLFLOW_TRACKING_URI.value,
-                create_if_not_exists=True,
+                create_run_if_not_exists=True,
                 experiment_name=DefaultPaths.DATASETS_EXPERIMENT_NAME.value,
                 run_name=dataset_name,
             )
@@ -162,10 +162,15 @@ class DatasetLoggingPipeline(Pipeline):
         save_results: bool = False,
         output_dir: Optional[str] = None,
         dataset_experiment_name: Optional[str] = None,
+        overwrite: bool = False,
     ):
         sqlite_path = sqlite_path or DefaultPaths.ARTIFACTS_SQLITE_PATH
         if self.check_if_exists(dataset_name, sqlite_path):
-            raise ValueError(f"Dataset {dataset_name} already exists in the database.")
+            if overwrite:
+                do_checks = train_test_validation or data_integrity
+                self.delete_artifact(dataset_name, sqlite_path,checks=do_checks)
+            else:
+                raise ValueError(f"Dataset {dataset_name} already exists in the database.")
 
         deepchecks_config = DeepchecksConfig(
             model_evaluation=False,
@@ -179,7 +184,7 @@ class DatasetLoggingPipeline(Pipeline):
         )
         mlflow_manager = MLflowManager(
             tracking_uri=mlflow_tracking_uri or DefaultPaths.MLFLOW_TRACKING_URI.value,
-            create_if_not_exists=True,
+            create_run_if_not_exists=True,
             experiment_name=dataset_experiment_name
             or DefaultPaths.DATASETS_EXPERIMENT_NAME.value,
             run_name=dataset_name,
@@ -199,6 +204,17 @@ class DatasetLoggingPipeline(Pipeline):
                 ]
             )
         super().__init__(steps=steps)
+    
+    def delete_artifact(self, dataset_name: str, sqlite_path: str,checks:bool=False) -> None:
+        repo = ArtifactRepository(sqlite_path)
+        record = repo.get(dataset_name, ArtifactPath.DATASET.value)
+        if record is None:
+            return False
+        mlflow_run_id = "" + record.mlflow_run_id
+        success = repo.delete(run_id=dataset_name, artifact_key=ArtifactPath.DATASET.value)
+        if checks:
+            success = success or repo.delete(run_id=mlflow_run_id, artifact_key=ArtifactPath.DEEPCHECKS.value)
+        return success
 
     def check_if_exists(self, dataset_name: str, sqlite_path: str) -> bool:
         repo = ArtifactRepository(sqlite_path)

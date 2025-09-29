@@ -5,23 +5,91 @@ This module provides comprehensive configuration classes for the advisor,
 including YAML loading, validation, and default value management.
 """
 
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, Dict, Any, Union
 from pathlib import Path
+import os
 from pydantic import BaseModel, Field, field_validator
 from omegaconf import DictConfig, OmegaConf
 from enum import StrEnum
+from platformdirs import (
+                user_data_dir,
+                user_cache_dir,
+                user_log_dir,
+            )
+
+def _get_base_dirs() -> Dict[str, Path]:
+    """Resolve base directories with precedence:
+    1) DEEPFIX_HOME env var
+    2) platform-appropriate user dirs (via platformdirs)
+    3) fallback to ~/.deepfix
+
+    Ensures directories exist.
+    """
+    env_home = os.environ.get("DEEPFIX_HOME")
+    if env_home:
+        base = Path(env_home).expanduser()
+        data_dir = base / "data"
+        cache_dir = base / "cache"
+        log_dir = base / "logs"
+    else:
+        try:
+            data_dir = Path(user_data_dir("deepfix", "deepfix"))
+            cache_dir = Path(user_cache_dir("deepfix", "deepfix"))
+            log_dir = Path(user_log_dir("deepfix", "deepfix"))
+        except:
+            base = Path("~/.deepfix").expanduser()
+            data_dir = base / "data"
+            cache_dir = base / "cache"
+            log_dir = base / "logs"
+
+    for d in (data_dir, cache_dir, log_dir):
+        d.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "data": data_dir,
+        "cache": cache_dir,
+        "log": log_dir,
+    }
+
+def _default_mlflow_tracking_uri(data_dir: Path) -> str:
+    mlruns_dir = data_dir / "deepfix_mlflow"
+    mlruns_dir.mkdir(parents=True, exist_ok=True)
+    # Use an OS-correct file:// URI (e.g., file:///C:/... on Windows)
+    return mlruns_dir.resolve().as_uri()
+
+def _default_mlflow_downloads_dir(data_dir: Path) -> str:
+    downloads = data_dir / "mlflow_downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    return str(downloads)
+
+def _default_mlflow_artifact_root(data_dir: Path) -> str:
+    artifact_root = data_dir / "mlflow_artifacts"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    return str(artifact_root)
+def _default_sqlite_path(data_dir: Path) -> str:
+    sqlite_path = data_dir / "tmp" / "artifacts.db"
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    return str(sqlite_path)
+
+def _default_output_dir(data_dir: Path) -> str:
+    out = data_dir / "advisor_output"
+    out.mkdir(parents=True, exist_ok=True)
+    return str(out)
+
+_BASE_DIRS = _get_base_dirs()
 
 
 class DefaultPaths(StrEnum):
-    MLFLOW_TRACKING_URI = "file:./deepfix_mlflow"
-    MLFLOW_DOWNLOADS = "mlflow_downloads"
+    MLFLOW_TRACKING_URI = _default_mlflow_tracking_uri(_BASE_DIRS["data"])
+    MLFLOW_DOWNLOADS = _default_mlflow_downloads_dir(_BASE_DIRS["data"])
     MLFLOW_RUN_NAME = "default"
+    MLFLOW_DEFAULT_ARTIFACT_ROOT = _default_mlflow_artifact_root(_BASE_DIRS["data"])
 
     DATASETS_EXPERIMENT_NAME = "deepfix_datasets"
 
-    ARTIFACTS_SQLITE_PATH = "tmp/artifacts.db"
+    ARTIFACTS_SQLITE_PATH = _default_sqlite_path(_BASE_DIRS["data"])
 
-    ADVISOR_OUTPUT_DIR = "advisor_output"
+    ADVISOR_OUTPUT_DIR = _default_output_dir(_BASE_DIRS["data"])
 
 
 class MLflowConfig(BaseModel):
@@ -39,9 +107,9 @@ class MLflowConfig(BaseModel):
     experiment_name: Optional[str] = Field(
         default=None, description="MLflow experiment name (optional)"
     )
-    create_if_not_exists: bool = Field(
+    create_run_if_not_exists: bool = Field(
         default=False,
-        description="Whether to create the experiment if it doesn't exist",
+        description="Whether to create the run if it doesn't exist",
     )
     run_name: Optional[str] = Field(default=None, description="MLflow run name")
 
@@ -51,6 +119,7 @@ class MLflowConfig(BaseModel):
     )
 
     @field_validator("tracking_uri")
+    @classmethod
     def validate_tracking_uri(cls, v):
         if not v.startswith(
             (
@@ -126,6 +195,7 @@ class OutputConfig(BaseModel):
     format: str = Field(default="txt", description="Output format (txt, json, yaml)")
 
     @field_validator("format")
+    @classmethod
     def validate_format(cls, v):
         allowed_formats = ["txt", "json", "yaml"]
         if v.lower() not in allowed_formats:
