@@ -4,7 +4,6 @@ from torch.utils.data import Dataset
 from typing import Optional, List, Union
 
 from ..utils.logging import get_logger
-from .mlflow import MLflowManager
 from ..core.pipelines.factory import TrainLoggingPipeline
 
 LOGGER = get_logger(__name__)
@@ -15,9 +14,8 @@ class DeepSightCallback(Callback):
         self,
         dataset_name: str,
         train_dataset: Dataset,
-        metric_names: Union[List[str], None],
+        metric_names: List[str],
         val_dataset: Optional[Dataset] = None,
-        model_evaluation_checks: bool = True,
         batch_size: int = 16,
     ):
         super().__init__()
@@ -29,13 +27,9 @@ class DeepSightCallback(Callback):
 
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
-        self.mlflow_manager = None
-        self.model_evaluation_checks = model_evaluation_checks
         self.batch_size = batch_size
         self.metric_names = metric_names
 
-        if model_evaluation_checks:
-            assert isinstance(metric_names, list), "metric_names must be a list"
 
     def setup(self, trainer, pl_module, stage):
         LOGGER.info(f"Setup callback for {stage} stage")
@@ -61,31 +55,30 @@ class DeepSightCallback(Callback):
     def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule):
         self.mlflow_run_id = getattr(pl_module.logger, "run_id", None)
         self.mlflow_experiment_id = getattr(pl_module.logger, "experiment_id", None)
-        tracking_uri = getattr(pl_module.logger, "_tracking_uri", None)
         if self.mlflow_run_id is not None:
             LOGGER.info(f"MLflow run_id: {self.mlflow_run_id}")
             LOGGER.info(f"MLflow experiment_id: {self.mlflow_experiment_id}")
-            self.mlflow_manager = MLflowManager(
-                run_id=self.mlflow_run_id, tracking_uri=tracking_uri
-            )
         else:
             LOGGER.warning("No mlflow logger found")
 
+    #TODO: make it work with any logger?
     def run(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
         # get best model path and score from trainer
         self.best_model_path = trainer.checkpoint_callback.best_model_path
         self.best_model_score = trainer.checkpoint_callback.best_model_score
 
         pipeline = TrainLoggingPipeline(
-            mlflow_manager=self.mlflow_manager,
             dataset_name=self.dataset_name,
+            run_id=self.mlflow_run_id,
             model=pl_module.predict_step,
-            model_evaluation_checks=self.model_evaluation_checks,
+            model_evaluation_checks=True,
             batch_size=self.batch_size,
         )
         pipeline.run(
             metric_names=self.metric_names,
             checkpoint_artifact_path=self.best_model_path,
+            train_data=self.train_dataset,
+            test_data=self.val_dataset,
         )
         return None
 

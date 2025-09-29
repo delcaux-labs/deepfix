@@ -6,17 +6,22 @@ from ..prompt_builders import PromptBuilder
 from ..artifacts import Artifacts
 from .models import AgentContext, AgentResult
 
+from ...utils.logging import get_logger
+
+LOGGER = get_logger(__name__)   
 
 class Agent(dspy.Module):
     def __init__(self, config: Optional[LLMConfig] = None):
         super().__init__()
         assert (config is None) or isinstance(config, LLMConfig), "config must be an instance of LLMConfig"
         self._llm_config = config
-        self.agent_name = self.__class__.__name__.lower().replace("agent", "")
+        self.agent_name = self.__class__.__name__.replace("agent", "")
+        if config is None:
+            LOGGER.warning("No LLM config provided, Make sure to use dspy-settings.configure(...) to configure the LLM.")
 
     @contextmanager
     def _llm_context(self):
-        if self.config is None:
+        if self._llm_config is None:
             with nullcontext():
                 yield
             return

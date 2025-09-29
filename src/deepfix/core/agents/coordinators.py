@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List
 import mlflow
 
-from .models import AgentResult, AgentContext, Artifacts, TrainingDynamicsConfig
+from .models import AgentResult, AgentContext, Artifacts, TrainingDynamicsConfig,ArtifactAnalysisResult
 from .artifact_analyzers import (DeepchecksArtifactsAnalyzer, 
 DatasetArtifactsAnalyzer, 
 ModelCheckpointArtifactsAnalyzer,
@@ -35,8 +35,7 @@ class ArtifactAnalysisCoordinator:
     ):
         self.mlflow_config = mlflow_config
         self.artifact_config = artifact_config
-        self.llm_config = llm_config 
-        self.trace_llm_requests = trace_llm_requests
+        self.llm_config = llm_config        
         self.training_dynamics_config = training_dynamics_config
 
         if llm_config is None:
@@ -64,34 +63,37 @@ class ArtifactAnalysisCoordinator:
         if training_dynamics_config is None:
             self.training_dynamics_config = TrainingDynamicsConfig()
 
-        self.dataset_name = dataset_name
+        self.dataset_name = self.artifact_config.dataset_name
         self.artifacts_loader = self._initialize_artifacts_loader()
         self.analyzer_agents = self._initialize_analyzer_agents()
-        self.cross_artifact_reasoning_agent = CrossArtifactIntegrationAgent()
+        self.trace_llm_requests = self.mlflow_config.trace_dspy
+        self.cross_artifact_reasoning_agent = CrossArtifactIntegrationAgent(llm_config=self.llm_config)
 
         # Initialize tracing
-        self._initialize_tracing()
-    
+        self._initialize_tracing()    
 
     def _initialize_tracing(self):
         if self.trace_llm_requests:
+            mlflow.dspy.autolog()
             mlflow.set_tracking_uri(self.mlflow_config.tracking_uri)
-            mlflow.set_experiment("DSPy-tracing")
-            mlflow.dspy.autolog(log_traces=True,disable=False)
+            mlflow.set_experiment("DSPy-tracing")           
            
     
     @classmethod
-    def from_config(cls, mlflow_config: MLflowConfig, artifact_config: ArtifactConfig, llm_config: Optional[LLMConfig] = None, env_file: Optional[str] = None) -> "ArtifactAnalysisCoordinator":
+    def from_config(cls, mlflow_config: MLflowConfig, 
+                    artifact_config: ArtifactConfig, 
+                    llm_config: Optional[LLMConfig] = None, 
+                    env_file: Optional[str] = None) -> "ArtifactAnalysisCoordinator":
         return cls(mlflow_config=mlflow_config, artifact_config=artifact_config, llm_config=llm_config, env_file=env_file)
     
     def _analyze_one_artifact(self, artifact: Artifacts) -> AgentResult:
         analyzer_agent = self._get_analyzer_agent(artifact)
         if analyzer_agent:
             focused_context = self._create_focused_context(artifact)
-            result = analyzer_agent.forward(focused_context)
+            result = analyzer_agent(focused_context)
             return result
 
-    def run(self,max_workers:int=3) -> AgentContext:   
+    def run(self,max_workers:int=3) -> ArtifactAnalysisResult:   
         #1. Create context  
         LOGGER.info(f"Creating context for dataset {self.dataset_name}...")
         context = self.create_context()
@@ -104,9 +106,12 @@ class ArtifactAnalysisCoordinator:
 
         #3. Cross-artifact reasoning
         LOGGER.info(f"Cross-artifact reasoning...")
-        out = self.cross_artifact_reasoning_agent.forward(previous_analyses=context.agent_results)
+        out = self.cross_artifact_reasoning_agent(previous_analyses=context.agent_results)
         context.agent_results[out.agent_name] = out
-        return context
+
+        #4. Output results
+        output = ArtifactAnalysisResult(context=context, summary=out.refined_analysis)
+        return output
     
     def create_context(self,) -> AgentContext:
         output = self.artifacts_loader.run()
@@ -140,37 +145,3 @@ class ArtifactAnalysisCoordinator:
                                                     artifact_config=self.artifact_config)
 
 
-class AgentCoordinator:
-    def __init__(self,):
-        self.agents = self._load_agents()
-        self.knowledge_bridge = KnowledgeBridge(intelligence_config)
-
-    def run(self, context: dict) -> dict:
-        agent_context = AgentContext.from_pipeline_context(context)
-
-        # Run applicable agents sequentially
-        for agent in self._get_applicable_agents(agent_context):
-            try:
-                result = agent.run(agent_context)
-                agent_context.agent_results[agent.name] = result
-                agent_context.completed_agents.append(agent.name)
-            except Exception as e:
-                self._handle_agent_failure(agent, e, agent_context)
-
-        # Synthesize results
-        synthesizer = NarrativeSynthesizer(self.knowledge_bridge)
-        advisor_result = synthesizer.synthesize(agent_context)
-
-        context["advisor_result"] = advisor_result
-        return context
-
-    def _load_agents(self):
-        pass
-
-    def _get_applicable_agents(self, agent_context: AgentContext):
-        pass
-
-    def _handle_agent_failure(
-        self, agent: Agent, e: Exception, agent_context: AgentContext
-    ):
-        pass

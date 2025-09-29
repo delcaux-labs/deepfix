@@ -1,12 +1,14 @@
 import dspy
-from typing import Dict
+from typing import Dict, Optional
+from ..config import LLMConfig
 from .base import Agent, AgentResult
 from .signatures import ArtifactsAnalysisSignature
 
 class CrossArtifactIntegrationAgent(Agent):
     def __init__(
-        self,
+        self,llm_config: Optional[LLMConfig] = None
     ):
+        super().__init__(config=llm_config)
         self.llm = dspy.ChainOfThought(ArtifactsAnalysisSignature)
         self.agent_name = "cross_artifact_integration"
 
@@ -16,7 +18,8 @@ class CrossArtifactIntegrationAgent(Agent):
     ) -> AgentResult:
         
         assert len(previous_analyses) > 0, "At least one analysis must be provided"
-        out = self.llm(previous_analyses=previous_analyses)
+        with self._llm_context():
+            out = self.llm(previous_analyses=previous_analyses)
         return AgentResult(
             agent_name=self.agent_name, 
             refined_analysis=out.refined_analysis,

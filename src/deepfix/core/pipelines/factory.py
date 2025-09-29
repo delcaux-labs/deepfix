@@ -30,7 +30,7 @@ class TrainLoggingPipeline(Pipeline):
     def __init__(
         self,
         dataset_name: str,
-        run_id: str,
+        run_id: Optional[str] = None,
         run_name: Optional[str] = None,
         experiment_name: Optional[str] = None,
         mlflow_tracking_uri: Optional[str] = None,
