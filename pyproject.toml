@@ -10,7 +10,8 @@ dependencies = [
     "deepchecks[vision]>=0.19.1",
     "dspy>=3.0.3",
     "fire>=0.7.1",
-    "huggingface-hub>=0.34.4",
+    "huggingface-hub[hf-xet]>=0.34.4",
+    "kaleido>=1.1.0",
     "lightning>=2.5.4",
     "mlflow>=3.3.2",
     "notebook>=7.4.5",
@@ -28,3 +29,6 @@ dependencies = [
     "torchvision",
     "typer>=0.16.1",
 ]
+
+[project.scripts]
+deepfix = "deepfix.cli.main:main"

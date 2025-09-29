@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any, Union
 import mlflow
 import traceback
 from mlflow.tracking import MlflowClient
-from mlflow.entities import Run, Experiment
+from mlflow.entities import Run, Experiment, RunStatus
 from omegaconf import OmegaConf
 import pandas as pd
 from pathlib import Path
@@ -43,7 +43,7 @@ class MLflowManager:
         experiment_name: Optional[str] = None,
         run_id: Optional[str] = None,
         dwnd_dir: Optional[str] = None,
-        create_if_not_exists: bool = False,
+        create_run_if_not_exists: bool = False,
         run_name: Optional[str] = None,
     ):
         """
@@ -60,7 +60,7 @@ class MLflowManager:
         self.current_experiment: Experiment = None
         self.current_run: Run = None
         self.dwnd_dir = dwnd_dir or DefaultPaths.MLFLOW_DOWNLOADS.value
-        self.create_if_not_exists = create_if_not_exists
+        self.create_run_if_not_exists = create_run_if_not_exists
 
         if experiment_name is not None:
             self.set_experiment(experiment_name)
@@ -69,7 +69,7 @@ class MLflowManager:
             assert run_name is None, "run_name must be None if run_id is provided"
             self.set_run(run_id)
             self.dwnd_dir = str(Path(self.dwnd_dir) / self.run_id)
-        elif create_if_not_exists:
+        elif create_run_if_not_exists:
             assert isinstance(self.experiment_name, str), (
                 f"experiment_name must be a string, got {type(self.experiment_name)}"
             )
@@ -78,7 +78,7 @@ class MLflowManager:
         # create directory if it doesn't exist
         Path(self.dwnd_dir).mkdir(parents=True, exist_ok=True)
 
-        mlflow.set_tracking_uri(tracking_uri)
+        mlflow.set_tracking_uri(self.tracking_uri)
 
     @classmethod
     def from_config(cls, config: MLflowConfig) -> "MLflowManager":
@@ -87,7 +87,7 @@ class MLflowManager:
             experiment_name=config.experiment_name,
             run_id=config.run_id,
             dwnd_dir=config.download_dir,
-            create_if_not_exists=config.create_if_not_exists,
+            create_run_if_not_exists=config.create_run_if_not_exists,
             run_name=config.run_name,
         )
 
@@ -103,9 +103,9 @@ class MLflowManager:
                 experiment_name
             )
             if self.current_experiment is None:
-                if not self.create_if_not_exists:
+                if not self.create_run_if_not_exists:
                     LOGGER.warning(
-                        f"Experiment {experiment_name} not found and create_if_not_exists is False"
+                        f"Experiment {experiment_name} not found and create_run_if_not_exists is False"
                     )
 
                 experiment_id = self.client.create_experiment(
@@ -152,7 +152,25 @@ class MLflowManager:
             run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value,
         )
         self.run_id = self.current_run.info.run_id
+        self.set_run_status()
 
+    def set_run_status(self, status: str = "FINISHED") -> None:
+        """
+        Set the current run status to a terminal state using MlflowClient.
+
+        Args:
+            status: One of {"FINISHED", "FAILED", "KILLED"}
+        """
+        assert self.run_id is not None, "Run ID is not set"
+        if status:
+            self.client.set_terminated(self.run_id, status=status)
+        else:
+            self.client.set_terminated(self.run_id)
+    
+    def delete_run(self,run_id:str)->None:
+        self.client.delete_run(run_id=run_id)
+        LOGGER.info(f"Run {run_id} deleted")
+    
     def get_run_info(self) -> Dict[str, Any]:
         if self.current_run is None:
             raise ValueError("Run not set")
