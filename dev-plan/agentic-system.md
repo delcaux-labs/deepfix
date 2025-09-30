@@ -2,16 +2,6 @@
 
 ## Architecture Foundation
 
-### Agent Integration Strategy
-
-**Agents as Enhanced Steps**: Each agent implements the `Step` interface but with richer contracts:
-- Input: Typed `AgentContext` (extends pipeline `dict` context)  
-- Output: Structured `AgentResult` with confidence, citations, recommendations
-- Interface: `Agent.run(context: AgentContext) → AgentResult`
-
-**Pipeline Integration**: 
-1. `AgentCoordinator` runs applicable agents sequentially based on available artifacts
-2. `NarrativeSynthesizer` consolidates agent outputs into final `AdvisorResult`
 
 ### Data Flow
 ```
@@ -19,7 +9,7 @@ Raw Artifacts
      ↓
 ┌─────────────────┬─────────────────┐
 │ ArtifactAnalysis│ TrainingDynamics│ (Parallel execution)
-│     Agent       │     Agent       │
+│    Coordinator  │     Agent       │
 └─────────────────┴─────────────────┘
      ↓                    ↓
      └──────────┬─────────┘
@@ -27,8 +17,6 @@ Raw Artifacts
     CrossArtifactIntegrationAgent  (Sequential execution)
                 ↓
      OptimizationAdvisorAgent      (Uses integration insights)
-                ↓
-         NarrativeSynthesizer      (Final synthesis)
 ```
 ```
 ArtifactAnalysisCoordinator (Coordinator)
@@ -39,55 +27,6 @@ ArtifactAnalysisCoordinator (Coordinator)
 ```
 
 ## Concrete Agent Architecture
-
-### Agent Context Schema
-```python
-class AgentContext(BaseModel):
-    run_id: str
-    artifacts: List[Artifacts]  # From existing artifact loading
-    mlflow_metadata: Dict[str, Any]
-    
-    # Typed artifact accessors
-    training_artifacts: Optional[TrainingArtifacts] = None
-    deepchecks_artifacts: Optional[DeepchecksArtifacts] = None  
-    dataset_artifacts: Optional[DatasetArtifacts] = None
-    
-    # Agent coordination
-    completed_agents: List[str] = []
-    agent_results: Dict[str, AgentResult] = {}
-    knowledge_cache: Dict[str, Any] = {}
-```
-
-### Agent Result Schema
-```python
-class AgentResult(BaseModel):
-    agent_name: str
-    status: Literal["success", "partial", "failed"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    
-    # Core outputs
-    findings: List[Finding]
-    recommendations: List[Recommendation] 
-    risks: List[Risk]
-    
-    # Metadata
-    execution_time: float
-    artifacts_analyzed: List[str]
-    knowledge_refs: List[str] = []
-    
-class Finding(BaseModel):
-    type: str  # "anomaly", "pattern", "metric"
-    description: str
-    evidence: Dict[str, Any]
-    severity: Literal["low", "medium", "high"]
-
-class Recommendation(BaseModel):
-    action: str
-    rationale: str
-    priority: Literal["low", "medium", "high"]
-    implementation: str
-    expected_impact: str
-```
 
 ### Core Agents (Phase 1)
 
@@ -108,35 +47,6 @@ class Recommendation(BaseModel):
 - **Inputs**: Training artifacts + Deepchecks results + dataset metadata
 - **Outputs**: Hyperparameter recommendations, augmentation strategies, architecture suggestions
 - **Implementation**: Rule-based recommendations + knowledge retrieval
-
-### Agent Coordination
-
-**AgentCoordinator Step**:
-```python
-class AgentCoordinator(Step):
-    def __init__(self, intelligence_config: IntelligenceConfig):
-        self.agents = self._load_agents()
-        self.knowledge_bridge = KnowledgeBridge(intelligence_config)
-    
-    def run(self, context: dict) -> dict:
-        agent_context = AgentContext.from_pipeline_context(context)
-        
-        # Run applicable agents sequentially
-        for agent in self._get_applicable_agents(agent_context):
-            try:
-                result = agent.run(agent_context)
-                agent_context.agent_results[agent.name] = result
-                agent_context.completed_agents.append(agent.name)
-            except Exception as e:
-                self._handle_agent_failure(agent, e, agent_context)
-        
-        # Synthesize results
-        synthesizer = NarrativeSynthesizer(self.knowledge_bridge)
-        advisor_result = synthesizer.synthesize(agent_context)
-        
-        context["advisor_result"] = advisor_result
-        return context
-```
 
 ## Knowledge Integration
 
