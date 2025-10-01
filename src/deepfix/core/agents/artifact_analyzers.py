@@ -10,12 +10,8 @@ from ..artifacts import (
 )
 from .models import AgentContext, AgentResult, TrainingDynamicsConfig, Finding, Recommendation, Severity
 from ..config import LLMConfig
-from .signatures import (
-    DeepchecksArtifactsAnalysisSignature,
-    DatasetArtifactsAnalysisSignature,
-    ModelCheckpointArtifactsAnalysisSignature,
-    TrainingArtifactsAnalysisSignature
-)
+from .signatures import ArtifactAnalysisSignature
+
 from .training_dynamics_utils import TrainingDynamicsAnalyzer
 
 from ...utils.logging import get_logger
@@ -28,8 +24,8 @@ class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
+        llm: Optional[dspy.Module] = None,
     ):
-        llm = dspy.ChainOfThought(DeepchecksArtifactsAnalysisSignature)
         super().__init__(llm=llm, config=config)
 
     @property
@@ -88,8 +84,8 @@ class DatasetArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
+        llm: Optional[dspy.Module] = None,
     ):
-        llm = dspy.ChainOfThought(DatasetArtifactsAnalysisSignature)
         super().__init__(llm=llm, config=config)
 
     @property
@@ -148,8 +144,8 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
+        llm: Optional[dspy.Module] = None,
     ):
-        llm = dspy.ChainOfThought(ModelCheckpointArtifactsAnalysisSignature)
         super().__init__(llm=llm, config=config)
 
     @property
@@ -207,8 +203,7 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
 
 
 class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
-    def __init__(self, config: Optional[TrainingDynamicsConfig]=None,llm_config: Optional[LLMConfig]=None):
-        llm = dspy.ChainOfThought(TrainingArtifactsAnalysisSignature)
+    def __init__(self, config: Optional[TrainingDynamicsConfig]=None,llm_config: Optional[LLMConfig]=None,llm: Optional[dspy.Module] = None):
         super().__init__(llm=llm,config=llm_config)
         self.config = config or TrainingDynamicsConfig()
         self.logger = LOGGER
@@ -258,8 +253,9 @@ class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
     
     def _run(self, context: AgentContext) -> AgentResult:
         """Main analysis method following the specification"""
-        raise NotImplementedError
         
+        raise NotImplementedError("TrainingArtifactsAnalyzer is not implemented yet")
+
         # Find training artifacts
         training_artifacts = self._get_training_artifacts(context.artifacts)
         if not training_artifacts:

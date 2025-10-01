@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union
 from enum import StrEnum
+from datetime import datetime
 import pandas as pd
 
 from ..artifacts import Artifacts
@@ -10,38 +11,35 @@ class Severity(StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
 
-
 class AnalyzerTypes(StrEnum):
     TRAINING = "training"
     DEEPCHECKS = "deepchecks"
     DATASET = "dataset"
     MODEL_CHECKPOINT = "model_checkpoint"
 
-
 class Finding(BaseModel):
-    description: str
-    evidence: str
-    severity: Severity
+    description: str = Field(default=...,description="Short Description of the finding")
+    evidence: str = Field(default=...,description="Evidence of the finding")
+    severity: Severity = Field(default=...,description="Severity of the finding")
     confidence: float = Field(ge=0.0, le=1.0)
-
 
 class Recommendation(BaseModel):
-    action: str
-    rationale: str
-    priority: Severity
+    action: str =  Field(default=...,description="Action to take to address the finding")
+    rationale: str =  Field(default=...,description="Rationale for the recommendation")
+    priority: Severity = Field(default=...,description="Priority of the recommendation")
     confidence: float = Field(ge=0.0, le=1.0)
 
-
 class Analysis(BaseModel):
-    findings: Finding
-    recommendations: Recommendation
-
+    findings: Finding = Field(default=...,description="Finding of the analysis")
+    recommendations: Recommendation = Field(default=...,description="Recommendation based on the findings")
 
 class AgentResult(BaseModel):
     agent_name: str
     analysis: List[Analysis] = Field(default=[],description="List of Analysis elements")
     analyzed_artifacts: Optional[List[str]] = Field(default=None,description="List of artifacts analyzed by the agent")
-    refined_analysis: Optional[str] = Field(default=None,description="Refined analysis of the artifacts using all the available context")
+    retrieved_knowledge: Optional[List[str]] = Field(default=None,description="External knowledge relevant to the analysis")
+    additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
+    error_message: Optional[str] = Field(default=None,description="Error message if the agent failed")
 
 class AgentContext(BaseModel):
     artifacts: List[Artifacts]
@@ -66,9 +64,11 @@ class AgentContext(BaseModel):
                 row = {
                     'agent_name': agent_name,
                     'analyzed_artifacts': ', '.join(agent_result.analyzed_artifacts) if agent_result.analyzed_artifacts else '',
-                    'refined_analysis': agent_result.refined_analysis or '',
+                    'retrieved_knowledge': ', '.join(agent_result.retrieved_knowledge) if agent_result.retrieved_knowledge else '',
+                    'summary': agent_result.additional_outputs.get('summary', ''),
                     'finding_description': findings.description,
                     'finding_evidence': findings.evidence,
+                    'error_message': agent_result.error_message,
                     'finding_severity': findings.severity.value,
                     'finding_confidence': findings.confidence,
                     'recommendation_action': recommendations.action,
@@ -115,32 +115,31 @@ class AgentContext(BaseModel):
             summary += (f"\n{agent}:")
             summary += (f"\n  - Findings: {len(agent_df)}")
             summary += (f"\n  - Artifacts analyzed: {agent_df['analyzed_artifacts'].iloc[0] if not agent_df.empty else 'None'}")
-            if agent_df['refined_analysis'].iloc[0]:
-                summary += (f"\n  - Refined analysis: {agent_df['refined_analysis'].iloc[0][:100]}...")
+            if agent_df['summary'].iloc[0]:
+                summary += (f"\n  - Summary: {agent_df['summary'].iloc[0][:100]}...")
 
         return summary
 
 class ArtifactAnalysisResult(BaseModel):
     context: AgentContext = Field(default=...,description="Context of the analysis")
     summary: Optional[str] = Field(default=...,description="Summary of the analysis")
+    additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
 
     def to_text(self) -> str:
         summary = "\n" + "="*80
-        summary += "\nDEEPFIX ANALYSIS RESULT"
-        summary += "\n" + "="*80
+        summary += "\nDEEPFIX ANALYSIS RESULT\n"
         summary += f"\nDataset: {self.context.dataset_name}"
         summary += f"\nRun ID: {self.context.run_id}"
+        if self.additional_outputs.get('optimization_areas'):
+            summary += f"\nOptimization areas: {self.additional_outputs['optimization_areas']}"
+        if self.additional_outputs.get('constraints'):
+            summary += f"\nConstraints: {self.additional_outputs['constraints']}"
         summary += "\n" + "="*80
         summary += f"\nSummary of the analysis:\n{self.summary}"
         summary += "\n" + "="*80
         summary += self.context.to_text()        
         return summary
-
-        
-
-
-
-
+    
 class TrainingDynamicsConfig(BaseModel):
     # Analysis Configuration
     enabled_analyzers: List[str] = [
@@ -173,3 +172,111 @@ class TrainingDynamicsConfig(BaseModel):
     lightweight_mode: bool = True           # <10% overhead constraint
     max_analysis_time: float = 30.0        # Maximum analysis time in seconds
     small_model_optimized: bool = True     # Optimized for <100M parameters
+
+# ============================================================================
+# KnowledgeBridge Models
+# ============================================================================
+
+class KnowledgeDomain(StrEnum):
+    """Knowledge domains for retrieval"""
+    TRAINING = "training"
+    DATA_QUALITY = "data_quality"
+    ARCHITECTURE = "architecture"
+    OPTIMIZATION = "optimization"
+
+class QueryType(StrEnum):
+    """Types of knowledge queries"""
+    BEST_PRACTICE = "best_practice"
+    DIAGNOSTIC = "diagnostic"
+    SOLUTION = "solution"
+    VALIDATION = "validation"
+
+class KnowledgeDocument(BaseModel):
+    """Structured knowledge document for indexing"""
+    # Core Content
+    title: str
+    content: str
+    domain: KnowledgeDomain
+    knowledge_type: QueryType
+    
+    # Metadata for Retrieval
+    tags: List[str] = Field(default=[])
+    ml_frameworks: List[str] = Field(default=[], description="e.g., pytorch, lightning, tensorflow")
+    model_types: List[str] = Field(default=[], description="e.g., cnn, transformer, mlp")
+    problem_types: List[str] = Field(default=[], description="e.g., classification, regression")
+    
+    # Validation
+    confidence_level: float = Field(ge=0.0, le=1.0, default=0.8)
+    source: str = Field(description="Research paper, documentation, case study")
+    last_updated: Optional[datetime] = Field(default=None)
+    
+    # Application Context
+    prerequisites: List[str] = Field(default=[], description="When is this knowledge applicable?")
+    contraindications: List[str] = Field(default=[], description="When should this NOT be used?")
+    examples: List[str] = Field(default=[])
+
+class KnowledgeItem(BaseModel):
+    """Single piece of retrieved knowledge"""
+    content: str
+    source: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    metadata: Dict[str, Any] = Field(default={})
+
+class AgentKnowledgeRequest(BaseModel):
+    """Standard knowledge request from agents"""
+    requesting_agent: str
+    domain: KnowledgeDomain
+    query_type: QueryType
+    
+    # Context from agent analysis
+    findings: List[Finding] = Field(default=[])
+    artifacts_analyzed: List[str] = Field(default=[])
+    constraints: Dict[str, Any] = Field(default={})
+    
+    # Retrieval preferences
+    max_results: int = Field(default=5, ge=1, le=20)
+    min_confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    include_citations: bool = Field(default=True)
+    
+    def to_query_string(self) -> str:
+        """Convert request to natural language query"""
+        parts = []
+        
+        # Add domain and query type
+        parts.append(f"{self.query_type.value} for {self.domain.value}")
+        
+        # Add findings context
+        if self.findings:
+            finding_desc = ", ".join([f.description for f in self.findings[:2]])
+            parts.append(f"Issues: {finding_desc}")
+        
+        # Add constraints
+        if self.constraints:
+            constraint_str = ", ".join([f"{k}={v}" for k, v in list(self.constraints.items())[:3]])
+            parts.append(f"Context: {constraint_str}")
+        
+        return ". ".join(parts)
+
+class KnowledgeResponse(BaseModel):
+    """Structured knowledge response"""
+    retrieved_knowledge: List[KnowledgeItem]
+    synthesis: str = Field(description="Coherent summary of all evidence")
+    confidence: float = Field(ge=0.0, le=1.0, description="Overall confidence in response")
+    citations: List[str] = Field(default=[])
+    
+    # For recommendation validation
+    supporting_evidence: Dict[str, List[str]] = Field(default={})
+    contradicting_evidence: Dict[str, List[str]] = Field(default={})
+    
+    # Metadata
+    retrieval_strategy: str = Field(default="semantic")
+    num_queries_executed: int = Field(default=1)
+    retrieval_time: float = Field(default=0.0, description="Time in seconds")
+
+class ValidationResult(BaseModel):
+    """Evidence validation result"""
+    evidence: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    relevance: str
+    is_valid: bool

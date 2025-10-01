@@ -148,7 +148,7 @@ class ChecksPipeline(Pipeline):
         return super().run(**self.context)
 
 
-class DatasetLoggingPipeline(Pipeline):
+class DatasetIngestionPipeline(Pipeline):
     def __init__(
         self,
         dataset_name: str,

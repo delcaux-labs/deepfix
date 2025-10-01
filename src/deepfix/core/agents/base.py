@@ -5,6 +5,7 @@ from ..config import PromptConfig, LLMConfig
 from ..prompt_builders import PromptBuilder
 from ..artifacts import Artifacts
 from .models import AgentContext, AgentResult
+from .signatures import ArtifactAnalysisSignature
 
 from ...utils.logging import get_logger
 
@@ -39,15 +40,19 @@ class Agent(dspy.Module):
     
     def forward(self, **kwargs) -> AgentResult:
         raise NotImplementedError("Subclasses must implement this method")
+    
+    @property
+    def system_prompt(self) -> str:
+        return ""
 
 
 class ArtifactAnalyzer(Agent):
     def __init__(
-        self, llm: dspy.Module, config: Optional[LLMConfig] = None, config_prompt_builder: Optional[PromptConfig] = None
+        self, llm: Optional[dspy.Module] = None, config: Optional[LLMConfig] = None, config_prompt_builder: Optional[PromptConfig] = None
     ):
         super().__init__(config=config)
         self.prompt_builder = PromptBuilder(config=config_prompt_builder)
-        self.llm = llm
+        self.llm = llm or dspy.ChainOfThought(ArtifactAnalysisSignature)
     
     def _check_artifacts(self, artifacts: List[Artifacts]) -> bool:
         if not all(self.supports_artifact(a) for a in artifacts):
@@ -57,7 +62,7 @@ class ArtifactAnalyzer(Agent):
         self._check_artifacts(context.artifacts)
         prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
         with self._llm_context():
-            response = self.llm(artifacts=prompt)
+            response = self.llm(artifacts=prompt,system_prompt=self.system_prompt)
         return AgentResult(
             agent_name=self.agent_name,
             analysis=response.analysis,
@@ -75,6 +80,3 @@ class ArtifactAnalyzer(Agent):
     def supports_artifact(self, artifact: Artifacts) -> bool:
         return isinstance(artifact, self.supported_artifact_types)
 
-    @property
-    def system_prompt(self) -> str:
-        raise NotImplementedError("Subclasses must implement this method")

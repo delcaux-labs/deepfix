@@ -7,11 +7,11 @@ from .artifact_analyzers import (DeepchecksArtifactsAnalyzer,
 DatasetArtifactsAnalyzer, 
 ModelCheckpointArtifactsAnalyzer,
 TrainingArtifactsAnalyzer)
-from .base import ArtifactAnalyzer, Agent
+from .base import ArtifactAnalyzer
 from ..pipelines import ArtifactLoadingPipeline
 from ..config import MLflowConfig,ArtifactConfig, LLMConfig
 from ...utils.logging import get_logger
-from .cross_artifact_reasoning import CrossArtifactIntegrationAgent
+from .cross_artifact_reasoning import CrossArtifactReasoningAgent
 
 LOGGER = get_logger(__name__)
 
@@ -39,6 +39,7 @@ class ArtifactAnalysisCoordinator:
         self.training_dynamics_config = training_dynamics_config
 
         if llm_config is None:
+            assert env_file is not None, "env_file must be provided if llm_config is not provided"
             self.llm_config = LLMConfig.load_from_env(env_file=env_file)
 
         if mlflow_config is None:
@@ -62,12 +63,13 @@ class ArtifactAnalysisCoordinator:
         
         if training_dynamics_config is None:
             self.training_dynamics_config = TrainingDynamicsConfig()
-
+        
+        #initialize agents and loaders
         self.dataset_name = self.artifact_config.dataset_name
         self.artifacts_loader = self._initialize_artifacts_loader()
         self.analyzer_agents = self._initialize_analyzer_agents()
         self.trace_llm_requests = self.mlflow_config.trace_dspy
-        self.cross_artifact_reasoning_agent = CrossArtifactIntegrationAgent(llm_config=self.llm_config)
+        self.cross_artifact_reasoning_agent = CrossArtifactReasoningAgent(llm_config=self.llm_config)
 
         # Initialize tracing
         self._initialize_tracing()    
@@ -87,11 +89,15 @@ class ArtifactAnalysisCoordinator:
         return cls(mlflow_config=mlflow_config, artifact_config=artifact_config, llm_config=llm_config, env_file=env_file)
     
     def _analyze_one_artifact(self, artifact: Artifacts) -> AgentResult:
-        analyzer_agent = self._get_analyzer_agent(artifact)
-        if analyzer_agent:
-            focused_context = self._create_focused_context(artifact)
-            result = analyzer_agent(focused_context)
-            return result
+        try:
+            analyzer_agent = self._get_analyzer_agent(artifact)
+            if analyzer_agent:
+                focused_context = self._create_focused_context(artifact)
+                result = analyzer_agent(focused_context)
+                return result
+        except Exception as e:
+            LOGGER.error(f"Error analyzing artifact {artifact}: {e}")
+            return AgentResult(agent_name="None", error_message=str(e))
 
     def run(self,max_workers:int=3) -> ArtifactAnalysisResult:   
         #1. Create context  
@@ -110,7 +116,9 @@ class ArtifactAnalysisCoordinator:
         context.agent_results[out.agent_name] = out
 
         #4. Output results
-        output = ArtifactAnalysisResult(context=context, summary=out.refined_analysis)
+        output = ArtifactAnalysisResult(context=context, 
+                                        summary=out.additional_outputs['summary'],
+                                    )
         return output
     
     def create_context(self,) -> AgentContext:

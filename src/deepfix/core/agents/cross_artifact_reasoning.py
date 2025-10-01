@@ -2,15 +2,14 @@ import dspy
 from typing import Dict, Optional
 from ..config import LLMConfig
 from .base import Agent, AgentResult
-from .signatures import ArtifactsAnalysisSignature
+from .signatures import CrossArtifactReasoningSignature
 
-class CrossArtifactIntegrationAgent(Agent):
+class CrossArtifactReasoningAgent(Agent):
     def __init__(
         self,llm_config: Optional[LLMConfig] = None
     ):
         super().__init__(config=llm_config)
-        self.llm = dspy.ChainOfThought(ArtifactsAnalysisSignature)
-        self.agent_name = "cross_artifact_integration"
+        self.llm = dspy.ChainOfThought(CrossArtifactReasoningSignature)
 
     def forward(
         self,
@@ -19,10 +18,22 @@ class CrossArtifactIntegrationAgent(Agent):
         
         assert len(previous_analyses) > 0, "At least one analysis must be provided"
         with self._llm_context():
-            out = self.llm(previous_analyses=previous_analyses)
+            out = self.llm(system_prompt=self.system_prompt,
+            previous_analyses=previous_analyses)
+        analyzed_artifacts = []
+        retrieved_knowledge = []
+        for result in previous_analyses.values():
+            if result.analyzed_artifacts is not None:
+                analyzed_artifacts.extend(result.analyzed_artifacts)
+            if result.retrieved_knowledge is not None:
+                retrieved_knowledge.extend(result.retrieved_knowledge)
+
         return AgentResult(
-            agent_name=self.agent_name, 
-            refined_analysis=out.refined_analysis,
+            agent_name=self.agent_name,
+            analysis=out.analysis,
+            analyzed_artifacts=analyzed_artifacts,
+            retrieved_knowledge=retrieved_knowledge,
+            additional_outputs={'summary': out.summary}
         )
 
     @property
