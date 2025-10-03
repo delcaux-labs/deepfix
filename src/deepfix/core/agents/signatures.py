@@ -1,7 +1,13 @@
 """DSPy signatures for agent reasoning"""
 import dspy
 from typing import List, Optional
-from .models import Analysis,AgentResult
+from .models import (Analysis,
+                    AgentKnowledgeRequest,
+                    AgentResult,
+                    QueryGenerationResult,
+                    EvidenceValidationResult,
+                    KnowledgeItem
+                )
 
 class ArtifactAnalysisSignature(dspy.Signature):
     """Analyze dataset, model checkpoint, training artifacts for issues and recommendations"""
@@ -23,50 +29,38 @@ class CrossArtifactReasoningSignature(dspy.Signature):
 class QueryGenerationSignature(dspy.Signature):
     """Transform agent knowledge request into optimized retrieval queries"""
     
-    agent_context: str = dspy.InputField(
+    request: AgentKnowledgeRequest = dspy.InputField(
         desc="Context from requesting agent (findings, artifacts, constraints)"
-    )
-    domain: str = dspy.InputField(
-        desc="Knowledge domain (training, data_quality, optimization, architecture)"
-    )
-    query_type: str = dspy.InputField(
-        desc="Type of knowledge needed (best_practice, diagnostic, solution, validation)"
-    )
+    )    
     
-    retrieval_queries: List[str] = dspy.OutputField(
-        desc="List of 3-5 optimized queries for multi-aspect retrieval"
-    )
-    search_strategy: str = dspy.OutputField(
-        desc="Retrieval strategy (semantic, hybrid, keyword-based)"
-    )
-    reasoning: str = dspy.OutputField(
-        desc="Brief reasoning for query formulation"
+    result: QueryGenerationResult = dspy.OutputField(
+        desc="Query generation result with optimized queries, search strategy, rationale etc."
     )
 
 
 class EvidenceValidationSignature(dspy.Signature):
-    """Validate and score retrieved evidence"""
+    """Validate and score retrieved evidences for a given question"""
     
-    context: str = dspy.InputField(
-        desc="Original request context and requirements"
-    )
-    evidence: str = dspy.InputField(
-        desc="Retrieved evidence to validate"
-    )
-    question: str = dspy.InputField(
-        desc="Original question or query"
-    )
+    question: str = dspy.InputField(description="Original question or query")
+    context: AgentKnowledgeRequest = dspy.InputField(description="Requesting agent's context")    
+    retrieved_evidences: List[KnowledgeItem] = dspy.InputField(description="Retrieved evidences to validate")
     
-    confidence_score: str = dspy.OutputField(
-        desc="Confidence score between 0.0 and 1.0"
-    )
-    relevance_explanation: str = dspy.OutputField(
-        desc="Explanation of why this evidence is or isn't relevant"
-    )
-    is_actionable: str = dspy.OutputField(
-        desc="Whether the evidence provides actionable insights (yes/no)"
+    result: List[EvidenceValidationResult] = dspy.OutputField(
+        desc="Evidence validation result for each evidence"
     )
 
+class KnowledgeBridgeReActSignature(dspy.Signature):
+    """Retrieve evidence from knowledge base for a given question"""
+    
+    request: AgentKnowledgeRequest = dspy.InputField(description="Requesting agent's context")
+    
+    queries: List[str] = dspy.OutputField(description="Generated queries")
+    retrieved_evidences: List[List[KnowledgeItem]] = dspy.OutputField(description="List of retrieved evidences for each query")
+    evidence_validations: List[List[EvidenceValidationResult]] = dspy.OutputField(
+        desc="List of evidence validation results for each retrieved evidence"
+    )
+
+    
 
 class ResponseSynthesisSignature(dspy.Signature):
     """Synthesize multiple evidence pieces into coherent response"""
@@ -74,12 +68,10 @@ class ResponseSynthesisSignature(dspy.Signature):
     original_query: str = dspy.InputField(
         desc="Original knowledge request query"
     )
-    evidence_items: str = dspy.InputField(
+    evidence_items: List[KnowledgeItem] = dspy.InputField(
         desc="Retrieved evidence items with scores"
     )
-    domain: str = dspy.InputField(
-        desc="Knowledge domain context"
-    )
+    
     
     synthesis: str = dspy.OutputField(
         desc="Coherent summary synthesizing all evidence"

@@ -1,4 +1,4 @@
-from typing import List, Type, Optional, Tuple
+from typing import List, Type, Optional, Tuple, Any
 from contextlib import contextmanager, nullcontext
 import dspy
 from ..config import PromptConfig, LLMConfig
@@ -38,7 +38,7 @@ class Agent(dspy.Module):
         ):
             yield
     
-    def forward(self, **kwargs) -> AgentResult:
+    def forward(self, *args, **kwargs) -> Any:
         raise NotImplementedError("Subclasses must implement this method")
     
     @property

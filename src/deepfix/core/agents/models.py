@@ -6,6 +6,9 @@ import pandas as pd
 
 from ..artifacts import Artifacts
 
+# ============================================================================
+# Analysis data Models
+# ============================================================================
 class Severity(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
@@ -21,13 +24,13 @@ class Finding(BaseModel):
     description: str = Field(default=...,description="Short Description of the finding")
     evidence: str = Field(default=...,description="Evidence of the finding")
     severity: Severity = Field(default=...,description="Severity of the finding")
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0,description="Confidence in the finding and severity")
 
 class Recommendation(BaseModel):
     action: str =  Field(default=...,description="Action to take to address the finding")
     rationale: str =  Field(default=...,description="Rationale for the recommendation")
     priority: Severity = Field(default=...,description="Priority of the recommendation")
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0,description="Confidence in the recommendation")
 
 class Analysis(BaseModel):
     findings: Finding = Field(default=...,description="Finding of the analysis")
@@ -219,64 +222,50 @@ class KnowledgeItem(BaseModel):
     """Single piece of retrieved knowledge"""
     content: str
     source: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    relevance_score: float = Field(ge=0.0, le=1.0)
-    metadata: Dict[str, Any] = Field(default={})
+    confidence: Optional[float] = Field(default=None,description="Confidence score on relevance of evidence to the question, between 0.0 and 1.0")
+    relevance_score: Optional[float] = Field(default=None,description="Relevance score of the evidence to the question, between 0.0 and 1.0")
+    metadata: Dict[str, Any] = Field(default={},description="Metadata of the evidence")
 
 class AgentKnowledgeRequest(BaseModel):
     """Standard knowledge request from agents"""
     requesting_agent: str
-    domain: KnowledgeDomain
+    domain: Optional[KnowledgeDomain] = Field(default=None,description="Knowledge domain for the retrieval. If None, all domains will be searched.")
     query_type: QueryType
     
     # Context from agent analysis
-    findings: List[Finding] = Field(default=[])
-    artifacts_analyzed: List[str] = Field(default=[])
-    constraints: Dict[str, Any] = Field(default={})
+    agent_result: AgentResult
     
     # Retrieval preferences
     max_results: int = Field(default=5, ge=1, le=20)
     min_confidence: float = Field(default=0.7, ge=0.0, le=1.0)
-    include_citations: bool = Field(default=True)
+
+class QueryGenerationResult(BaseModel):
+    domain: KnowledgeDomain = Field(
+        description="Knowledge domain for the retrieval"
+    )
+    retrieval_queries: List[str] = Field(
+        description="List of optimized queries for multi-aspect retrieval"
+    )
+    search_strategy: str = Field(
+        description="Retrieval strategy (semantic, hybrid, keyword-based)"
+    )
+    rationale: str = Field(
+        description="Concise rationale behind the query formulation"
+    )
+
+
+class EvidenceValidationResult(BaseModel):
+    """Evidence validation result. It contains the confidence, relevance, and actionable status for an evidence."""
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score on relevance of evidence to the question, between 0.0 and 1.0")
+    relevance: str = Field(description="Explanation of why this evidence is or isn't relevant")
+    is_actionable: bool = Field(description="Whether the evidence provides actionable insights True/False")
+    is_contradictory: bool = Field(description="Whether the evidence contradicts the question True/False")
     
-    def to_query_string(self) -> str:
-        """Convert request to natural language query"""
-        parts = []
-        
-        # Add domain and query type
-        parts.append(f"{self.query_type.value} for {self.domain.value}")
-        
-        # Add findings context
-        if self.findings:
-            finding_desc = ", ".join([f.description for f in self.findings[:2]])
-            parts.append(f"Issues: {finding_desc}")
-        
-        # Add constraints
-        if self.constraints:
-            constraint_str = ", ".join([f"{k}={v}" for k, v in list(self.constraints.items())[:3]])
-            parts.append(f"Context: {constraint_str}")
-        
-        return ". ".join(parts)
 
 class KnowledgeResponse(BaseModel):
     """Structured knowledge response"""
+    query: str
     retrieved_knowledge: List[KnowledgeItem]
-    synthesis: str = Field(description="Coherent summary of all evidence")
-    confidence: float = Field(ge=0.0, le=1.0, description="Overall confidence in response")
-    citations: List[str] = Field(default=[])
-    
-    # For recommendation validation
-    supporting_evidence: Dict[str, List[str]] = Field(default={})
-    contradicting_evidence: Dict[str, List[str]] = Field(default={})
-    
-    # Metadata
-    retrieval_strategy: str = Field(default="semantic")
-    num_queries_executed: int = Field(default=1)
-    retrieval_time: float = Field(default=0.0, description="Time in seconds")
+    validation_results: List[EvidenceValidationResult]
 
-class ValidationResult(BaseModel):
-    """Evidence validation result"""
-    evidence: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    relevance: str
-    is_valid: bool
+
