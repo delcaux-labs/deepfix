@@ -5,7 +5,7 @@
 [![MLflow](https://img.shields.io/badge/MLflow-3.0+-orange.svg)](https://mlflow.org/)
 [![PyTorch Lightning](https://img.shields.io/badge/PyTorch%20Lightning-2.0+-yellow.svg)](https://pytorch-lightning.readthedocs.io/)
 
-DeepFix is an intelligent AI assistant that integrates directly into the ML workflow (starting with PyTorch Lightning and MLflow). Our platform automatically diagnoses common bugs in machine learning and provides a prioritized list of solutions backed by industry/research best practices.
+DeepFix is an AI agent assistant that automatically diagnoses common bugs in machine learning and provides a prioritized list of solutions backed by industry/research best practices. It integrates directly into ML workflows.
 
 ## ✨ Features
 
@@ -31,16 +31,34 @@ uv pip install -e .
 ### Basic Usage
 
 ```python
-from deepfix import DeepFix
+from deepfix.core.pipelines.factory import DatasetIngestionPipeline
+from deepfix.zoo.datasets.foodwaste import load_train_and_val_datasets
 
-# Initialize DeepFix with your MLflow experiment
-deepfix = DeepFix(mlflow_experiment="my_experiment")
+# Load image datasets
+train_data, val_data = load_train_and_val_datasets(
+    image_size=448,
+    batch_size=8,
+    num_workers=4,
+    pin_memory=False,)
 
-# Run diagnostics on your model
-results = deepfix.diagnose(model, data_loader)
+dataset_name="cafetaria-foodwaste"
+dataset_logging_pipeline = DatasetIngestionPipeline(dataset_name=dataset_name,
+                                                train_test_validation=True,
+                                                data_integrity=True,
+                                                batch_size=8,
+                                                overwrite=False # True -> i.e. delete and re-create
+                                                )
+                                                
+dataset_logging_pipeline.run(train_data=train_data,
+                            test_data=val_data,
+                        )
+
+# Run diagnostics on your data
+analyzer = DatasetAnalyzer(env_file=env_file,)
 
 # Get prioritized solutions
-solutions = results.get_solutions()
+result = analyzer.run(dataset_name=dataset_name)
+print(result.to_text())
 ```
 
 ## 📝 License
@@ -54,7 +72,7 @@ We welcome contributions! Please feel free to submit issues and pull requests.
 ## 📧 Support
 
 - **Issues**: [GitHub Issues](https://github.com/delcaux-labs/deepfix/issues)
-- **Email**: Contact us at team@delcaux-labs.com
+- **Email**: Contact us at fadel.seydou@delcaux.com
 
 ---
 
