@@ -42,39 +42,16 @@ ArtifactAnalysisCoordinator (Coordinator)
 - **Outputs**: Gradient anomalies, overfitting detection, training stability assessment
 - **Implementation**: Statistical analysis of training curves, threshold-based detection
 
-**3. OptimizationAdvisorAgent**
+**3. KnowledgeBridge**
+- **Purpose**: serves as the knowledge retrieval backbone for system
+
+**4. OptimizationAdvisorAgent**
 - **Purpose**: Suggest model and data improvements based on training context
 - **Inputs**: Training artifacts + Deepchecks results + dataset metadata
 - **Outputs**: Hyperparameter recommendations, augmentation strategies, architecture suggestions
 - **Implementation**: Rule-based recommendations + knowledge retrieval
 
 ## Knowledge Integration
+**KnowledgeBridge**: agent knowledge retrieval
 
-**KnowledgeBridge**: Extends existing `IntelligenceClient` pattern
-```python
-class KnowledgeBridge:
-    def __init__(self, intelligence_config: IntelligenceConfig):
-        self.client = IntelligenceClient(intelligence_config)
-        self.cache = {}
-    
-    def retrieve_best_practices(self, domain: str, context: Dict) -> List[str]:
-        # Query LLM for domain-specific best practices
-        
-    def validate_recommendation(self, recommendation: str, evidence: Dict) -> float:
-        # Get confidence score for recommendation
-```
 
-## Configuration Integration
-
-**Extend AdvisorConfig**:
-```python
-class AgentConfig(BaseModel):
-    enabled_agents: List[str] = ["artifact_analysis", "training_dynamics", "optimization_advisor"]
-    agent_timeouts: Dict[str, float] = {"default": 30.0}
-    confidence_thresholds: Dict[str, float] = {"default": 0.7}
-    fallback_to_legacy: bool = True  # Backward compatibility
-
-class AdvisorConfig(BaseModel):
-    # ... existing fields ...
-    agents: AgentConfig = Field(default_factory=AgentConfig)
-```

@@ -67,6 +67,7 @@ def _default_mlflow_artifact_root(data_dir: Path) -> str:
     artifact_root = data_dir / "mlflow_artifacts"
     artifact_root.mkdir(parents=True, exist_ok=True)
     return str(artifact_root)
+
 def _default_sqlite_path(data_dir: Path) -> str:
     sqlite_path = data_dir / "tmp" / "artifacts.db"
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)
@@ -76,6 +77,23 @@ def _default_output_dir(data_dir: Path) -> str:
     out = data_dir / "advisor_output"
     out.mkdir(parents=True, exist_ok=True)
     return str(out)
+
+def _default_knowledge_base_dir(data_dir: Path) -> str:
+    knowledge_base_dir = data_dir / "knowledge_base"
+    knowledge_base_dir.mkdir(parents=True, exist_ok=True)
+    return str(knowledge_base_dir)
+
+def _default_knowledge_base_indices_dir(data_dir: Path) -> str:
+    p = _default_knowledge_base_dir(data_dir)
+    knowledge_base_indices_dir = Path(p) / "indices"
+    knowledge_base_indices_dir.mkdir(parents=True, exist_ok=True)
+    return str(knowledge_base_indices_dir)
+
+def _default_knowledge_base_documents_dir(data_dir: Path) -> str:
+    p = _default_knowledge_base_dir(data_dir)
+    knowledge_base_documents_dir = Path(p) / "documents"
+    knowledge_base_documents_dir.mkdir(parents=True, exist_ok=True)
+    return str(knowledge_base_documents_dir)
 
 _BASE_DIRS = _get_base_dirs()
 
@@ -91,6 +109,10 @@ class DefaultPaths(StrEnum):
     ARTIFACTS_SQLITE_PATH = _default_sqlite_path(_BASE_DIRS["data"])
 
     ADVISOR_OUTPUT_DIR = _default_output_dir(_BASE_DIRS["data"])
+
+    KNOWLEDGE_BASE_DIR = _default_knowledge_base_dir(_BASE_DIRS["data"])
+    KNOWLEDGE_BASE_INDICES_DIR = _default_knowledge_base_indices_dir(_BASE_DIRS["data"])
+    KNOWLEDGE_BASE_DOCUMENTS_DIR = _default_knowledge_base_documents_dir(_BASE_DIRS["data"])
 
 
 class MLflowConfig(BaseModel):

@@ -1,16 +1,19 @@
 """Knowledge base manager for document loading and indexing"""
 import json
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 from datetime import datetime
 
 from llama_index.core import Document, VectorStoreIndex, StorageContext
-from llama_index.core.node_parser import SimpleNodeParser
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core import load_index_from_storage
+from llama_index.core.node_parser import (
+    HierarchicalNodeParser,
+    SentenceSplitter,
+)
 
 from ..agents.models import KnowledgeDocument, KnowledgeDomain, KnowledgeItem
 from ...utils.logging import get_logger
+from ..config import DefaultPaths
 
 logger = get_logger(__name__)
 
@@ -20,20 +23,13 @@ class KnowledgeBaseManager:
     
     def __init__(
         self, 
+        embed_model: Callable,
         documents_dir: Optional[Path] = None,
         index_dir: Optional[Path] = None,
-        use_openai: bool = False
-    ):
-        if not LLAMAINDEX_AVAILABLE:
-            raise ImportError(
-                "LlamaIndex is not installed. Install with: pip install llama-index"
-            )
-        
-        self.documents_dir = documents_dir or Path(__file__).parent / "documents"
-        self.index_dir = index_dir or Path(__file__).parent / "indices"
-        self.index_dir.mkdir(parents=True, exist_ok=True)
-        
-        self.use_openai = use_openai
+    ):                
+        self.documents_dir = documents_dir or Path(DefaultPaths.KNOWLEDGE_BASE_DOCUMENTS_DIR.value)
+        self.index_dir = index_dir or Path(DefaultPaths.KNOWLEDGE_BASE_INDICES_DIR.value)
+        self.embed_model = embed_model        
         self.documents: List[KnowledgeDocument] = []
         self.indices: Dict[str, VectorStoreIndex] = {}
         
@@ -58,6 +54,12 @@ class KnowledgeBaseManager:
         logger.info(f"Loaded {len(documents)} knowledge documents")
         return documents
     
+    def get_index_name(self, domain: KnowledgeDomain) -> str:
+        return f"{domain.value}_index"
+    
+    def get_index_path(self, domain: KnowledgeDomain) -> Path:
+        return self.index_dir / self.get_index_name(domain)
+
     def _create_llama_documents(self, kb_docs: List[KnowledgeDocument]) -> List[Document]:
         """Convert KnowledgeDocument to LlamaIndex Document format"""
         llama_docs = []
@@ -86,36 +88,23 @@ class KnowledgeBaseManager:
         
         return llama_docs
     
-    def build_index(self, domain: Optional[KnowledgeDomain] = None) -> VectorStoreIndex:
+    def build_index(self, domain: KnowledgeDomain) -> VectorStoreIndex:
         """Build vector index for documents, optionally filtered by domain"""
-        if not self.documents:
+        if len(self.documents) == 0:
             self.load_documents()
         
         # Filter by domain if specified
-        if domain:
-            filtered_docs = [d for d in self.documents if d.domain == domain]
-            index_name = f"{domain.value}_index"
-        else:
-            filtered_docs = self.documents
-            index_name = "global_index"
+        filtered_docs = [d for d in self.documents if d.domain == domain]
+        index_name = self.get_index_name(domain)
         
         logger.info(f"Building index '{index_name}' with {len(filtered_docs)} documents")
         
         # Convert to LlamaIndex documents
         llama_docs = self._create_llama_documents(filtered_docs)
-        
-        # Build index
-        if self.use_openai:
-            # Use OpenAI embeddings (requires API key)
-            from llama_index.embeddings.openai import OpenAIEmbedding
-            embed_model = OpenAIEmbedding(model="text-embedding-3-small")
-        else:
-            # Use default local embeddings
-            embed_model = "local:BAAI/bge-small-en-v1.5"  # Small, fast model
-        
+                
         index = VectorStoreIndex.from_documents(
             llama_docs,
-            embed_model=embed_model,
+            embed_model=self.embed_model,
             show_progress=True
         )
         
@@ -124,34 +113,33 @@ class KnowledgeBaseManager:
         
         return index
     
-    def get_index(self, domain: Optional[KnowledgeDomain] = None) -> VectorStoreIndex:
+    def get_index(self, domain: KnowledgeDomain) -> VectorStoreIndex:
         """Get index for domain, building if necessary"""
-        index_name = f"{domain.value}_index" if domain else "global_index"
+        index_name = self.get_index_name(domain)
         
         if index_name not in self.indices:
             self.build_index(domain)
         
         return self.indices[index_name]
     
-    def save_index(self, domain: Optional[KnowledgeDomain] = None)->None:
+    def save_index(self, domain: KnowledgeDomain)->None:
         """Save index to disk"""
-        index_name = f"{domain.value}_index" if domain else "global_index"
+        index_name = self.get_index_name(domain)
         
         if index_name not in self.indices:
             logger.warning(f"Index '{index_name}' not found, building it first")
             self.build_index(domain)
         
         index = self.indices[index_name]
-        persist_path = self.index_dir / index_name
+        persist_path = self.get_index_path(domain)
         index.storage_context.persist(persist_dir=str(persist_path))
         logger.info(f"Index '{index_name}' saved to {persist_path}")
     
-    def load_index(self, domain: Optional[KnowledgeDomain] = None) -> VectorStoreIndex:
+    def load_index(self, domain: KnowledgeDomain) -> VectorStoreIndex:
         """Load index from disk"""
-        
-        
-        index_name = f"{domain.value}_index" if domain else "global_index"
-        persist_path = self.index_dir / index_name
+                
+        index_name = self.get_index_name(domain)
+        persist_path = self.get_index_path(domain)
         
         if not persist_path.exists():
             logger.warning(f"Index '{index_name}' not found on disk, building new one")
@@ -173,14 +161,14 @@ class KnowledgeBaseManager:
     def search_documents(
         self, 
         query: str, 
-        domain: Optional[KnowledgeDomain] = None,
+        domain: KnowledgeDomain = KnowledgeDomain.GLOBAL,
         top_k: int = 5
     ) -> List[KnowledgeItem]:
         """Search knowledge base and return results"""
         index = self.get_index(domain)
-        query_engine = index.as_query_engine(similarity_top_k=top_k)
+        retriever = index.as_retriever(similarity_top_k=top_k)
         
-        response = query_engine.query(query)
+        response = retriever.retrieve(query)
         
         results = [KnowledgeItem(
             content=node.text,

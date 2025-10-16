@@ -39,6 +39,8 @@ The `TrainingArtifactsAnalyzerAgent` is responsible for analyzing training metri
 **Purpose**: Identify overfitting patterns through train-validation metric divergence analysis.
 
 ##### Specific Detection Methods
+**Model architecture visualization**:
+- Use torchinfo to get a summary
 **Performance Gap Analysis**:
 - Calculate absolute and relative gaps between train and validation metrics
 - Track gap progression over training epochs

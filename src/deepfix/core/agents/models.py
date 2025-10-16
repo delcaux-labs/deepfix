@@ -186,6 +186,7 @@ class KnowledgeDomain(StrEnum):
     DATA_QUALITY = "data_quality"
     ARCHITECTURE = "architecture"
     OPTIMIZATION = "optimization"
+    GLOBAL = "global"
 
 class QueryType(StrEnum):
     """Types of knowledge queries"""

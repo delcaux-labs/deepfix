@@ -1,12 +1,11 @@
 """KnowledgeBridge: Intelligent knowledge retrieval agent"""
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any, Union, Callable
 import time
 from pathlib import Path
 import dspy
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
-from litellm.responses.litellm_completion_transformation.transformation import ResponsesAPIOptionalRequestParams
 
 from .base import Agent
 from .models import (
@@ -44,13 +43,14 @@ class KnowledgeBridge(Agent):
     
     def __init__(
         self, 
-        llm_config: Optional[LLMConfig] = None,
-        documents_dir: Optional[Path] = None,
+        documents_dir: str,
+        embed_model: Callable,
+        llm_config: Optional[LLMConfig] = None,        
         num_workers: int = 3
     ):
         super().__init__(config=llm_config)        
         self.num_workers = num_workers
-        self.kb_manager = KnowledgeBaseManager(documents_dir=documents_dir)
+        self.kb_manager = KnowledgeBaseManager(documents_dir=Path(documents_dir), embed_model=embed_model)
         # Load documents on initialization
         self.kb_manager.load_documents()
         
@@ -159,10 +159,11 @@ class KnowledgeBridge(Agent):
 class KnowledgeBridgeReActAgent(KnowledgeBridge):
     """ReAct-based agentic RAG for knowledge retrieval"""
     
-    def __init__(self, llm_config: LLMConfig, documents_dir: Optional[Path] = None, max_iters: int = 3):
+    def __init__(self, llm_config: LLMConfig, documents_dir: str, embed_model: Callable, max_iters: int = 3):
         super().__init__(
             llm_config=llm_config,
             documents_dir=documents_dir,
+            embed_model=embed_model,
         )
         self.orchestrator = dspy.ReAct(KnowledgeBridgeReActSignature, tools=self.get_tools(),max_iters=max_iters)    
 
