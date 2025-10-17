@@ -7,7 +7,7 @@ from DeepchecksArtifacts instances.
 
 from typing import Optional, Dict, Any, Union
 from .base import BasePromptBuilder
-from ..artifacts import (
+from ...shared.models import (
     DeepchecksArtifacts,
     DeepchecksParsedResult,
     Artifacts,

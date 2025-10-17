@@ -1,13 +1,16 @@
-from typing import Optional
+from typing import Optional, List, Union
 from .base import Step
 from ..utils.logging import get_logger
-from ..artifacts import (
-    ArtifactsManager,
+from ...shared.models import (
     ArtifactPath,
     DatasetArtifacts,
     DeepchecksArtifacts,
+    Artifacts,
+    TrainingArtifacts,
+    ModelCheckpointArtifacts,
 )
 from ..integrations import MLflowManager
+from ..artifacts import ArtifactsManager
 
 
 class LoadArtifact(Step):
@@ -26,20 +29,23 @@ class LoadArtifact(Step):
         self.run_id = run_id or self.mlflow_manager.run_id
         self.logger = get_logger(self.__class__.__name__)
 
-    def run(self, context: dict) -> dict:
-        assert self.run_id is not None, "run_id must be set in MLflowManager"
+    def run(self) -> Union[Artifacts, dict[str, Artifacts]]:
+        if self.run_id is None:
+            raise ValueError(f"run_id must be set in MLflowManager for artifact: {self.artifact_key}")
         self.logger.info(
             f"Loading artifact: {self.artifact_key} for run_id: {self.run_id}"
         )
         artifact = self.artifact_mgr.load_artifact(
             run_id=self.run_id, artifact_key=self.artifact_key, download_if_missing=True
         )
-        if "artifacts" in context.keys():
-            context["artifacts"].append(artifact)
-        else:
-            context["artifacts"] = [artifact]
-
-        return context
+        return artifact
+    
+    @property
+    def name(self) -> str:
+        return self.get_name()
+    
+    def get_name(self) -> str:
+        return self.artifact_key.value
 
 
 class LoadTrainingArtifact(LoadArtifact):
@@ -50,6 +56,10 @@ class LoadTrainingArtifact(LoadArtifact):
             artifact_sqlite_path=artifact_sqlite_path,
         )
 
+    def run(self) -> TrainingArtifacts:
+        return super().run()
+
+
 
 class LoadDeepchecksArtifacts(LoadArtifact):
     def __init__(self, mlflow_manager: MLflowManager, artifact_sqlite_path: str):
@@ -58,6 +68,9 @@ class LoadDeepchecksArtifacts(LoadArtifact):
             mlflow_manager=mlflow_manager,
             artifact_sqlite_path=artifact_sqlite_path,
         )
+       
+    def run(self) -> DeepchecksArtifacts:
+        return super().run()
 
 
 class LoadModelCheckpoint(LoadArtifact):
@@ -67,6 +80,9 @@ class LoadModelCheckpoint(LoadArtifact):
             mlflow_manager=mlflow_manager,
             artifact_sqlite_path=artifact_sqlite_path,
         )
+
+    def run(self) -> ModelCheckpointArtifacts:
+        return super().run()
 
 
 class LoadDatasetArtifact(LoadArtifact):
@@ -82,25 +98,30 @@ class LoadDatasetArtifact(LoadArtifact):
             artifact_sqlite_path=artifact_sqlite_path,
             run_id=dataset_name,
         )
+        self.dataset_name = dataset_name
 
-    def run(self, context: dict) -> dict:
+    def run(self) -> dict[str, Artifacts]:
+        """
+        Returns a dict with ArtifactPath.DATASET and optionally ArtifactPath.DEEPCHECKS keys.
+        This allows loading both artifacts while keeping them separated.
+        """
         assert self.run_id is not None, "run_id must be set in MLflowManager"
         self.logger.info(
             f"Loading artifact: {self.artifact_key} for run_id: {self.run_id}"
         )
-        # get artifacts
-        metadata_artifact = self._load_dataset_metadata()
+        
+        result = {}
+        
+        # Load dataset metadata
+        dataset_artifact = self._load_dataset_metadata()
+        if dataset_artifact is not None:
+            result[ArtifactPath.DATASET.value] = dataset_artifact
+        
         deepchecks_artifact = self._load_deepchecks_artifacts()
-        arts = []
-        if metadata_artifact is not None:
-            arts.append(metadata_artifact)
         if deepchecks_artifact is not None:
-            arts.append(deepchecks_artifact)
-        if "artifacts" in context.keys():
-            context["artifacts"].extend(arts)
-        else:
-            context["artifacts"] = arts
-        return context
+            result[ArtifactPath.DEEPCHECKS.value] = deepchecks_artifact
+        
+        return result
 
     def _load_dataset_metadata(self) -> Optional[DatasetArtifacts]:
         # Dataset metadata
@@ -116,7 +137,8 @@ class LoadDatasetArtifact(LoadArtifact):
             self.run_id, ArtifactPath.DATASET
         )
         if mlflow_run_id is None:
-            raise ValueError(f"MLflow run ID not found for dataset {self.run_id}")
+            self.logger.warning(f"MLflow run ID not found for dataset {self.run_id}")
+            return None
         artifact = self.artifact_mgr.load_artifact(
             run_id=mlflow_run_id,
             artifact_key=ArtifactPath.DEEPCHECKS,

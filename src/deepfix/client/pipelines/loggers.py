@@ -3,13 +3,13 @@ from torch.utils.data import Dataset
 
 from .base import Step
 from ..utils.logging import get_logger
-from ..artifacts import (
-    ArtifactsManager,
+from ...shared.models import (
     ArtifactPath,
     DeepchecksArtifacts,
     DatasetArtifacts,
     TrainingArtifacts,
 )
+from ..artifacts import ArtifactsManager
 from ..data.utils import DataStatistics
 from ..integrations import MLflowManager
 

@@ -19,14 +19,14 @@ from pathlib import Path
 import os
 import time
 
-from ..core.artifacts.datamodel import (
+from ...shared.models import (
     DeepchecksArtifacts,
     ArtifactPath,
     TrainingArtifacts,
     DatasetArtifacts,
+    DeepchecksConfig,
 )
-from .deepchecks import DeepchecksConfig
-from ..core.config import DefaultPaths, MLflowConfig
+from ..config import DefaultPaths, MLflowConfig
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)

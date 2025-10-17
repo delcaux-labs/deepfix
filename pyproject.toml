@@ -33,6 +33,7 @@ dependencies = [
     "torchmetrics",
     "torchvision",
     "typer>=0.16.1",
+    "uvicorn>=0.37.0",
 ]
 
 [project.scripts]

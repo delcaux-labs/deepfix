@@ -3,7 +3,7 @@ from typing import Optional
 
 from .base import Step
 from ..integrations import DeepchecksRunner
-from ..config import DeepchecksConfig
+from ...shared.models import DeepchecksConfig
 
 
 class Checks(Step):

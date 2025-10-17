@@ -4,7 +4,7 @@ Training dynamics analysis utilities centered around `TrainingDynamicsAnalyzer`.
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Tuple
-from ..models import Severity
+from ...shared.models import Severity
 
 
 class TrainingDynamicsAnalyzer:

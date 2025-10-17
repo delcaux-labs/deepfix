@@ -5,9 +5,8 @@ Main PromptBuilder class for orchestrating prompt creation from existing Pydanti
 from typing import Optional, Dict, Any, List
 import traceback
 
-from ...utils.logging import get_logger
-from ...utils.exceptions import PromptBuilderError
-from ..artifacts import Artifacts
+from ..logging import get_logger
+from ...shared.models import Artifacts
 from ..config import PromptConfig
 from .deepchecks_prompt import DeepchecksPromptBuilder
 from .training_prompt import TrainingPromptBuilder
@@ -15,6 +14,10 @@ from .dataset_prompt import DatasetPromptBuilder
 from .base import BasePromptBuilder
 from .instructions import get_instructions
 
+class PromptBuilderError(Exception):
+    """Base exception for PromptBuilder errors."""
+
+    pass
 
 class PromptBuilder:
     """Main class for orchestrating prompt creation from existing Artifacts Pydantic models."""

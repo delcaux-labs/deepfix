@@ -4,16 +4,36 @@ from enum import StrEnum
 from datetime import datetime
 import pandas as pd
 
-from ..shared.models import Artifacts, AgentResult
+from ..shared.models import Artifacts, AgentResult, DatasetArtifacts, TrainingArtifacts, DeepchecksArtifacts, ModelCheckpointArtifacts
 
 
 ## Agent Context
 class AgentContext(BaseModel):
-    artifacts: List[Artifacts]
+    dataset_artifacts: Optional[DatasetArtifacts] = None
+    training_artifacts: Optional[TrainingArtifacts] = None
+    deepchecks_artifacts: Optional[DeepchecksArtifacts] = None
+    model_checkpoint_artifacts: Optional[ModelCheckpointArtifacts] = None
     dataset_name: Optional[str] = None
     agent_results: Dict[str, AgentResult] = Field(default={},description="Results of the agents")
     knowledge_cache: Dict[str, Any] = Field(default={})
 
+    @property
+    def artifacts(self,) -> List[Artifacts]:
+        artifacts = [self.dataset_artifacts, self.training_artifacts, self.deepchecks_artifacts, self.model_checkpoint_artifacts]
+        return [a for a in artifacts if a is not None]
+    
+    def insert_artifact(self, artifact: Artifacts):
+        if isinstance(artifact, DatasetArtifacts):
+            self.dataset_artifacts = artifact
+        elif isinstance(artifact, TrainingArtifacts):
+            self.training_artifacts = artifact
+        elif isinstance(artifact, DeepchecksArtifacts):
+            self.deepchecks_artifacts = artifact
+        elif isinstance(artifact, ModelCheckpointArtifacts):
+            self.model_checkpoint_artifacts = artifact
+        else:
+            raise ValueError(f"Invalid artifact type: {type(artifact)}")
+    
     def to_dataframe(self) -> pd.DataFrame:
         """
         Transform ArtifactAnalysisResult.context into a pandas DataFrame.

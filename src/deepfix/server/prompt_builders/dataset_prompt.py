@@ -2,7 +2,10 @@ from typing import Optional, Dict, Any, List
 import json
 
 from .base import BasePromptBuilder
-from ..artifacts import DatasetArtifacts, Artifacts
+from ...shared.models import (
+    DatasetArtifacts,
+    Artifacts,
+)
 
 
 class DatasetPromptBuilder(BasePromptBuilder):

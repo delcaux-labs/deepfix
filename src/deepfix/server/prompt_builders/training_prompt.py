@@ -13,7 +13,10 @@ import matplotlib.pyplot as plt
 import math
 
 from .base import BasePromptBuilder
-from ..artifacts import TrainingArtifacts, Artifacts
+from ...shared.models import (
+    TrainingArtifacts,
+    Artifacts,
+)
 
 
 class CurvePlotter:

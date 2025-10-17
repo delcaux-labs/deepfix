@@ -3,7 +3,7 @@ from contextlib import contextmanager, nullcontext
 import dspy
 from ..config import PromptConfig, LLMConfig
 from ..prompt_builders import PromptBuilder
-from ..models import AgentContext, AgentResult
+from ..models import AgentContext, AgentResult, Artifacts
 from .signatures import ArtifactAnalysisSignature
 
 from ..logging import get_logger
@@ -76,6 +76,6 @@ class ArtifactAnalyzer(Agent):
     def supported_artifact_types(self):
         raise NotImplementedError("Subclasses must implement this method")
     
-    def supports_artifact(self, artifact) -> bool:
+    def supports_artifact(self, artifact:Artifacts) -> bool:
         return isinstance(artifact, self.supported_artifact_types)
 

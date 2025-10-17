@@ -6,8 +6,8 @@ This module provides the abstract base class for all prompt builders.
 
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
-from ..artifacts import Artifacts
 
+from ...shared.models import Artifacts
 
 class BasePromptBuilder(ABC):
     """Abstract base class for prompt builders."""

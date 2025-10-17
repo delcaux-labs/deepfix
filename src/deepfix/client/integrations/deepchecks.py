@@ -22,12 +22,12 @@ import traceback
 import base64
 
 from ..utils.logging import get_logger
-from ..core.artifacts.datamodel import (
+from ...shared.models import (
     DeepchecksParsedResult,
     DeepchecksArtifacts,
     DeepchecksResultHeaders,
+    DeepchecksConfig
 )
-from ..core.config import DeepchecksConfig
 
 LOGGER = get_logger(__name__)
 

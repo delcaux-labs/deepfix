@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List
+import traceback
 
 from .models import AgentResult, AgentContext, ArtifactAnalysisResult
 from .agents.artifact_analyzers import (DeepchecksArtifactsAnalyzer, 
@@ -10,6 +11,7 @@ from .agents.base import ArtifactAnalyzer
 from .config import  LLMConfig
 from .logging import get_logger
 from .agents.cross_artifact_reasoning import CrossArtifactReasoningAgent
+from ..shared.models import Artifacts
 
 LOGGER = get_logger(__name__)
 
@@ -27,16 +29,18 @@ class ArtifactAnalysisCoordinator:
         self.cross_artifact_reasoning_agent = CrossArtifactReasoningAgent(llm_config=self.llm_config)
 
            
-    def _analyze_one_artifact(self, artifact) -> AgentResult:
+    def _analyze_one_artifact(self, artifact:Artifacts) -> AgentResult:
+        agent_name=None
         try:
             analyzer_agent = self._get_analyzer_agent(artifact)
+            agent_name = analyzer_agent.agent_name
             if analyzer_agent:
                 focused_context = self._create_focused_context(artifact)
                 result = analyzer_agent(focused_context)
                 return result
         except Exception as e:
-            LOGGER.error(f"Error analyzing artifact {artifact}: {e}")
-            return AgentResult(agent_name="None", error_message=str(e))
+            LOGGER.error(f"Error with agent {agent_name}: {traceback.format_exc()}")
+            return AgentResult(agent_name=str(agent_name), error_message=str(e))
 
     def run(self,context:AgentContext,max_workers:int=3) -> ArtifactAnalysisResult:   
 
@@ -57,17 +61,16 @@ class ArtifactAnalysisCoordinator:
                                     )
         return output
         
-    def _get_analyzer_agent(self, artifact) -> ArtifactAnalyzer:
+    def _get_analyzer_agent(self, artifact:Artifacts) -> ArtifactAnalyzer:
         for analyzer_agent in self.analyzer_agents:
             if analyzer_agent.supports_artifact(artifact):
                 return analyzer_agent
         raise ValueError(f"No analyzer agent found for artifact of type: {type(artifact)}")
     
-    def _create_focused_context(self, artifact) -> AgentContext:
-        return AgentContext(
-            artifacts=[artifact],
-        )
-
+    def _create_focused_context(self, artifact: Artifacts) -> AgentContext:
+        ctx = AgentContext()
+        ctx.insert_artifact(artifact)
+        return ctx
     def _initialize_analyzer_agents(self) -> List[ArtifactAnalyzer]:
         """Initialize specialized analyzer agents."""
         agents = [DeepchecksArtifactsAnalyzer(config=self.llm_config),

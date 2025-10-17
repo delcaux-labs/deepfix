@@ -1,4 +1,3 @@
-import traceback
 from typing import Callable, Optional, List
 import torch
 from torch.utils.data import Dataset
@@ -18,10 +17,12 @@ from .loaders import (
 )
 from .data_ingestion import DataIngestor
 from .checks import Checks
-from ..artifacts import ArtifactRepository, ArtifactPath
+from ..artifacts import ArtifactRepository
 from ..integrations import MLflowManager
-from ..config import DeepchecksConfig, DefaultPaths, MLflowConfig, ArtifactConfig
+from ..config import DefaultPaths, MLflowConfig, ArtifactConfig
 from ..utils.logging import get_logger
+
+from ...shared.models import ArtifactPath, DeepchecksConfig
 
 LOGGER = get_logger(__name__)
 
@@ -232,85 +233,47 @@ class DatasetIngestionPipeline(Pipeline):
 class ArtifactLoadingPipeline(Pipeline):
     def __init__(
         self,
-        mlflow_tracking_uri: Optional[str] = None,
-        mlflow_run_id: Optional[str] = None,
-        sqlite_path: Optional[str] = None,
-        load_dataset_metadata: bool = True,
         dataset_name: Optional[str] = None,
-        dataset_experiment_name: Optional[str] = None,
-        load_checks: bool = True,
-        load_model_checkpoint: bool = True,
-        load_training: bool = True,
         mlflow_config: Optional[MLflowConfig] = None,
+        artifact_config: Optional[ArtifactConfig] = None,
     ):
-        self.mlflow_tracking_uri = mlflow_tracking_uri
         self.dataset_name = dataset_name
-        self.sqlite_path = sqlite_path or DefaultPaths.ARTIFACTS_SQLITE_PATH
-        self.load_model_checkpoint = load_model_checkpoint
-        self.load_training = load_training
-        self.load_checks = load_checks
-        self.load_dataset_metadata = load_dataset_metadata
-
-        if mlflow_config is None:
-            assert self.mlflow_tracking_uri is not None, (
-                "mlflow_tracking_uri must be provided if mlflow_config is not provided"
-            )
-            assert mlflow_run_id is not None, (
-                "mlflow_run_id must be provided if mlflow_config is not provided"
-            )
-            self.mlflow_manager = MLflowManager(
-                tracking_uri=self.mlflow_tracking_uri,
-                run_id=mlflow_run_id,
-            )
-            self.dataset_experiment_name = (
-                dataset_experiment_name or DefaultPaths.DATASETS_EXPERIMENT_NAME.value
-            )
-        else:
-            self.mlflow_manager = MLflowManager.from_config(mlflow_config)
-            self.dataset_experiment_name = mlflow_config.dataset_experiment_name
+        self.mlflow_config = mlflow_config or MLflowConfig()
+        self.artifact_config = artifact_config or ArtifactConfig()
+        
+        self.mlflow_manager = MLflowManager.from_config(self.mlflow_config)
+        self.dataset_experiment_name = self.mlflow_config.dataset_experiment_name        
 
         super().__init__(steps=self._load_steps())
-
-    @classmethod
-    def from_config(
-        cls, mlflow_config: MLflowConfig, artifact_config: ArtifactConfig
-    ) -> "ArtifactLoadingPipeline":
-        return cls(
-            sqlite_path=artifact_config.sqlite_path,
-            dataset_name=artifact_config.dataset_name,
-            load_dataset_metadata=artifact_config.load_dataset_metadata,
-            load_checks=artifact_config.load_checks,
-            load_model_checkpoint=artifact_config.load_model_checkpoint,
-            load_training=artifact_config.load_training,
-            mlflow_config=mlflow_config,
-        )
 
     def _load_steps(self) -> list[Step]:
         steps = []
         cfg = dict(
-            mlflow_manager=self.mlflow_manager, artifact_sqlite_path=self.sqlite_path
+            mlflow_manager=self.mlflow_manager, artifact_sqlite_path=self.artifact_config.sqlite_path
         )
-        if self.load_dataset_metadata:
+        if self.artifact_config.load_dataset_metadata:
             assert isinstance(self.dataset_name, str), (
                 f"dataset_name must be a string, got {type(self.dataset_name)}"
             )
             mlflow_manager = MLflowManager(
-                tracking_uri=self.mlflow_tracking_uri,
+                tracking_uri=self.mlflow_config.tracking_uri,
                 experiment_name=self.dataset_experiment_name,
             )
             steps.append(
                 LoadDatasetArtifact(
                     dataset_name=self.dataset_name,
-                    artifact_sqlite_path=self.sqlite_path,
+                    artifact_sqlite_path=self.artifact_config.sqlite_path,
                     mlflow_manager=mlflow_manager,
                 )
             )
-        if self.load_checks:
+        elif self.artifact_config.load_checks:
             steps.append(LoadDeepchecksArtifacts(**cfg))
-        if self.load_model_checkpoint:
+        elif self.artifact_config.load_model_checkpoint:
             steps.append(LoadModelCheckpoint(**cfg))
-        if self.load_training:
+        elif self.artifact_config.load_training:
             steps.append(LoadTrainingArtifact(**cfg))
+        else:
+            raise ValueError("No artifacts to load. Please check the artifact configuration.")
         return steps
 
     def append_steps(self, steps: list[Step]) -> None:
@@ -320,4 +283,10 @@ class ArtifactLoadingPipeline(Pipeline):
         self,
     ) -> dict:
         self.context = {}
-        return super().run(**self.context)
+        for step in self.steps:
+            try:
+                self.context[step.name] = step.run()
+            except Exception as e:
+                LOGGER.error(f"Error running step {step.name}: {e}")
+                
+        return self.context

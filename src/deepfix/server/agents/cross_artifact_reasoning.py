@@ -15,7 +15,7 @@ class CrossArtifactReasoningAgent(Agent):
         self,
         previous_analyses: Dict[str, AgentResult]
     ) -> AgentResult:
-        return self.forward(previous_analyses)
+        return self(previous_analyses)
 
     def forward(
         self,

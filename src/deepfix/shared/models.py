@@ -157,6 +157,8 @@ class ArtifactPath(StrEnum):
     # dataset artifacts
     DATASET = "dataset"
 
+
+
 ## Deepchecks
 class DeepchecksResultHeaders(StrEnum):
     # Train-Test Validation
@@ -204,10 +206,10 @@ class DeepchecksParsedResult(BaseModel):
         )
 
 
-class Artifacts(BaseModel,ABC):
-    @abstractmethod
+class Artifacts(BaseModel):
+    
     def to_dict(self) -> Dict[str, Any]:
-        pass
+        raise NotImplementedError("to_dict method to be implemented in the subclass")
 
     @classmethod
     def from_dict(cls, d: dict):
@@ -361,7 +363,7 @@ class AnalyzerTypes(StrEnum):
     DEEPCHECKS = "deepchecks"
     DATASET = "dataset"
     MODEL_CHECKPOINT = "model_checkpoint"
-
+    
 class Finding(BaseModel):
     description: str = Field(default=...,description="Short Description of the finding")
     evidence: str = Field(default=...,description="Evidence of the finding")
@@ -389,10 +391,13 @@ class AgentResult(BaseModel):
 # API Models
 class APIResponse(BaseModel):
     agent_results: Dict[str, AgentResult] = Field(default={},description="Results of the agents")
-    summary: Optional[str] = Field(default=...,description="Summary of the analysis")
+    summary: Optional[str] = Field(default=None,description="Summary of the analysis")
     additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
     error_message: Optional[str] = Field(default=None,description="Error message if the agent failed")
 
 class APIRequest(BaseModel):
-    artifacts: List[Artifacts]
-    dataset_name: Optional[str] = None
+    dataset_artifacts: Optional[DatasetArtifacts] = Field(default=None,description="Dataset artifacts")
+    training_artifacts: Optional[TrainingArtifacts] = Field(default=None,description="Training artifacts")
+    deepchecks_artifacts: Optional[DeepchecksArtifacts] = Field(default=None,description="Deepchecks artifacts")
+    model_checkpoint_artifacts: Optional[ModelCheckpointArtifacts] = Field(default=None,description="Model checkpoint artifacts")
+    dataset_name: Optional[str] = Field(default=None,description="Name of the dataset")

@@ -1,12 +1,11 @@
-from typing import List, Dict, Any, Type, Optional, Tuple
+from typing import List, Dict, Any, Optional
 import pandas as pd
 import dspy
 from .base import ArtifactAnalyzer
-from ..models import AgentContext, AgentResult, TrainingDynamicsConfig, Finding, Severity
+from ..models import AgentContext, AgentResult
 from ..config import LLMConfig
-
 from .training_dynamics_utils import TrainingDynamicsAnalyzer
-from ...shared.models import DeepchecksArtifacts, DatasetArtifacts, ModelCheckpointArtifacts, TrainingArtifacts
+from ...shared.models import DeepchecksArtifacts, DatasetArtifacts, ModelCheckpointArtifacts, TrainingArtifacts,Finding, Severity
 from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -68,7 +67,7 @@ class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
     
     @property
     def supported_artifact_types(self):
-        return (DeepchecksArtifacts,)
+        return DeepchecksArtifacts
 
 class DatasetArtifactsAnalyzer(ArtifactAnalyzer):
     """Expert in dataset analysis and quality assessment, data distribution analysis, feature quality assessment, and class balance evaluation"""
@@ -127,7 +126,7 @@ class DatasetArtifactsAnalyzer(ArtifactAnalyzer):
 
     @property
     def supported_artifact_types(self):
-        return (DatasetArtifacts,)
+        return DatasetArtifacts
     
 class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
     """Expert in model checkpoint integrity and validation, model configuration analysis, and deployment readiness assessment"""
@@ -190,21 +189,15 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
 
     @property
     def supported_artifact_types(self):
-        return (ModelCheckpointArtifacts,)
+        return ModelCheckpointArtifacts
 
 class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
-    def __init__(self, config: Optional[TrainingDynamicsConfig]=None,llm_config: Optional[LLMConfig]=None,llm: Optional[dspy.Module] = None):
+    def __init__(self, llm_config: Optional[LLMConfig]=None,llm: Optional[dspy.Module] = None):
         super().__init__(llm=llm,config=llm_config)
-        self.config = config or TrainingDynamicsConfig()
-        self.logger = LOGGER
         
-        # Initialize analysis cache for performance optimization
-        self._analysis_cache = {} if config.lightweight_mode else None
-        
-        # Initialize dynamics analyzer with thresholds derived from config where sensible
-        self.analyzer = TrainingDynamicsAnalyzer(
-            high_cv_threshold=self.config.stability_thresholds["loss_variance_threshold"],
-        )
+        self.logger = LOGGER 
+        self._analysis_cache = {}
+        self.analyzer = TrainingDynamicsAnalyzer()
     
     @property
     def system_prompt(self) -> str:
@@ -239,7 +232,7 @@ class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
 
     @property
     def supported_artifact_types(self):
-        return (TrainingArtifacts,)
+        return TrainingArtifacts
     
     def _run(self, context: AgentContext) -> AgentResult:
         """Main analysis method following the specification"""

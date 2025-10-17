@@ -1,6 +1,5 @@
 from typing import Optional, Dict, Any, Union, List
 from pydantic import BaseModel, Field, field_validator
-from omegaconf import DictConfig, OmegaConf
 import os
 from dotenv import load_dotenv
 
@@ -16,7 +15,6 @@ class PromptConfig(BaseModel):
     training_results_analysis: bool = Field(
         default=False, description="Whether to analyze the training"
     )
-
 
 class LLMConfig(BaseModel):
     api_key: Optional[str] = Field(
@@ -50,7 +48,6 @@ class LLMConfig(BaseModel):
         temperature=temperature, max_tokens=max_tokens, 
         cache=cache, track_usage=track_usage)
 
-
 class OutputConfig(BaseModel):
     """Configuration for output management."""
 
@@ -73,37 +70,6 @@ class OutputConfig(BaseModel):
         if v.lower() not in allowed_formats:
             raise ValueError(f"format must be one of {allowed_formats}")
         return v.lower()
-
-
-class DeepchecksConfig(BaseModel):
-    train_test_validation: bool = Field(
-        default=True, description="Whether to run the train_test_validation suite"
-    )
-    data_integrity: bool = Field(
-        default=True, description="Whether to run the data_integrity suite"
-    )
-    model_evaluation: bool = Field(
-        default=False, description="Whether to run the model_evaluation suite"
-    )
-    max_samples: Optional[int] = Field(
-        default=None, description="Maximum number of samples to run the suites on"
-    )
-    random_state: int = Field(
-        default=42, description="Random seed to use for the suites"
-    )
-    save_results: bool = Field(default=False, description="Whether to save the results")
-    output_dir: Optional[str] = Field(
-        default=None, description="Output directory to save the results"
-    )
-    batch_size: int = Field(default=16, description="Batch size to use for the suites")
-
-    @classmethod
-    def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
-        return cls(**config)
-
-    @classmethod
-    def from_file(cls, file_path: str) -> "DeepchecksConfig":
-        return cls.from_dict(OmegaConf.load(file_path))
 
 class TrainingDynamicsConfig(BaseModel):
     # Analysis Configuration

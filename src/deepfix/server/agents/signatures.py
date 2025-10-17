@@ -1,13 +1,14 @@
 """DSPy signatures for agent reasoning"""
 import dspy
 from typing import List, Optional
-from .models import (Analysis,
-                    AgentKnowledgeRequest,
+
+from ..models import (AgentKnowledgeRequest,
                     AgentResult,
                     QueryGenerationResult,
                     EvidenceValidationResult,
                     KnowledgeItem
                 )
+from ...shared.models import Analysis
 
 class ArtifactAnalysisSignature(dspy.Signature):
     """Analyze dataset, model checkpoint, training artifacts for issues and recommendations"""
