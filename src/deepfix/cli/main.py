@@ -1,7 +1,7 @@
 """Main CLI application for DeepFix."""
 
 import typer
-from .commands import mlflow_app
+from .commands import commands_app
 
 # Create the main CLI app
 app = typer.Typer(
@@ -12,7 +12,7 @@ app = typer.Typer(
 
 # Register command groups
 app.add_typer(
-    mlflow_app, name="mlflow", help="MLflow commands"
+    commands_app, help="Commands for DeepFix"
 )
 
 def main() -> None:

@@ -4,11 +4,11 @@ import subprocess
 import sys
 
 import typer
-from ..core.config import DefaultPaths
+from ..shared.models import DefaultPaths
 
-mlflow_app = typer.Typer()
+commands_app = typer.Typer()
 
-@mlflow_app.command()
+@commands_app.command(name="launch-mlflow-server")
 def launch_server(
     port: int = typer.Option(5000, help="Port to run MLflow server on"),
     host: str = typer.Option("127.0.0.1", help="Host to bind MLflow server to"),
@@ -46,3 +46,12 @@ def launch_server(
     except Exception as e:
         typer.echo(f"❌ Unexpected error: {e}", err=True)
         sys.exit(1)
+
+@commands_app.command(name="launch-deepfix-server")
+def launch_server(
+    port: int = typer.Option(8844, help="Port to run DeepFix server on"),
+    host: str = typer.Option("127.0.0.1", help="Host to bind DeepFix server to"),
+) -> None:
+    """Launch DeepFix server."""
+    pass
+        
