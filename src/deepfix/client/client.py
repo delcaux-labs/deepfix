@@ -7,18 +7,18 @@ from ..shared.models import APIRequest, APIResponse,ArtifactPath
 
 
 class DeepFixClient:
-    def __init__(self,api_url: str = "http://localhost:8844",mlflow_config: Optional[MLflowConfig]=None,artifact_config: Optional[ArtifactConfig]=None):
+    def __init__(self,api_url: str = "http://localhost:8844",mlflow_config: Optional[MLflowConfig]=None):
 
         self.mlflow_config = mlflow_config or MLflowConfig()
-        self.artifact_config = artifact_config or ArtifactConfig()
         self.api_url = api_url
         self.artifacts_loader: Optional[ArtifactLoadingPipeline] = None
 
     def diagnose_dataset(self, dataset_name: str) -> APIResponse:
+        artifact_config = ArtifactConfig(load_dataset_metadata=True, load_checks=False, load_model_checkpoint=False, load_training=False)
         self.artifacts_loader = ArtifactLoadingPipeline(mlflow_config=self.mlflow_config, 
-                                                        artifact_config=self.artifact_config,
+                                                        artifact_config=artifact_config,
                                                         dataset_name=dataset_name)
-        request = self._create_request(dataset_name=dataset_name)
+        request = self._create_dataset_request(dataset_name=dataset_name)
         response = self._send_request(request)
         return response
     
@@ -36,34 +36,18 @@ class DeepFixClient:
         dataset_logging_pipeline.run(train_data=train_data,
                                     test_data=test_data,
                                 )
-
-    def _create_request(self, dataset_name: str):
+    
+    def _create_dataset_request(self, dataset_name: str):
         output = self.artifacts_loader.run()
-        dataset_artifacts = None
-        training_artifacts = None
-        deepchecks_artifacts = None
-        model_checkpoint_artifacts = None
-        
-        for key, value in output.items():
-            name = ArtifactPath(key)                
-            if name == ArtifactPath.DATASET:
-                assert isinstance(value, dict), "Dataset artifacts must be a dict"
-                dataset_artifacts = value.get(ArtifactPath.DATASET.value)
-                deepchecks_artifacts = value.get(ArtifactPath.DEEPCHECKS.value)
-            elif name == ArtifactPath.TRAINING:
-                training_artifacts = value
-            elif name == ArtifactPath.DEEPCHECKS:
-                deepchecks_artifacts = value
-            elif name == ArtifactPath.MODEL_CHECKPOINT:
-                model_checkpoint_artifacts = value
-
-        return APIRequest(
-            dataset_artifacts=dataset_artifacts,
-            training_artifacts=training_artifacts,
-            deepchecks_artifacts=deepchecks_artifacts,
-            model_checkpoint_artifacts=model_checkpoint_artifacts,
-            dataset_name=dataset_name
-        )
+        cfg = {'dataset_name': dataset_name}
+        value = output.get(ArtifactPath.DATASET.value)
+        if value is None:
+            raise ValueError(f"Dataset artifacts not found for dataset {dataset_name}")
+        if not isinstance(value, dict):
+            raise ValueError(f"Expected a dictionary, got {type(value)}")
+        cfg["dataset_artifacts"] = value.get(ArtifactPath.DATASET.value)
+        cfg["deepchecks_artifacts"] = value.get(ArtifactPath.DEEPCHECKS.value)
+        return APIRequest(**cfg)
     
     def _send_request(self, request: APIRequest):
         response = requests.post(f"{self.api_url}/v1/analyze", json=request.model_dump(), timeout=30)

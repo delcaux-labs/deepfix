@@ -237,24 +237,33 @@ class ArtifactLoadingPipeline(Pipeline):
         mlflow_config: Optional[MLflowConfig] = None,
         artifact_config: Optional[ArtifactConfig] = None,
     ):
+        # Validate dataset_name early if required by config
+        if artifact_config and artifact_config.load_dataset_metadata:
+            if not isinstance(dataset_name, str):
+                raise ValueError(
+                    f"dataset_name must be a string when load_dataset_metadata is True, "
+                    f"got {type(dataset_name).__name__}"
+                )
+        
         self.dataset_name = dataset_name
         self.mlflow_config = mlflow_config or MLflowConfig()
         self.artifact_config = artifact_config or ArtifactConfig()
         
         self.mlflow_manager = MLflowManager.from_config(self.mlflow_config)
-        self.dataset_experiment_name = self.mlflow_config.dataset_experiment_name        
+        self.dataset_experiment_name = self.mlflow_config.dataset_experiment_name
 
         super().__init__(steps=self._load_steps())
 
     def _load_steps(self) -> list[Step]:
+        """Build steps based on configuration. Supports loading multiple artifact types."""
         steps = []
         cfg = dict(
-            mlflow_manager=self.mlflow_manager, artifact_sqlite_path=self.artifact_config.sqlite_path
+            mlflow_manager=self.mlflow_manager, 
+            artifact_sqlite_path=self.artifact_config.sqlite_path
         )
+        
+        # Load dataset metadata if configured
         if self.artifact_config.load_dataset_metadata:
-            assert isinstance(self.dataset_name, str), (
-                f"dataset_name must be a string, got {type(self.dataset_name)}"
-            )
             mlflow_manager = MLflowManager(
                 tracking_uri=self.mlflow_config.tracking_uri,
                 experiment_name=self.dataset_experiment_name,
@@ -266,27 +275,56 @@ class ArtifactLoadingPipeline(Pipeline):
                     mlflow_manager=mlflow_manager,
                 )
             )
-        elif self.artifact_config.load_checks:
+        
+        # Load deepchecks artifacts if configured
+        if self.artifact_config.load_checks:
             steps.append(LoadDeepchecksArtifacts(**cfg))
-        elif self.artifact_config.load_model_checkpoint:
+        
+        # Load model checkpoint if configured
+        if self.artifact_config.load_model_checkpoint:
             steps.append(LoadModelCheckpoint(**cfg))
-        elif self.artifact_config.load_training:
+        
+        # Load training artifacts if configured
+        if self.artifact_config.load_training:
             steps.append(LoadTrainingArtifact(**cfg))
-        else:
-            raise ValueError("No artifacts to load. Please check the artifact configuration.")
+        
+        # Ensure at least one artifact type is configured to load
+        if not steps:
+            raise ValueError(
+                "No artifacts to load. Please enable at least one of: "
+                "load_dataset_metadata, load_checks, load_model_checkpoint, load_training"
+            )
+        
         return steps
 
     def append_steps(self, steps: list[Step]) -> None:
+        """Append additional steps to the pipeline."""
         self.steps.extend(steps)
 
-    def run(
-        self,
-    ) -> dict:
+    def run(self, **kwargs) -> dict:
+        """Execute the pipeline, passing context through all steps.
+        
+        Args:
+            **kwargs: Initial context values to pass to steps
+            
+        Returns:
+            dict: Context dictionary with results from each step stored by step name
+            
+        Raises:
+            Exception: Re-raises any exception from a step after logging
+        """
         self.context = {}
         for step in self.steps:
             try:
-                self.context[step.name] = step.run()
+                # Store the result in context using step name as key
+                result = step.run(context=self.context, **kwargs)
+                if hasattr(step, 'name'):
+                    self.context[step.name] = result
+                else:
+                    # Fallback to class name if name property not available
+                    self.context[step.__class__.__name__] = result
             except Exception as e:
-                LOGGER.error(f"Error running step {step.name}: {e}")
-                
+                LOGGER.error("Error running step %s: %s", step.__class__.__name__, e, exc_info=True)
+                raise
+        
         return self.context

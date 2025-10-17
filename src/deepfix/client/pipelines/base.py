@@ -21,10 +21,22 @@ class Pipeline:
         self.context = {}
 
     def run(self, **kwargs) -> dict:
+        """Execute the pipeline with provided context.
+        
+        Args:
+            **kwargs: Initial context values to pass to steps
+            
+        Returns:
+            dict: The accumulated context dictionary after all steps complete
+            
+        Raises:
+            Exception: Re-raises any exception from a step after logging with traceback
+        """
         self.context.update(kwargs)
         for step in self.steps:
             try:
                 step.run(context=self.context)
             except Exception as e:
-                LOGGER.error(f"Step {step.__class__.__name__} failed with error: {e}")
+                LOGGER.error("Step %s failed with error: %s", step.__class__.__name__, e, exc_info=True)
+                raise
         return self.context

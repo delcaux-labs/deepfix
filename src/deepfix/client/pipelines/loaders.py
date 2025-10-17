@@ -29,7 +29,7 @@ class LoadArtifact(Step):
         self.run_id = run_id or self.mlflow_manager.run_id
         self.logger = get_logger(self.__class__.__name__)
 
-    def run(self) -> Union[Artifacts, dict[str, Artifacts]]:
+    def run(self,**kwargs) -> Union[Artifacts, dict[str, Artifacts]]:
         if self.run_id is None:
             raise ValueError(f"run_id must be set in MLflowManager for artifact: {self.artifact_key}")
         self.logger.info(
@@ -56,7 +56,7 @@ class LoadTrainingArtifact(LoadArtifact):
             artifact_sqlite_path=artifact_sqlite_path,
         )
 
-    def run(self) -> TrainingArtifacts:
+    def run(self,**kwargs) -> TrainingArtifacts:
         return super().run()
 
 
@@ -69,7 +69,7 @@ class LoadDeepchecksArtifacts(LoadArtifact):
             artifact_sqlite_path=artifact_sqlite_path,
         )
        
-    def run(self) -> DeepchecksArtifacts:
+    def run(self,**kwargs) -> DeepchecksArtifacts:
         return super().run()
 
 
@@ -81,7 +81,7 @@ class LoadModelCheckpoint(LoadArtifact):
             artifact_sqlite_path=artifact_sqlite_path,
         )
 
-    def run(self) -> ModelCheckpointArtifacts:
+    def run(self,**kwargs) -> ModelCheckpointArtifacts:
         return super().run()
 
 
@@ -100,7 +100,7 @@ class LoadDatasetArtifact(LoadArtifact):
         )
         self.dataset_name = dataset_name
 
-    def run(self) -> dict[str, Artifacts]:
+    def run(self,**kwargs) -> dict[str, Artifacts]:
         """
         Returns a dict with ArtifactPath.DATASET and optionally ArtifactPath.DEEPCHECKS keys.
         This allows loading both artifacts while keeping them separated.
