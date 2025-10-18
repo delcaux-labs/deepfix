@@ -40,10 +40,7 @@ class LoadArtifact(Step):
         )
         return artifact
     
-    @property
-    def name(self) -> str:
-        return self.get_name()
-    
+     
     def get_name(self) -> str:
         return self.artifact_key.value
 
@@ -58,7 +55,6 @@ class LoadTrainingArtifact(LoadArtifact):
 
     def run(self,**kwargs) -> TrainingArtifacts:
         return super().run()
-
 
 
 class LoadDeepchecksArtifacts(LoadArtifact):

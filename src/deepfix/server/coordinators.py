@@ -27,7 +27,6 @@ class ArtifactAnalysisCoordinator:
         #initialize agents and loaders
         self.analyzer_agents = self._initialize_analyzer_agents()
         self.cross_artifact_reasoning_agent = CrossArtifactReasoningAgent(llm_config=self.llm_config)
-
            
     def _analyze_one_artifact(self, artifact:Artifacts) -> AgentResult:
         agent_name=None
@@ -36,11 +35,11 @@ class ArtifactAnalysisCoordinator:
             agent_name = analyzer_agent.agent_name
             if analyzer_agent:
                 focused_context = self._create_focused_context(artifact)
-                result = analyzer_agent(focused_context)
+                result = analyzer_agent.run(focused_context)
                 return result
         except Exception as e:
-            LOGGER.error(f"Error with agent {agent_name}: {traceback.format_exc()}")
-            return AgentResult(agent_name=str(agent_name), error_message=str(e))
+            LOGGER.error(f"Error with agent {agent_name}:\n {traceback.format_exc()}")
+            raise e
 
     def run(self,context:AgentContext,max_workers:int=3) -> ArtifactAnalysisResult:   
 
@@ -57,7 +56,7 @@ class ArtifactAnalysisCoordinator:
 
         #3. Output results
         output = ArtifactAnalysisResult(context=context, 
-                                        summary=out.additional_outputs['summary'],
+                                        summary=out.additional_outputs.get('summary', None),
                                     )
         return output
         

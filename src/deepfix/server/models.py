@@ -126,6 +126,9 @@ class ArtifactAnalysisResult(BaseModel):
         summary += self.context.to_text()        
         return summary
     
+    
+    def get_error_messages(self) -> Dict[str, str]:
+        return {agent_name: agent_result.error_message for agent_name, agent_result in self.context.agent_results.items()}
 # ============================================================================
 # KnowledgeBridge Models
 # ============================================================================

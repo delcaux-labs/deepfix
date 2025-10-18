@@ -15,7 +15,10 @@ class CrossArtifactReasoningAgent(Agent):
         self,
         previous_analyses: Dict[str, AgentResult]
     ) -> AgentResult:
-        return self(previous_analyses)
+        try:
+            return self(previous_analyses)
+        except Exception as e:
+            return AgentResult(agent_name=self.agent_name, error_message=str(e))
 
     def forward(
         self,

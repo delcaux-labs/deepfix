@@ -5,6 +5,7 @@ from ..config import PromptConfig, LLMConfig
 from ..prompt_builders import PromptBuilder
 from ..models import AgentContext, AgentResult, Artifacts
 from .signatures import ArtifactAnalysisSignature
+from ...shared.models import Artifacts
 
 from ..logging import get_logger
 
@@ -32,6 +33,7 @@ class Agent(dspy.Module):
                 api_base=self._llm_config.base_url,
                 api_key=self._llm_config.api_key,
                 temperature=self._llm_config.temperature,
+                max_tokens=self._llm_config.max_tokens,
             ),
             track_usage=self._llm_config.track_usage,
         ):
@@ -53,11 +55,17 @@ class ArtifactAnalyzer(Agent):
         self.prompt_builder = PromptBuilder(config=config_prompt_builder)
         self.llm = llm or dspy.ChainOfThought(ArtifactAnalysisSignature)
     
-    def _check_artifacts(self, artifacts: List) -> bool:
+    def _check_artifacts(self, artifacts: List[Artifacts]) -> bool:
         if not all(self.supports_artifact(a) for a in artifacts):
             raise ValueError(f"Artifacts must be supported by the analyzer. Received:{[type(a) for a in artifacts]}")
 
-    def _run(self, context: AgentContext) -> AgentResult:
+    def run(self, context: AgentContext) -> AgentResult:
+        try:
+            return self(context)
+        except Exception as e:
+            return AgentResult(agent_name=self.agent_name, error_message=str(e))
+
+    def forward(self, context: AgentContext) -> AgentResult:
         self._check_artifacts(context.artifacts)
         prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
         with self._llm_context():
@@ -67,10 +75,6 @@ class ArtifactAnalyzer(Agent):
             analysis=response.analysis,
             analyzed_artifacts=[type(a).__name__ for a in context.artifacts],
         )
-
-    def forward(self, context: AgentContext) -> AgentResult:
-        assert isinstance(context, AgentContext), "Context must be an instance of AgentContext"
-        return self._run(context)
 
     @property
     def supported_artifact_types(self):

@@ -7,11 +7,12 @@ from ..shared.models import APIRequest, APIResponse,ArtifactPath
 
 
 class DeepFixClient:
-    def __init__(self,api_url: str = "http://localhost:8844",mlflow_config: Optional[MLflowConfig]=None):
+    def __init__(self,api_url: str = "http://localhost:8844",mlflow_config: Optional[MLflowConfig]=None,timeout: int = 30):
 
         self.mlflow_config = mlflow_config or MLflowConfig()
         self.api_url = api_url
         self.artifacts_loader: Optional[ArtifactLoadingPipeline] = None
+        self.timeout = timeout
 
     def diagnose_dataset(self, dataset_name: str) -> APIResponse:
         artifact_config = ArtifactConfig(load_dataset_metadata=True, load_checks=False, load_model_checkpoint=False, load_training=False)
@@ -50,7 +51,7 @@ class DeepFixClient:
         return APIRequest(**cfg)
     
     def _send_request(self, request: APIRequest):
-        response = requests.post(f"{self.api_url}/v1/analyze", json=request.model_dump(), timeout=30)
+        response = requests.post(f"{self.api_url}/v1/analyze", json=request.model_dump(), timeout=self.timeout)
         if response.status_code != 200:
             raise Exception(f"Error during analysis: status code: {response.status_code} \nand message: {response.text}")
         return APIResponse(**response.json())

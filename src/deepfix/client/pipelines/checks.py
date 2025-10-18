@@ -35,3 +35,6 @@ class Checks(Step):
         )
         context["checks_artifacts"] = artifacts
         return context
+    
+    def get_name(self) -> str:
+        return "ml_tests"

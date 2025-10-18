@@ -7,12 +7,17 @@ LOGGER = get_logger(__name__)
 
 class Step(ABC):
     
+    @abstractmethod
     def get_name(self) -> str:
-        raise NotImplementedError("Subclasses must implement this method")
+        pass
     
     @abstractmethod
     def run(self, *args, context: dict, **kwargs) -> dict:
         pass
+    
+    @property
+    def name(self) -> str:
+        return self.get_name()
 
 
 class Pipeline:

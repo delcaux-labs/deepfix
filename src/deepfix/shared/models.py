@@ -393,7 +393,7 @@ class APIResponse(BaseModel):
     agent_results: Dict[str, AgentResult] = Field(default={},description="Results of the agents")
     summary: Optional[str] = Field(default=None,description="Summary of the analysis")
     additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
-    error_message: Optional[str] = Field(default=None,description="Error message if the agent failed")
+    error_messages: Optional[Dict[str, Optional[str]]] = Field(default=None,description="Error messages if the agents failed")
 
 class APIRequest(BaseModel):
     dataset_artifacts: Optional[DatasetArtifacts] = Field(default=None,description="Dataset artifacts")
