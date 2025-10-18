@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union
 from enum import StrEnum
 from datetime import datetime
-import pandas as pd
 
 from ..shared.models import Artifacts, AgentResult, DatasetArtifacts, TrainingArtifacts, DeepchecksArtifacts, ModelCheckpointArtifacts
 
@@ -34,98 +33,10 @@ class AgentContext(BaseModel):
         else:
             raise ValueError(f"Invalid artifact type: {type(artifact)}")
     
-    def to_dataframe(self) -> pd.DataFrame:
-        """
-        Transform ArtifactAnalysisResult.context into a pandas DataFrame.
-        """
-        rows = []
-        
-        for agent_name, agent_result in self.agent_results.items():
-            for analysis in agent_result.analysis:
-                # Extract findings and recommendations from the Analysis object
-                findings = analysis.findings
-                recommendations = analysis.recommendations
-                
-                # Create a row combining findings and recommendations
-                row = {
-                    'agent_name': agent_name,
-                    'analyzed_artifacts': ', '.join(agent_result.analyzed_artifacts) if agent_result.analyzed_artifacts else '',
-                    'retrieved_knowledge': ', '.join(agent_result.retrieved_knowledge) if agent_result.retrieved_knowledge else '',
-                    'summary': agent_result.additional_outputs.get('summary', ''),
-                    'finding_description': findings.description,
-                    'finding_evidence': findings.evidence,
-                    'error_message': agent_result.error_message,
-                    'finding_severity': findings.severity.value,
-                    'finding_confidence': findings.confidence,
-                    'recommendation_action': recommendations.action,
-                    'recommendation_rationale': recommendations.rationale,
-                    'recommendation_priority': recommendations.priority.value,
-                    'recommendation_confidence': recommendations.confidence
-                }
-                rows.append(row)
-        
-        return pd.DataFrame(rows)
-
-    def to_text(self) -> str:
-        df = self.to_dataframe()
-        summary = "="*80
-        summary += "\nSUMMARY STATISTICS"
-        summary += ("\n" + "="*80)
-
-        summary += (f"\nTotal findings: {len(df)}")
-        summary += (f"\nAgents involved: {df['agent_name'].unique().tolist()}")
-        summary += ("\nSeverity distribution:")
-        summary += f"\n{df['finding_severity'].value_counts().to_dict()}"
-
-        summary += (f"\nPriority distribution:")
-        summary += f"\n{df['recommendation_priority'].value_counts().to_dict()}"
-        
-        for severity in df['finding_severity'].unique():
-            summary += ("\n" + "="*80)
-            summary += (f"\n{severity.upper()} SEVERITY ISSUES")
-            summary += ("\n" + "="*80)
-
-            df_severity = df[df['finding_severity'] == severity]
-            for i,(idx, row) in enumerate(df_severity.iterrows()):
-                summary += (f"\n{i+1}. [{row['agent_name']}] {row['finding_description']}")
-                summary += (f"\n   Evidence: {row['finding_evidence']}")
-                summary += (f"\n   Action: {row['recommendation_action']}")
-                summary += (f"\n   Rationale: {row['recommendation_rationale']}")
-
-        summary += ("\n" + "="*80)
-        summary += ("\nAGENT-SPECIFIC ANALYSIS")
-        summary += ("\n" + "="*80)
-
-        for agent in df['agent_name'].unique():
-            agent_df = df[df['agent_name'] == agent]
-            summary += (f"\n{agent}:")
-            summary += (f"\n  - Findings: {len(agent_df)}")
-            summary += (f"\n  - Artifacts analyzed: {agent_df['analyzed_artifacts'].iloc[0] if not agent_df.empty else 'None'}")
-            if agent_df['summary'].iloc[0]:
-                summary += (f"\n  - Summary: {agent_df['summary'].iloc[0][:100]}...")
-
-        return summary
-
 class ArtifactAnalysisResult(BaseModel):
     context: AgentContext = Field(default=...,description="Context of the analysis")
     summary: Optional[str] = Field(default=...,description="Summary of the analysis")
     additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
-
-    def to_text(self) -> str:
-        summary = "\n" + "="*80
-        summary += "\nDEEPFIX ANALYSIS RESULT\n"
-        summary += f"\nDataset: {self.context.dataset_name}"
-        summary += f"\nRun ID: {self.context.run_id}"
-        if self.additional_outputs.get('optimization_areas'):
-            summary += f"\nOptimization areas: {self.additional_outputs['optimization_areas']}"
-        if self.additional_outputs.get('constraints'):
-            summary += f"\nConstraints: {self.additional_outputs['constraints']}"
-        summary += "\n" + "="*80
-        summary += f"\nSummary of the analysis:\n{self.summary}"
-        summary += "\n" + "="*80
-        summary += self.context.to_text()        
-        return summary
-    
     
     def get_error_messages(self) -> Dict[str, str]:
         return {agent_name: agent_result.error_message for agent_name, agent_result in self.context.agent_results.items()}

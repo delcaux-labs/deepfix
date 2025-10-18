@@ -66,6 +66,9 @@ class ArtifactAnalyzer(Agent):
             return AgentResult(agent_name=self.agent_name, error_message=str(e))
 
     def forward(self, context: AgentContext) -> AgentResult:
+        
+        LOGGER.info(f"Running {self.agent_name} agent...")
+        
         self._check_artifacts(context.artifacts)
         prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
         with self._llm_context():

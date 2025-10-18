@@ -1,10 +1,14 @@
 from typing import Optional
 import requests
+from rich.console import Console
+from rich.spinner import Spinner
+from rich.live import Live
 
 from .pipelines import ArtifactLoadingPipeline, DatasetIngestionPipeline
 from .config import MLflowConfig, ArtifactConfig
 from ..shared.models import APIRequest, APIResponse,ArtifactPath
 
+console = Console()
 
 class DeepFixClient:
     def __init__(self,api_url: str = "http://localhost:8844",mlflow_config: Optional[MLflowConfig]=None,timeout: int = 30):
@@ -51,9 +55,15 @@ class DeepFixClient:
         return APIRequest(**cfg)
     
     def _send_request(self, request: APIRequest):
-        response = requests.post(f"{self.api_url}/v1/analyze", json=request.model_dump(), timeout=self.timeout)
-        if response.status_code != 200:
-            raise Exception(f"Error during analysis: status code: {response.status_code} \nand message: {response.text}")
+                
+        with Live(Spinner("dots", text="[cyan]Running analysis...[/cyan]", style="cyan"), console=console, refresh_per_second=10):
+            response = requests.post(f"{self.api_url}/v1/analyze", json=request.model_dump(), timeout=self.timeout)
+                    
+            if response.status_code != 200:
+                console.print("[red]✗[/red] Analysis failed", style="bold red")
+                raise Exception(f"Error during analysis: status code: {response.status_code} \nand message: {response.text}")
+        
+        console.print("[green]✓[/green] Analysis complete!", style="bold green")
         return APIResponse(**response.json())
 
     
