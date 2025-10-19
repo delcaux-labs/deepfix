@@ -38,3 +38,10 @@ dependencies = [
 
 [project.scripts]
 deepfix = "deepfix.cli.main:main"
+
+[project.optional-dependencies]
+nlp = [
+    "seqeval>=1.2.2",
+    "textblob>=0.19.0",
+    "transformers>=4.57.1",
+]
