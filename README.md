@@ -18,6 +18,28 @@ DeepFix is an AI agent assistant that automatically diagnoses common bugs in mac
 
 ### Installation
 
+#### Option 1: Docker (Recommended for Server Deployment)
+
+```bash
+# Clone the repository
+git clone https://github.com/delcaux-labs/deepfix.git
+cd deepfix
+
+# Copy environment example and configure
+cp env.example .env
+# Edit .env with your API keys
+
+# Start the server using docker-compose
+docker-compose up -d
+
+# Or using Make
+make docker-compose-up
+```
+
+See [Docker Deployment Guide](docs/DOCKER.md) for detailed instructions.
+
+#### Option 2: Local Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/delcaux-labs/deepfix.git
@@ -31,8 +53,10 @@ uv pip install -e .
 ### Basic Usage
 
 ```python
-from deepfix.core.pipelines.factory import DatasetIngestionPipeline
-from deepfix.zoo.datasets.foodwaste import load_train_and_val_datasets
+from deepfix.client import DeepFixClient
+from deepfix.client.zoo.datasets.foodwaste import load_train_and_val_datasets
+
+client = DeepFixClient(api_url="http://localhost:8844",timeout=120)
 
 # Load image datasets
 train_data, val_data = load_train_and_val_datasets(
@@ -42,24 +66,35 @@ train_data, val_data = load_train_and_val_datasets(
     pin_memory=False,)
 
 dataset_name="cafetaria-foodwaste"
-dataset_logging_pipeline = DatasetIngestionPipeline(dataset_name=dataset_name,
-                                                train_test_validation=True,
-                                                data_integrity=True,
-                                                batch_size=8,
-                                                overwrite=False # True -> i.e. delete and re-create
-                                                )
-                                                
-dataset_logging_pipeline.run(train_data=train_data,
-                            test_data=val_data,
-                        )
+client.ingest_dataset(dataset_name=dataset_name,
+                    train_data=train_data,
+                    test_data=val_data,
+                    train_test_validation=True,
+                    data_integrity=True,
+                    batch_size=8,
+                    overwrite=False
+                    )
 
-# Run diagnostics on your data
-analyzer = DatasetAnalyzer(env_file=env_file,)
-
-# Get prioritized solutions
-result = analyzer.run(dataset_name=dataset_name)
+result = client.diagnose_dataset(dataset_name=dataset_name)
 print(result.to_text())
 ```
+
+## 🐳 Docker Deployment
+
+DeepFix can be deployed as a containerized service:
+
+```bash
+# Quick start with docker-compose
+docker-compose up -d
+
+# Or using Makefile commands
+make build          # Build the Docker image
+make run            # Run the container
+make logs           # View logs
+make stop           # Stop the container
+```
+
+For production deployment and advanced configuration, see the [Docker Deployment Guide](docs/DOCKER.md).
 
 ## 📝 License
 
