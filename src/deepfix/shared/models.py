@@ -505,6 +505,28 @@ class APIResponse(BaseModel):
             console.print()
         
         # Summary Statistics Table
+        stats_table = self._summary_table(df)
+        console.print(stats_table)
+        console.print()
+        
+        # Issues by Severity
+        for severity in sorted(df['finding_severity'].unique(), key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x, 3)):
+            severity_color = {"high": "red", "medium": "yellow", "low": "green"}.get(severity, "black")
+            df_severity = df[df['finding_severity'] == severity]
+            
+            # Create a table for issues of this severity
+            issues_table = self._issues_table(df_severity, severity, severity_color)            
+            console.print(issues_table)
+            console.print()
+        
+        # Agent-Specific Analysis
+        #agent_table = self._agent_table(df)        
+        #console.print(agent_table)
+        
+        # Get the string output
+        return buffer.getvalue()
+    
+    def _summary_table(self, df: pd.DataFrame) -> Table:
         stats_table = Table(title="Summary Statistics", show_header=True, header_style="bold blue", box=None)
         stats_table.add_column("Metric", style="blue bold", width=30)
         stats_table.add_column("Value", style="black", width=60)
@@ -519,7 +541,7 @@ class APIResponse(BaseModel):
             color = {"high": "red", "medium": "yellow", "low": "green"}.get(severity, "black")
             severity_text.append(f"{severity.upper()}: {count}  ", style=f"bold {color}")
         stats_table.add_row("Severity Distribution", severity_text)
-        
+
         # Priority distribution with color coding
         #priority_counts = df['recommendation_priority'].value_counts().to_dict()
         #priority_text = Text()
@@ -527,39 +549,32 @@ class APIResponse(BaseModel):
         #    color = {"high": "red", "medium": "yellow", "low": "green"}.get(priority, "black")
         #    priority_text.append(f"{priority.upper()}: {count}  ", style=f"bold {color}")
         #stats_table.add_row("Priority Distribution", priority_text)
-        
-        console.print(stats_table)
-        console.print()
-        
-        # Issues by Severity
-        for severity in sorted(df['finding_severity'].unique(), key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x, 3)):
-            severity_color = {"high": "red", "medium": "yellow", "low": "green"}.get(severity, "black")
-            df_severity = df[df['finding_severity'] == severity]
-            
-            # Create a table for issues of this severity
-            issues_table = Table(
+
+        return stats_table
+    
+    def _issues_table(self, df_severity: pd.DataFrame, severity: Severity, severity_color: str) -> Table:
+        issues_table = Table(
                 title=f"{severity.upper()} Severity Issues ({len(df_severity)})",
                 show_header=True,
                 header_style=f"bold {severity_color}",
                 border_style=severity_color,
                 expand=False
             )
-            issues_table.add_column("#", style="dim", width=3)
-            issues_table.add_column("Agent", style="blue bold", width=30)
-            issues_table.add_column("Finding", style="black", width=40)
-            issues_table.add_column("Action", style="black", width=40)
-            
-            for i, (_, row) in enumerate(df_severity.iterrows(), 1):
-                issues_table.add_row(
-                    str(i),
-                    row['agent_name'],
-                    f"{row['finding_description']}\n[dim]Evidence: {row['finding_evidence']}[/dim]",
-                    f"{row['recommendation_action']}\n[dim italic]{row['recommendation_rationale']}[/dim italic]"
-                )
-            
-            console.print(issues_table)
-            console.print()
+        issues_table.add_column("#", style="dim", width=3)
+        issues_table.add_column("Agent", style="blue bold", width=30)
+        issues_table.add_column("Finding", style="black", width=40)
+        issues_table.add_column("Action", style="black", width=40)
         
+        for i, (_, row) in enumerate(df_severity.iterrows(), 1):
+            issues_table.add_row(
+                str(i),
+                row['agent_name'],
+                f"{row['finding_description']}\n[dim]Evidence: {row['finding_evidence']}[/dim]",
+                f"{row['recommendation_action']}\n[dim italic]{row['recommendation_rationale']}[/dim italic]"
+            )
+        return issues_table
+    
+    def _agent_table(self, df: pd.DataFrame) -> Table:
         # Agent-Specific Analysis
         agent_table = Table(
             title="Agent-Specific Analysis",
@@ -583,11 +598,7 @@ class APIResponse(BaseModel):
                 artifacts,
                 summary
             )
-        
-        console.print(agent_table)
-        
-        # Get the string output
-        return buffer.getvalue()
+        return agent_table
 
 class APIRequest(BaseModel):
     dataset_artifacts: Optional[DatasetArtifacts] = Field(default=None,description="Dataset artifacts")

@@ -70,6 +70,7 @@ class ArtifactAnalysisCoordinator:
         ctx = AgentContext()
         ctx.insert_artifact(artifact)
         return ctx
+    
     def _initialize_analyzer_agents(self) -> List[ArtifactAnalyzer]:
         """Initialize specialized analyzer agents."""
         agents = [DeepchecksArtifactsAnalyzer(config=self.llm_config),
