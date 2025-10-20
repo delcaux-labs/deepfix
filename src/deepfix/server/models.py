@@ -37,6 +37,10 @@ class ArtifactAnalysisResult(BaseModel):
     context: AgentContext = Field(default=...,description="Context of the analysis")
     summary: Optional[str] = Field(default=...,description="Summary of the analysis")
     additional_outputs: Dict[str, Any] = Field(default={},description="Additional outputs from the agent")
+
+    @property
+    def get_agent_results(self) -> Dict[str, AgentResult]:
+        return self.context.agent_results
     
     def get_error_messages(self) -> Dict[str, str]:
         return {agent_name: agent_result.error_message for agent_name, agent_result in self.context.agent_results.items()}

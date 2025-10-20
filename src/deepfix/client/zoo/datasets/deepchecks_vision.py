@@ -8,7 +8,7 @@ supporting classification, object detection, and segmentation tasks.
 from typing import Optional, Tuple, Union
 import logging
 from deepchecks.vision import VisionData
-from deepchecks.vision.datasets import classification, detection
+from deepchecks.vision.datasets import detection, classification
 import torch
 
 try:
@@ -25,7 +25,7 @@ def load_mnist_classification(
     n_samples: Optional[int] = None,
     batch_size: int = 8,
     shuffle: bool = False,
-    pin_memory: bool = True,
+    pin_memory: bool = False,
     object_type: str = 'VisionData',
     use_iterable_dataset: bool = False,
     device: Union[str, torch.device] = 'cpu',

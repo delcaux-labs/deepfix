@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 # Classification Datasets
-def load_tweet_emotion_classification(include_embeddings: bool = False) -> TextData:
+def load_tweet_emotion_classification(include_embeddings: bool = False,as_train_test=False) -> TextData:
     """
     Load Tweet Emotion classification dataset from DeepChecks.
     
@@ -30,7 +30,7 @@ def load_tweet_emotion_classification(include_embeddings: bool = False) -> TextD
         data = classification.tweet_emotion.load_data(data_format="TextData",
                                             include_embeddings=include_embeddings,
                                             include_properties=True,
-                                            as_train_test=False
+                                            as_train_test=as_train_test
                                         )  # type: ignore
         return data
     except Exception as e:
@@ -38,7 +38,7 @@ def load_tweet_emotion_classification(include_embeddings: bool = False) -> TextD
         raise e
 
 
-def load_just_dance_comment_classification(include_embeddings: bool = False,use_full_size: bool = False) -> TextData:
+def load_just_dance_comment_classification(include_embeddings: bool = False,use_full_size: bool = False,as_train_test=False) -> TextData:
     """
     Load Just Dance Comment Analysis classification dataset from DeepChecks.
     
@@ -53,7 +53,7 @@ def load_just_dance_comment_classification(include_embeddings: bool = False,use_
         data = classification.just_dance_comment_analysis.load_data(data_format="TextData",
                                                             include_embeddings=include_embeddings,
                                                             include_properties=True,
-                                                            as_train_test=False,
+                                                            as_train_test=as_train_test,
                                                             use_full_size=use_full_size
                                                             )  # type: ignore
         return data

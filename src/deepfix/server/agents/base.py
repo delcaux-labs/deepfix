@@ -53,7 +53,8 @@ class ArtifactAnalyzer(Agent):
     ):
         super().__init__(config=config)
         self.prompt_builder = PromptBuilder(config=config_prompt_builder)
-        self.llm = llm or dspy.ChainOfThought(ArtifactAnalysisSignature)
+        signature = type(f"{self.agent_name}Signature",(ArtifactAnalysisSignature,),{"__doc__":self.system_prompt})
+        self.llm = llm or dspy.ChainOfThought(signature)
     
     def _check_artifacts(self, artifacts: List[Artifacts]) -> bool:
         if not all(self.supports_artifact(a) for a in artifacts):
@@ -72,7 +73,7 @@ class ArtifactAnalyzer(Agent):
         self._check_artifacts(context.artifacts)
         prompt = self.prompt_builder.build_prompt(artifacts=context.artifacts,context=None)
         with self._llm_context():
-            response = self.llm(artifacts=prompt,system_prompt=self.system_prompt)
+            response = self.llm(artifacts=prompt)
         return AgentResult(
             agent_name=self.agent_name,
             analysis=response.analysis,

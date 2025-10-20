@@ -38,7 +38,8 @@ from ...shared.models import (
     DeepchecksParsedResult,
     DeepchecksArtifacts,
     DeepchecksResultHeaders,
-    DeepchecksConfig
+    DeepchecksConfig,
+    DataType
 )
 
 LOGGER = get_logger(__name__)
@@ -162,6 +163,18 @@ class BaseDeepchecksRunner(ABC):
     @abstractmethod
     def run_suite_model_evaluation(self, train_data: Union[VisionData, TabularDataset, 'TextData'], test_data: Optional[Union[VisionData, TabularDataset, 'TextData']] = None) -> SuiteResult:
         pass
+
+
+def get_deepchecks_runner(data_type: Union[str, DataType], config: Optional[DeepchecksConfig] = None) -> BaseDeepchecksRunner:
+    _type = DataType(data_type) if isinstance(data_type, str) else data_type
+    if _type == DataType.VISION:
+        return DeepchecksRunnerForVision(config=config)
+    elif _type == DataType.TABULAR:
+        return DeepchecksRunnerForTabular(config=config)
+    elif _type == DataType.NLP:
+        return DeepchecksRunnerForNLP(config=config)
+    else:
+        raise ValueError(f"Unsupported data type: {_type}")
 
 
 class DeepchecksRunnerForVision(BaseDeepchecksRunner):
@@ -382,7 +395,7 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         )
 
 
-class DeepchecksRunnerForText(BaseDeepchecksRunner):
+class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
     """
     Deepchecks integration for automated model validation and testing on text/NLP data.
     Provides high-level interface for running Deepchecks NLP test suites.

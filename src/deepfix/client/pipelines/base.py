@@ -7,9 +7,8 @@ LOGGER = get_logger(__name__)
 
 class Step(ABC):
     
-    @abstractmethod
     def get_name(self) -> str:
-        pass
+        return self.__class__.__name__
     
     @abstractmethod
     def run(self, *args, context: dict, **kwargs) -> dict:

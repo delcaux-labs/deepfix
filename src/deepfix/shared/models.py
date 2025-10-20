@@ -119,6 +119,11 @@ class DefaultPaths(StrEnum):
 
 
 # MLTest configs
+class DataType(StrEnum):
+    VISION = "vision"
+    TABULAR = "tabular"
+    NLP = "nlp"
+
 class DeepchecksConfig(BaseModel):
     train_test_validation: bool = Field(
         default=True, description="Whether to run the train_test_validation suite"
@@ -140,6 +145,7 @@ class DeepchecksConfig(BaseModel):
         default=None, description="Output directory to save the results"
     )
     batch_size: int = Field(default=16, description="Batch size to use for the suites")
+    data_type: DataType = Field(default=DataType.VISION, description="Type of data to run the suites on")
 
     @classmethod
     def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":

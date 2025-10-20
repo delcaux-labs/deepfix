@@ -1,5 +1,4 @@
-from typing import Optional, List
-from torch.utils.data import Dataset
+from typing import Optional, List, Union
 
 from .base import Step
 from ..utils.logging import get_logger
@@ -8,9 +7,10 @@ from ...shared.models import (
     DeepchecksArtifacts,
     DatasetArtifacts,
     TrainingArtifacts,
+    DataType,
 )
 from ..artifacts import ArtifactsManager
-from ..data.utils import DataStatistics
+from ..data import BaseDataset, get_data_statistics
 from ..integrations import MLflowManager
 
 LOGGER = get_logger(__name__)
@@ -115,7 +115,7 @@ class LogModelCheckpoint(LogArtifact):
 
 class LogDatasetMetadata(LogArtifact):
     def __init__(
-        self, sqlite_path: str, mlflow_manager: MLflowManager, dataset_name: str
+        self, sqlite_path: str, mlflow_manager: MLflowManager, dataset_name: str, data_type: DataType
     ):
         super().__init__(
             artifact_key=ArtifactPath.DATASET,
@@ -123,12 +123,13 @@ class LogDatasetMetadata(LogArtifact):
             mlflow_manager=mlflow_manager,
         )
         self.dataset_name = dataset_name
+        self.data_type = data_type
 
     def run(
         self,
         context: dict,
-        train_data: Optional[Dataset] = None,
-        test_data: Optional[Dataset] = None,
+        train_data: Optional[BaseDataset] = None,
+        test_data: Optional[BaseDataset] = None,
     ) -> dict:
         train_data = train_data or context.get("train_data")
         test_data = test_data or context.get("test_data")
@@ -137,15 +138,10 @@ class LogDatasetMetadata(LogArtifact):
         assert isinstance(dataset_name, str), (
             f"dataset_name must be a string, got {type(dataset_name)}"
         )
-        assert isinstance(train_data, Dataset), (
-            f"train_data must be a PyTorch Dataset, got {type(train_data)}"
-        )
-        assert isinstance(test_data, Dataset), (
-            f"test_data must be a PyTorch Dataset, got {type(test_data)}"
-        )
-        data_statistics = DataStatistics(train_data=train_data, test_data=test_data)
+        
+        data_statistics = get_data_statistics(data_type=self.data_type, train_data=train_data, test_data=test_data)
         dataset_artifacts = DatasetArtifacts(
-            dataset_name=dataset_name, statistics=data_statistics.get_statistics()
+            dataset_name=dataset_name, statistics=data_statistics
         )
         self.artifact_mgr.register_artifact(
             run_id=dataset_name,

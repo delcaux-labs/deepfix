@@ -1,6 +1,5 @@
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 import torch
-from torch.utils.data import Dataset
 
 from .base import Pipeline, Step
 from .loggers import (
@@ -15,6 +14,7 @@ from .loaders import (
     LoadModelCheckpoint,
     LoadTrainingArtifact,
 )
+from ..data import BaseDataset
 from .data_ingestion import DataIngestor
 from .checks import Checks
 from ..artifacts import ArtifactRepository
@@ -22,7 +22,7 @@ from ..integrations import MLflowManager
 from ..config import DefaultPaths, MLflowConfig, ArtifactConfig
 from ..utils.logging import get_logger
 
-from ...shared.models import ArtifactPath, DeepchecksConfig
+from ...shared.models import ArtifactPath, DeepchecksConfig, DataType
 
 LOGGER = get_logger(__name__)
 
@@ -140,8 +140,8 @@ class ChecksPipeline(Pipeline):
 
     def run(
         self,
-        train_data: Dataset,
-        test_data: Optional[Dataset] = None,
+        train_data: BaseDataset,
+        test_data: Optional[BaseDataset] = None,
     ) -> dict:
         self.context = {}
         self.context["test_data"] = test_data
@@ -152,7 +152,8 @@ class ChecksPipeline(Pipeline):
 class DatasetIngestionPipeline(Pipeline):
     def __init__(
         self,
-        dataset_name: str,
+        dataset_name: str,        
+        data_type: Union[str, DataType],
         batch_size: int = 16,
         mlflow_tracking_uri: Optional[str] = None,
         sqlite_path: Optional[str] = None,
@@ -172,12 +173,16 @@ class DatasetIngestionPipeline(Pipeline):
                 self.delete_artifact(dataset_name, sqlite_path,checks=do_checks)
             else:
                 raise ValueError(f"Dataset {dataset_name} already exists in the database.")
+        
+        if isinstance(data_type, str):
+            data_type = DataType(data_type)
 
         deepchecks_config = DeepchecksConfig(
             model_evaluation=False,
             train_test_validation=train_test_validation,
             data_integrity=data_integrity,
             batch_size=batch_size,
+            data_type=data_type,
             max_samples=max_samples,
             random_state=random_state,
             save_results=save_results,
@@ -192,7 +197,7 @@ class DatasetIngestionPipeline(Pipeline):
         )
         cfg = dict(mlflow_manager=mlflow_manager, sqlite_path=sqlite_path)
         steps = [
-            LogDatasetMetadata(dataset_name=dataset_name, **cfg),
+            LogDatasetMetadata(dataset_name=dataset_name,data_type=data_type, **cfg),
         ]
         if train_test_validation or data_integrity:
             steps.extend(
@@ -221,7 +226,7 @@ class DatasetIngestionPipeline(Pipeline):
         repo = ArtifactRepository(sqlite_path)
         return repo.get(dataset_name, ArtifactPath.DATASET.value) is not None
 
-    def run(self, train_data: Dataset, test_data: Optional[Dataset] = None) -> dict:
+    def run(self, train_data: BaseDataset, test_data: Optional[BaseDataset] = None) -> dict:
         self.context = {}
         self.context["test_data"] = test_data
         self.context["train_data"] = train_data

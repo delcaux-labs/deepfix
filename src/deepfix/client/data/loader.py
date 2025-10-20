@@ -37,7 +37,7 @@ class ClassificationVisionDataLoader:
         dataset: Dataset,
         batch_size: int = 8,
         shuffle: bool = True,
-        model: Optional[torch.nn.Module] = None,
+        model: Optional[Callable] = None,
     ) -> VisionData:
         assert isinstance(dataset, Dataset), (
             "dataset must be an instance of torch.utils.data.Dataset. Received: {}".format(

@@ -1,9 +1,9 @@
-from deepchecks.vision import VisionData
-from typing import Optional
+from typing import Optional, Any
 
 from .base import Step
-from ..integrations import DeepchecksRunner
+from ..integrations.deepchecks import get_deepchecks_runner
 from ...shared.models import DeepchecksConfig
+
 
 
 class Checks(Step):
@@ -16,12 +16,12 @@ class Checks(Step):
     def run(
         self,
         context: dict,
-        train_data: Optional[VisionData] = None,
-        test_data: Optional[VisionData] = None,
+        train_data: Any = None,
+        test_data: Any = None,
         **kwargs,
     ) -> dict:
         deepchecks_config = self.deepchecks_config or context.get("deepchecks_config")
-        deepchecks_runner = DeepchecksRunner(config=deepchecks_config)
+        deepchecks_runner = get_deepchecks_runner(deepchecks_config.data_type, config=deepchecks_config)
         dataset_name = self.dataset_name or context.get("dataset_name")
 
         assert dataset_name is not None, (

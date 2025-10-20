@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 # Classification Datasets
-def load_adult_classification() -> Dataset:
+def load_adult_classification(as_train_test:bool=False) -> Dataset:
     """
     Load Adult/Census income classification dataset from DeepChecks.
     
@@ -25,10 +25,10 @@ def load_adult_classification() -> Dataset:
         DeepChecks Dataset object
     """
     LOGGER.info("Loading Adult classification dataset")
-    return classification.adult.load_data(data_format="Dataset")
+    return classification.adult.load_data(data_format="Dataset",as_train_test=as_train_test)
 
 
-def load_iris_classification() -> Dataset:
+def load_iris_classification(as_train_test:bool=False) -> Dataset:
     """
     Load Iris flower classification dataset from DeepChecks.
     
@@ -36,7 +36,7 @@ def load_iris_classification() -> Dataset:
         DeepChecks Dataset object
     """
     LOGGER.info("Loading Iris classification dataset")    
-    return classification.iris.load_data(data_format="Dataset") 
+    return classification.iris.load_data(data_format="Dataset",as_train_test=as_train_test) 
 
 
 # Regression Datasets
@@ -53,7 +53,7 @@ def load_airbnb_regression(data_size:Optional[int]=15000) -> Tuple[Dataset, Data
     return train_data, test_data
 
 
-def load_wine_quality_regression() -> Dataset:
+def load_wine_quality_regression(as_train_test:bool=False) -> Dataset:
     """
     Load Wine quality regression dataset from DeepChecks.
     
@@ -61,10 +61,10 @@ def load_wine_quality_regression() -> Dataset:
     DeepChecks Dataset object
     """
     LOGGER.info("Loading Wine quality regression dataset")
-    return regression.wine_quality.load_data(data_format="Dataset") 
+    return regression.wine_quality.load_data(data_format="Dataset",as_train_test=as_train_test) 
 
 
-def load_avocado_regression() -> Dataset:
+def load_avocado_regression(as_train_test:bool=False) -> Dataset:
     """
     Load Avocado regression dataset from DeepChecks.
     
@@ -72,6 +72,6 @@ def load_avocado_regression() -> Dataset:
     DeepChecks Dataset object
     """
     LOGGER.info("Loading Avocado regression dataset")
-    return regression.avocado.load_data(data_format="Dataset")
+    return regression.avocado.load_data(data_format="Dataset",as_train_test=as_train_test)
 
 

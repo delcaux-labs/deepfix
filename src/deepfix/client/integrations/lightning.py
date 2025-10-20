@@ -1,10 +1,9 @@
 from lightning.pytorch.callbacks import Callback
 import lightning as L
-from torch.utils.data import Dataset
-from typing import Optional, List, Union
+from typing import Optional, List
 
 from ..utils.logging import get_logger
-from ..core.pipelines.factory import TrainLoggingPipeline
+from ..pipelines.factory import TrainLoggingPipeline
 
 LOGGER = get_logger(__name__)
 
@@ -13,9 +12,7 @@ class DeepSightCallback(Callback):
     def __init__(
         self,
         dataset_name: str,
-        train_dataset: Dataset,
         metric_names: List[str],
-        val_dataset: Optional[Dataset] = None,
         batch_size: int = 16,
     ):
         super().__init__()
@@ -24,9 +21,6 @@ class DeepSightCallback(Callback):
         self.best_model_path: Optional[str] = None
         self.best_model_score: Optional[float] = None
         self.dataset_name: str = dataset_name
-
-        self.train_dataset = train_dataset
-        self.val_dataset = val_dataset
         self.batch_size = batch_size
         self.metric_names = metric_names
 
@@ -77,8 +71,6 @@ class DeepSightCallback(Callback):
         pipeline.run(
             metric_names=self.metric_names,
             checkpoint_artifact_path=self.best_model_path,
-            train_data=self.train_dataset,
-            test_data=self.val_dataset,
         )
         return None
 

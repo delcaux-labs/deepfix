@@ -1,14 +1,35 @@
+from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
 import torch
+import numpy as np
 from typing import Optional, Union, List, Dict
 from tqdm import tqdm
 
+from ..data import BaseDataset, VisionDataset
+from ...shared.models import DataType
 
-class DataStatistics:
+
+def get_data_statistics(data_type: Union[str, DataType], train_data: BaseDataset, test_data: Optional[BaseDataset] = None):
+    if data_type == DataType.VISION:
+        return VisionDataStatistics(train_data=train_data, test_data=test_data).get_statistics()
+    elif data_type == DataType.TABULAR:
+        return TabularDataStatistics(train_data=train_data, test_data=test_data).get_statistics()
+    elif data_type == DataType.NLP:
+        return NLPDataStatistics(train_data=train_data, test_data=test_data).get_statistics()
+    else:
+        raise ValueError(f"Unsupported data type: {data_type}")
+
+class BaseDataStatistics(ABC):
+
+    @abstractmethod
+    def get_statistics(self) -> Dict[str, Union[int, List[float]]]:
+        pass
+
+class VisionDataStatistics(BaseDataStatistics):
     def __init__(
         self,
-        train_data: Dataset,
-        test_data: Optional[Dataset] = None,
+        train_data: VisionDataset,
+        test_data: Optional[VisionDataset] = None,
     ):
         self.train_data = train_data
         self.test_data = test_data
@@ -84,8 +105,12 @@ class DataStatistics:
                 image = sample
 
             # Ensure image is a tensor and floating type
-            if not isinstance(image, torch.Tensor):
-                image = torch.tensor(image)
+            if isinstance(image, np.ndarray):
+                image = torch.from_numpy(image)
+            elif isinstance(image, torch.Tensor):
+                pass
+            else:
+                raise ValueError(f"Unsupported image type: {type(image)}")
             # Cast to float32 and normalize if in 0-255 range
             if image.dtype.is_floating_point:
                 image = image.to(torch.float32)
@@ -113,3 +138,27 @@ class DataStatistics:
         std = torch.sqrt(variance)
 
         return {"mean": mean.tolist(), "std": std.tolist()}
+
+class TabularDataStatistics(BaseDataStatistics):
+    def __init__(
+        self,
+        train_data: BaseDataset,
+        test_data: Optional[BaseDataset] = None,
+    ):
+        self.train_data = train_data
+        self.test_data = test_data
+
+    def get_statistics(self) -> Dict[str, Union[int, List[float]]]:
+        pass
+
+class NLPDataStatistics(BaseDataStatistics):
+    def __init__(
+        self,
+        train_data: BaseDataset,
+        test_data: Optional[BaseDataset] = None,
+    ):
+        self.train_data = train_data
+        self.test_data = test_data
+
+    def get_statistics(self) -> Dict[str, Union[int, List[float]]]:
+        pass

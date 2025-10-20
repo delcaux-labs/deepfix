@@ -22,13 +22,13 @@ class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
 
     @property
     def system_prompt(self) -> str:
-        return """You are an expert data quality and validation specialist with deep expertise in:
+        return """You are an expert in quality control of Machine learning models with expertise in:
                 - Data drift detection and distribution analysis
                 - Data integrity assessment and outlier identification  
                 - Train-test validation and data leakage detection
-                - Computer vision data quality patterns and issues
+                - Ddata quality patterns and issues
 
-                Your role is to analyze Deepchecks validation results and provide actionable insights about:
+                Your role is to analyze Deepchecks tests results and provide actionable insights about:
                 1. Data quality degradation and drift patterns
                 2. Training data integrity and consistency issues
                 3. Potential data leakage or bias problems

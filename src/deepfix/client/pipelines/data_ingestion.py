@@ -1,16 +1,12 @@
-from torch.utils.data import Dataset
 from typing import Optional, Callable
-import torch
-
+from ..data.datasets import BaseDataset
 from .base import Step
-from ..data import ClassificationVisionDataLoader
-
 
 class DataIngestor(Step):
     def __init__(
         self,
         batch_size: int = 8,
-        model: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+        model: Optional[Callable] = None,
     ):
         self.batch_size = batch_size
         self.model = model
@@ -18,21 +14,23 @@ class DataIngestor(Step):
     def run(
         self,
         context: dict,
-        train_data: Optional[Dataset] = None,
-        test_data: Optional[Dataset] = None,
+        train_data: Optional[BaseDataset] = None,
+        test_data: Optional[BaseDataset] = None,
         **kwargs,
     ) -> dict:
-        train_data = ClassificationVisionDataLoader.load_from_dataset(
-            train_data or context.get("train_data"),
-            batch_size=self.batch_size,
-            model=self.model or context.get("model"),
-        )
-        if context.get("test_data") is not None:
-            test_data = ClassificationVisionDataLoader.load_from_dataset(
-                test_data or context.get("test_data"),
-                batch_size=self.batch_size,
-                model=self.model or context.get("model"),
-            )
+
+        if train_data is None:
+            train_data = context.get("train_data")
+        if test_data is None:
+            test_data = context.get("test_data")
+
+        if train_data is None:
+            raise ValueError("train_data is required")
+        train_data = train_data.to_loader(model=self.model, batch_size=self.batch_size)
+
+        if test_data is not None:
+            test_data = test_data.to_loader(model=self.model, batch_size=self.batch_size)
+        
         context["train_data"] = train_data
         context["test_data"] = test_data
         return context
