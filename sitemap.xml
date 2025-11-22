@@ -1,95 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/</loc>
+         <loc>https://docs.delcaux.com/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/api-reference/</loc>
+         <loc>https://docs.delcaux.com/api-reference/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/api-reference/core/</loc>
+         <loc>https://docs.delcaux.com/api-reference/core/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/api-reference/sdk/</loc>
+         <loc>https://docs.delcaux.com/api-reference/sdk/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/api-reference/server/</loc>
+         <loc>https://docs.delcaux.com/api-reference/server/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/architecture/agents/</loc>
+         <loc>https://docs.delcaux.com/architecture/agents/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/architecture/client-server/</loc>
+         <loc>https://docs.delcaux.com/architecture/client-server/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/architecture/overview/</loc>
+         <loc>https://docs.delcaux.com/architecture/overview/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/contributing/development/</loc>
+         <loc>https://docs.delcaux.com/contributing/development/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/contributing/guidelines/</loc>
+         <loc>https://docs.delcaux.com/contributing/guidelines/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/deployment/docker/</loc>
+         <loc>https://docs.delcaux.com/deployment/docker/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/deployment/local-setup/</loc>
+         <loc>https://docs.delcaux.com/deployment/local-setup/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/getting-started/configuration/</loc>
+         <loc>https://docs.delcaux.com/getting-started/configuration/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/getting-started/installation/</loc>
+         <loc>https://docs.delcaux.com/getting-started/installation/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/getting-started/quickstart/</loc>
+         <loc>https://docs.delcaux.com/getting-started/quickstart/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/guides/image-classification/</loc>
+         <loc>https://docs.delcaux.com/guides/image-classification/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/guides/mlflow-integration/</loc>
+         <loc>https://docs.delcaux.com/guides/mlflow-integration/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/guides/nlp-datasets/</loc>
+         <loc>https://docs.delcaux.com/guides/nlp-datasets/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/guides/tabular-data/</loc>
+         <loc>https://docs.delcaux.com/guides/tabular-data/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/tutorials/computer-vision/</loc>
+         <loc>https://docs.delcaux.com/tutorials/computer-vision/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/tutorials/nlp/</loc>
+         <loc>https://docs.delcaux.com/tutorials/nlp/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/tutorials/tabular/</loc>
+         <loc>https://docs.delcaux.com/tutorials/tabular/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
     <url>
-         <loc>https://delcaux-labs.github.io/deepfix/tutorials/tabular_french/</loc>
+         <loc>https://docs.delcaux.com/tutorials/tabular_french/</loc>
          <lastmod>2025-11-22</lastmod>
     </url>
 </urlset>
