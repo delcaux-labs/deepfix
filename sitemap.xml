@@ -2,94 +2,94 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.delcaux.com/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/api-reference/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/api-reference/core/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/api-reference/sdk/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/api-reference/server/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/architecture/agents/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/architecture/client-server/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/architecture/overview/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/contributing/development/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/contributing/guidelines/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/deployment/docker/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/deployment/local-setup/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/getting-started/configuration/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/getting-started/installation/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/getting-started/quickstart/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/guides/image-classification/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/guides/mlflow-integration/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/guides/nlp-datasets/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/guides/tabular-data/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/tutorials/computer-vision/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/tutorials/nlp/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/tutorials/tabular/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://docs.delcaux.com/tutorials/tabular_french/</loc>
-         <lastmod>2025-11-26</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
 </urlset>
