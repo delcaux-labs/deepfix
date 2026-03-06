@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="automated testing tool for diagnosing ML bugs and providing prioritized solutions">
+        <meta name="description" content="DeepFix client–server responsibilities, communication patterns, and design constraints.">
       
       
         <meta name="author" content="DeepFix Team">
@@ -29,7 +29,7 @@
     
     
       
-        <title>Client-Server Architecture - DeepFix Documentation</title>
+        <title>Client–Server Architecture - DeepFix Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#client-server-architecture" class="md-skip">
+        <a href="#overview" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Client-Server Architecture
+              Client–Server Architecture
             
           </span>
         </div>
@@ -1199,8 +1199,6 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
-        
-      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -1209,7 +1207,7 @@
   <span class="md-ellipsis">
     
   
-    Client-Server Architecture
+    Client–Server Architecture
   
 
     
@@ -1227,7 +1225,7 @@
   <span class="md-ellipsis">
     
   
-    Client-Server Architecture
+    Client–Server Architecture
   
 
     
@@ -1242,8 +1240,6 @@
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
-  
-    
   
   
     <label class="md-nav__title" for="__toc">
@@ -1272,6 +1268,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Architecture Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-design-choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Choices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1287,10 +1300,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-artifact-retrieval" class="md-nav__link">
+  <a href="#1-ai-powered-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Artifact Retrieval
+        1. AI-Powered Analysis
       
     </span>
   </a>
@@ -1298,10 +1311,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-ai-powered-analysis" class="md-nav__link">
+  <a href="#2-knowledge-retrieval" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. AI-Powered Analysis
+        2. Knowledge Retrieval
       
     </span>
   </a>
@@ -1309,10 +1322,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-knowledge-retrieval" class="md-nav__link">
+  <a href="#3-result-formatting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Knowledge Retrieval
+        3. Result Formatting
       
     </span>
   </a>
@@ -1320,82 +1333,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-result-formatting" class="md-nav__link">
+  <a href="#4-error-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Result Formatting
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Server Constraints
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Server Constraints">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#performance-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#resource-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resource Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#operational-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operational Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#compatibility-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compatibility Constraints
+        4. Error Handling
       
     </span>
   </a>
@@ -1553,10 +1494,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-synchronous-analysis" class="md-nav__link">
+  <a href="#synchronous-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Synchronous Analysis
+        Synchronous Analysis
       
     </span>
   </a>
@@ -1564,10 +1505,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-asynchronous-analysis" class="md-nav__link">
+  <a href="#asynchronous-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Asynchronous Analysis
+        Asynchronous Analysis
       
     </span>
   </a>
@@ -1575,10 +1516,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-batch-analysis" class="md-nav__link">
+  <a href="#batch-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Batch Analysis
+        Batch Analysis
       
     </span>
   </a>
@@ -1603,10 +1544,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-client-server" class="md-nav__link">
+  <a href="#why-clientserver" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Client-Server?
+        Why Client–Server?
       
     </span>
   </a>
@@ -1629,17 +1570,6 @@
     <span class="md-ellipsis">
       
         Why MLflow for Artifacts?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-in-memory-cache" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why In-Memory Cache?
       
     </span>
   </a>
@@ -1957,8 +1887,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1986,6 +1914,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Architecture Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-design-choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Choices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2001,10 +1946,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-artifact-retrieval" class="md-nav__link">
+  <a href="#1-ai-powered-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Artifact Retrieval
+        1. AI-Powered Analysis
       
     </span>
   </a>
@@ -2012,10 +1957,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-ai-powered-analysis" class="md-nav__link">
+  <a href="#2-knowledge-retrieval" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. AI-Powered Analysis
+        2. Knowledge Retrieval
       
     </span>
   </a>
@@ -2023,10 +1968,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-knowledge-retrieval" class="md-nav__link">
+  <a href="#3-result-formatting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Knowledge Retrieval
+        3. Result Formatting
       
     </span>
   </a>
@@ -2034,82 +1979,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-result-formatting" class="md-nav__link">
+  <a href="#4-error-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Result Formatting
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Server Constraints
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Server Constraints">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#performance-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#resource-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resource Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#operational-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operational Constraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#compatibility-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compatibility Constraints
+        4. Error Handling
       
     </span>
   </a>
@@ -2267,10 +2140,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-synchronous-analysis" class="md-nav__link">
+  <a href="#synchronous-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Synchronous Analysis
+        Synchronous Analysis
       
     </span>
   </a>
@@ -2278,10 +2151,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-asynchronous-analysis" class="md-nav__link">
+  <a href="#asynchronous-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Asynchronous Analysis
+        Asynchronous Analysis
       
     </span>
   </a>
@@ -2289,10 +2162,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-batch-analysis" class="md-nav__link">
+  <a href="#batch-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Batch Analysis
+        Batch Analysis
       
     </span>
   </a>
@@ -2317,10 +2190,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-client-server" class="md-nav__link">
+  <a href="#why-clientserver" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Client-Server?
+        Why Client–Server?
       
     </span>
   </a>
@@ -2343,17 +2216,6 @@
     <span class="md-ellipsis">
       
         Why MLflow for Artifacts?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-in-memory-cache" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why In-Memory Cache?
       
     </span>
   </a>
@@ -2396,19 +2258,21 @@
   
 
 
-<h1 id="client-server-architecture">Client-Server Architecture</h1>
-<p>This document details the client-server architecture of DeepFix, including component responsibilities, communication protocols, and design decisions.</p>
+  <h1>Client–Server Architecture</h1>
+
+<p>This page details the client–server architecture of DeepFix: what each side is responsible for, how they communicate, and the main design constraints.</p>
 <h2 id="overview">Overview</h2>
-<p>DeepFix follows a client-server architecture that separates artifact computation (client) from AI-powered analysis (server). This design enables scalability, flexibility, and maintainability.</p>
+<p>DeepFix separates artifact computation (client) from AI-powered analysis (server). This enables scalability, flexibility, and maintainability.</p>
+<p><img alt="Architecture Diagram" src="../diagrams/architecture.png" /></p>
 <h2 id="architecture-decision">Architecture Decision</h2>
-<p><strong>Server State Management: Hybrid (Stateless + In-Memory Cache)</strong></p>
+<p><strong>Server state management: hybrid (stateless + in-memory cache).</strong></p>
 <ul>
-<li>Stateless core API for horizontal scalability</li>
-<li>In-memory LRU cache for KnowledgeBridge (upgradeable to Redis)</li>
-<li>MLflow as the persistent artifact store</li>
-<li>Local-first deployment model</li>
+<li>Stateless core API for horizontal scalability.</li>
+<li>In-memory LRU cache for knowledge retrieval (upgradeable to Redis).</li>
+<li>MLflow as the persistent artifact store.</li>
+<li>Local-first deployment model.</li>
 </ul>
-<p><strong>Key Design Choices:</strong></p>
+<h3 id="key-design-choices">Key Design Choices</h3>
 <table>
 <thead>
 <tr>
@@ -2436,333 +2300,191 @@
 <tr>
 <td>Deployment</td>
 <td>Local-first</td>
-<td>Matches current usage, easier migration</td>
+<td>Matches expected usage, easier to run and debug</td>
 </tr>
 </tbody>
 </table>
 <h2 id="server-responsibilities">Server Responsibilities</h2>
 <p>The DeepFix server is responsible for:</p>
-<h3 id="1-artifact-retrieval">1. Artifact Retrieval</h3>
+<h3 id="1-ai-powered-analysis">1. AI-Powered Analysis</h3>
 <ul>
-<li>Connect to MLflow tracking server using provided URI</li>
-<li>Fetch artifacts for specified run_id or dataset_name</li>
-<li>Download and cache artifacts locally (temporary storage)</li>
-<li>Handle missing or incomplete artifacts gracefully</li>
+<li>Execute the multi-agent analysis pipeline.</li>
+<li>Coordinate agent execution (parallel where possible).</li>
+<li>Aggregate agent results into unified output.</li>
+<li>Generate natural-language summaries and recommendations.</li>
 </ul>
-<p><strong>Implementation Notes:</strong>
-- Reuse <code>ArtifactsManager</code> from <code>deepfix-core/artifacts/</code>
-- Use MLflow Python client for artifact downloads
-- Implement parallel downloads for multiple artifact types
-- Store downloaded artifacts in ephemeral temp directory (clean up after analysis)</p>
-<h3 id="2-ai-powered-analysis">2. AI-Powered Analysis</h3>
+<p>The server does <strong>not</strong>:</p>
 <ul>
-<li>Execute multi-agent analysis pipeline</li>
-<li>Coordinate agent execution (parallel where possible)</li>
-<li>Aggregate agent results into unified output</li>
-<li>Generate natural language summaries</li>
+<li>Train models.</li>
+<li>Compute metrics or run training loops.</li>
 </ul>
-<p><strong>NOT responsible for</strong>: Training models or computing metrics</p>
-<p><strong>Implementation Notes:</strong>
-- Reuse agent system from <code>deepfix-server/agents/</code>
-- Maintain agent execution order:
-  - Parallel: TrainingAnalyzer, DatasetAnalyzer, DeepchecksAnalyzer
-  - Sequential: CrossArtifactIntegration → OptimizationAdvisor
-- Implement timeout handling per agent
-- Support partial results when some agents fail</p>
-<h3 id="3-knowledge-retrieval">3. Knowledge Retrieval</h3>
+<h3 id="2-knowledge-retrieval">2. Knowledge Retrieval</h3>
 <ul>
-<li>Query knowledge base using KnowledgeBridge</li>
-<li>Cache knowledge retrieval results</li>
-<li>Validate retrieved knowledge against agent context</li>
-<li>Provide knowledge citations in responses</li>
+<li>Query the knowledge base via a <code>KnowledgeBridge</code>.</li>
+<li>Cache knowledge retrieval results.</li>
+<li>Validate retrieved knowledge against the agent context.</li>
+<li>Attach knowledge citations to responses.</li>
 </ul>
-<p><strong>NOT responsible for</strong>: Knowledge base updates or curation</p>
-<p><strong>Implementation Notes:</strong>
-- Reuse <code>KnowledgeBridge</code> from <code>deepfix-kb/</code>
-- Implement in-memory LRU cache for query results
-- Cache key: hash(query + domain + query_type)
-- TTL: 24 hours</p>
-<h3 id="4-result-formatting">4. Result Formatting</h3>
+<p>The server does <strong>not</strong> own:</p>
 <ul>
-<li>Transform agent results into API response format</li>
-<li>Generate natural language summaries</li>
-<li>Prioritize findings by severity and confidence</li>
-<li>Format recommendations with actionable steps</li>
+<li>Knowledge base updates or curation.</li>
 </ul>
-<p><strong>NOT responsible for</strong>: Result persistence or visualization</p>
-<h3 id="5-error-handling">5. Error Handling</h3>
+<h3 id="3-result-formatting">3. Result Formatting</h3>
 <ul>
-<li>Validate incoming requests against schema</li>
-<li>Handle MLflow connection failures</li>
-<li>Manage agent execution errors</li>
-<li>Provide detailed error messages with recovery suggestions</li>
+<li>Transform agent results into the API response schema.</li>
+<li>Prioritize findings by severity and confidence.</li>
+<li>Format recommendations as concrete steps.</li>
 </ul>
-<p><strong>NOT responsible for</strong>: Client-side error recovery</p>
-<h2 id="server-constraints">Server Constraints</h2>
-<h3 id="performance-constraints">Performance Constraints</h3>
-<table>
-<thead>
-<tr>
-<th>Metric</th>
-<th>Constraint</th>
-<th>Rationale</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Response Time</td>
-<td>&lt;60s (typical)</td>
-<td>User expectation for interactive analysis</td>
-</tr>
-<tr>
-<td>Timeout</td>
-<td>300s (max)</td>
-<td>Hard limit to prevent resource exhaustion</td>
-</tr>
-<tr>
-<td>Concurrent Requests</td>
-<td>10 simultaneous</td>
-<td>Local-first deployment assumption</td>
-</tr>
-<tr>
-<td>Memory Usage</td>
-<td>&lt;4GB per analysis</td>
-<td>Supports deployment on standard machines</td>
-</tr>
-<tr>
-<td>Knowledge Query Time</td>
-<td>&lt;2s</td>
-<td>Interactive query experience</td>
-</tr>
-</tbody>
-</table>
-<h3 id="resource-constraints">Resource Constraints</h3>
+<h3 id="4-error-handling">4. Error Handling</h3>
 <ul>
-<li><strong>Cache Size</strong>: Max 1GB or 1000 entries (LRU eviction)</li>
-<li><strong>Artifact Storage</strong>: Temporary only, cleaned after analysis</li>
-<li><strong>Database</strong>: No persistent state (optional SQLite for artifact tracking)</li>
-<li><strong>Network</strong>: Must handle MLflow server on different host</li>
-</ul>
-<h3 id="operational-constraints">Operational Constraints</h3>
-<ul>
-<li><strong>Stateless Design</strong>: No session state between requests</li>
-<li><strong>No User Authentication</strong>: Relies on network security (add later)</li>
-<li><strong>No Artifact Storage</strong>: Server doesn't persist artifacts beyond analysis</li>
-<li><strong>Single Tenant</strong>: No multi-tenancy support in v1</li>
-</ul>
-<h3 id="compatibility-constraints">Compatibility Constraints</h3>
-<ul>
-<li><strong>Python Version</strong>: 3.11+</li>
-<li><strong>MLflow Version</strong>: Compatible with 2.0+</li>
-<li><strong>Artifact Formats</strong>: Must handle legacy and current formats</li>
-<li><strong>API Version</strong>: Semantic versioning (v1 = stable)</li>
+<li>Validate incoming requests against the schema.</li>
+<li>Handle MLflow connection failures.</li>
+<li>Manage agent timeouts and execution errors.</li>
+<li>Return structured error messages.</li>
 </ul>
 <h2 id="server-boundaries">Server Boundaries</h2>
-<p><strong>What Server DOES:</strong></p>
+<p><strong>What the server does:</strong></p>
 <ul>
-<li>✅ Fetch artifacts from MLflow</li>
-<li>✅ Run AI analysis on artifacts</li>
-<li>✅ Query and cache knowledge</li>
-<li>✅ Return structured results</li>
-<li>✅ Health monitoring</li>
+<li>✅ Run AI analysis on artifacts.</li>
+<li>✅ Query and cache knowledge.</li>
+<li>✅ Return structured results.</li>
 </ul>
-<p><strong>What Server DOES NOT:</strong></p>
+<p><strong>What the server does not do:</strong></p>
 <ul>
-<li>❌ Compute or generate artifacts</li>
-<li>❌ Store artifacts permanently</li>
-<li>❌ Log to MLflow</li>
-<li>❌ Train models</li>
-<li>❌ Manage user sessions</li>
-<li>❌ Persist analysis history (v1)</li>
-<li>❌ Update knowledge base (v1)</li>
+<li>❌ Compute or generate artifacts.</li>
+<li>❌ Store artifacts permanently.</li>
+<li>❌ Log to MLflow.</li>
+<li>❌ Train models.</li>
+<li>❌ Manage user sessions.</li>
 </ul>
 <h2 id="client-responsibilities">Client Responsibilities</h2>
 <p>The DeepFix SDK (client) is responsible for:</p>
 <h3 id="1-artifact-computation">1. Artifact Computation</h3>
 <ul>
-<li>Generate datasets, deepchecks reports, model checkpoints</li>
-<li>Compute training metrics and logs</li>
-<li>Run data quality checks</li>
-<li>Extract dataset statistics</li>
+<li>Generate datasets, Deepchecks reports, model checkpoints.</li>
+<li>Compute training metrics and logs.</li>
+<li>Run data quality checks and extract statistics.</li>
 </ul>
-<p><strong>Implementation Notes:</strong>
-- Use existing data loading and processing pipelines
-- Integrate with PyTorch Lightning for training artifacts
-- Use Deepchecks for data quality reports
-- Generate artifacts in MLflow-compatible formats</p>
 <h3 id="2-artifact-recording">2. Artifact Recording</h3>
 <ul>
-<li>Store artifacts in MLflow tracking server</li>
-<li>Tag artifacts with metadata (dataset_name, model_name, etc.)</li>
-<li>Version artifacts appropriately</li>
-<li>Handle artifact storage failures</li>
+<li>Store artifacts in an MLflow tracking server or local store.</li>
+<li>Tag artifacts with metadata (dataset name, run ID, etc.).</li>
+<li>Handle artifact upload errors and retries.</li>
 </ul>
-<p><strong>Implementation Notes:</strong>
-- Use MLflow Python API for artifact logging
-- Implement retry logic for failed uploads
-- Support offline mode with local artifact storage
-- Clean up temporary artifacts after successful upload</p>
 <h3 id="3-workflow-integration">3. Workflow Integration</h3>
 <ul>
-<li>Integrate with PyTorch Lightning callbacks</li>
-<li>Integrate with MLflow experiments</li>
-<li>Support Jupyter notebooks and scripts</li>
-<li>Provide command-line interface</li>
+<li>Integrate with PyTorch Lightning (callbacks/hooks).</li>
+<li>Integrate with MLflow experiments.</li>
+<li>Support notebooks, scripts, and pipelines.</li>
 </ul>
-<p><strong>Implementation Notes:</strong>
-- Create Lightning callback for automatic analysis
-- Provide context managers for MLflow integration
-- Support both synchronous and asynchronous workflows
-- Handle workflow-specific errors gracefully</p>
 <h3 id="4-client-communication">4. Client Communication</h3>
 <ul>
-<li>Send analysis requests to DeepFix server</li>
-<li>Handle server responses and errors</li>
-<li>Implement retry logic for transient failures</li>
-<li>Support offline mode with graceful degradation</li>
+<li>Send analysis requests to the DeepFix server.</li>
+<li>Handle server responses and errors.</li>
+<li>Implement retry logic for transient failures.</li>
+<li>Provide clear error messages to users.</li>
 </ul>
-<p><strong>Implementation Notes:</strong>
-- Use <code>requests</code> library for HTTP communication
-- Implement exponential backoff retry strategy
-- Cache server responses when appropriate
-- Provide clear error messages to users</p>
 <h3 id="5-result-processing">5. Result Processing</h3>
 <ul>
-<li>Parse server responses</li>
-<li>Format results for display</li>
-<li>Integrate results into workflows</li>
-<li>Store results in MLflow (optional)</li>
+<li>Parse server responses.</li>
+<li>Display results in notebooks, logs, or UIs.</li>
+<li>Optionally store results back into MLflow.</li>
 </ul>
-<p><strong>NOT responsible for</strong>: Running AI analysis or querying knowledge base</p>
 <h2 id="client-boundaries">Client Boundaries</h2>
-<p><strong>What Client DOES:</strong></p>
+<p><strong>What the client does:</strong></p>
 <ul>
-<li>✅ Compute artifacts (datasets, checks, metrics)</li>
-<li>✅ Store artifacts in MLflow</li>
-<li>✅ Send analysis requests</li>
-<li>✅ Display results to users</li>
-<li>✅ Integrate with ML workflows</li>
+<li>✅ Compute artifacts (datasets, checks, metrics).</li>
+<li>✅ Store artifacts in MLflow.</li>
+<li>✅ Send analysis requests.</li>
+<li>✅ Render results to users.</li>
 </ul>
-<p><strong>What Client DOES NOT:</strong></p>
+<p><strong>What the client does not do:</strong></p>
 <ul>
-<li>❌ Run AI analysis</li>
-<li>❌ Query knowledge base directly</li>
-<li>❌ Manage server state</li>
-<li>❌ Store analysis results permanently (optional)</li>
+<li>❌ Run AI analysis.</li>
+<li>❌ Query the knowledge base directly.</li>
+<li>❌ Manage server state.</li>
 </ul>
 <h2 id="communication-protocol">Communication Protocol</h2>
 <h3 id="rest-api">REST API</h3>
-<p>The client and server communicate via REST API:</p>
-<p><strong>Endpoint</strong>: <code>POST /v1/analyse</code></p>
-<p><strong>Request Format:</strong>
+<p>The client and server communicate via a JSON-over-HTTP API.</p>
+<ul>
+<li><strong>Endpoint</strong>: <code>POST /v1/analyse</code></li>
+<li><strong>Protocol</strong>: HTTP/HTTPS</li>
+<li><strong>Format</strong>: JSON</li>
+</ul>
+<p><strong>Request format:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;dataset_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-dataset&quot;</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;model_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-model&quot;</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;dataset_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">&quot;statistics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">&quot;deepchecks_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">&quot;reports&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">&quot;checks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">&quot;model_checkpoint_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">&quot;checkpoint_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="nt">&quot;training_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nt">&quot;logs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;english&quot;</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Response Format:</strong>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;dataset_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;deepchecks_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;model_checkpoint_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">&quot;training_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;english&quot;</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Response format:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;agent_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;DatasetArtifactsAnalyzer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;findings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.95</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;high&quot;</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">&quot;DeepchecksArtifactsAnalyzer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="err">...</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Cross-artifact summary...&quot;</span><span class="p">,</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">&quot;additional_outputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">&quot;recommendations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">&quot;citations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">&quot;error_messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="p">}</span>
-</span></code></pre></div></p>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;agent_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Cross-artifact summary...&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;additional_outputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">&quot;recommendations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">&quot;citations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">&quot;error_messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">}</span>
+</span></code></pre></div>
 <h3 id="error-handling">Error Handling</h3>
-<p><strong>Server Errors:</strong></p>
+<p>Typical server errors:</p>
 <ul>
-<li><code>400 Bad Request</code>: Invalid request format</li>
-<li><code>404 Not Found</code>: Artifacts not found in MLflow</li>
-<li><code>500 Internal Server Error</code>: Server processing error</li>
-<li><code>503 Service Unavailable</code>: Server overloaded or unavailable</li>
-<li><code>504 Gateway Timeout</code>: Request timeout</li>
+<li><code>400 Bad Request</code>: invalid request.</li>
+<li><code>404 Not Found</code>: artifacts not found.</li>
+<li><code>500 Internal Server Error</code>: server error.</li>
+<li><code>503 Service Unavailable</code>: overloaded or offline.</li>
 </ul>
-<p><strong>Client Errors:</strong></p>
+<p>Typical client-side handling:</p>
 <ul>
-<li>Connection errors: Retry with exponential backoff</li>
-<li>Timeout errors: Increase timeout or retry</li>
-<li>Validation errors: Fix request format</li>
-<li>Server errors: Log error and notify user</li>
+<li>Retry with backoff on transient errors.</li>
+<li>Surface validation errors clearly.</li>
+<li>Log and expose server-side error messages.</li>
 </ul>
 <h2 id="workflow-patterns">Workflow Patterns</h2>
-<h3 id="1-synchronous-analysis">1. Synchronous Analysis</h3>
+<h3 id="synchronous-analysis">Synchronous Analysis</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Client → Ingest Artifacts → Request Analysis → Wait for Results → Display
 </span></code></pre></div>
-<p><strong>Use Case</strong>: Immediate feedback after training</p>
-<h3 id="2-asynchronous-analysis">2. Asynchronous Analysis</h3>
+<p>Use when you want immediate feedback after training or data preparation.</p>
+<h3 id="asynchronous-analysis">Asynchronous Analysis</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Client → Ingest Artifacts → Request Analysis → Continue Work → Poll for Results
 </span></code></pre></div>
-<p><strong>Use Case</strong>: Long-running analysis</p>
-<h3 id="3-batch-analysis">3. Batch Analysis</h3>
+<p>Use for long-running analyses or batch jobs.</p>
+<h3 id="batch-analysis">Batch Analysis</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Client → Ingest Multiple Artifacts → Request Multiple Analyses → Aggregate Results
 </span></code></pre></div>
-<p><strong>Use Case</strong>: Analyzing multiple experiments</p>
+<p>Use to analyze many experiments or datasets together.</p>
 <h2 id="design-rationale">Design Rationale</h2>
-<h3 id="why-client-server">Why Client-Server?</h3>
+<h3 id="why-clientserver">Why Client–Server?</h3>
 <ol>
-<li><strong>Separation of Concerns</strong>: Clear separation of computation and analysis</li>
-<li><strong>Scalability</strong>: Independent scaling of analysis service</li>
-<li><strong>Flexibility</strong>: Client can work offline with graceful degradation</li>
-<li><strong>Maintainability</strong>: Easier to update and maintain components</li>
+<li>Separation of concerns between computation and analysis.</li>
+<li>Independent scaling of the analysis service.</li>
+<li>Easier updates to analysis logic without touching training code.</li>
 </ol>
 <h3 id="why-stateless-server">Why Stateless Server?</h3>
 <ol>
-<li><strong>Scalability</strong>: Easy horizontal scaling</li>
-<li><strong>Reliability</strong>: No session state to manage</li>
-<li><strong>Simplicity</strong>: Easier deployment and maintenance</li>
-<li><strong>Fault Tolerance</strong>: No state corruption issues</li>
+<li>Easier horizontal scaling and load balancing.</li>
+<li>No session state to manage or migrate.</li>
+<li>More robust restarts and deployments.</li>
 </ol>
 <h3 id="why-mlflow-for-artifacts">Why MLflow for Artifacts?</h3>
 <ol>
-<li><strong>Standardization</strong>: Industry-standard artifact storage</li>
-<li><strong>Integration</strong>: Works with existing ML workflows</li>
-<li><strong>Persistence</strong>: Reliable artifact storage and versioning</li>
-<li><strong>Tooling</strong>: Rich ecosystem of tools</li>
-</ol>
-<h3 id="why-in-memory-cache">Why In-Memory Cache?</h3>
-<ol>
-<li><strong>Performance</strong>: Fast knowledge retrieval</li>
-<li><strong>Simplicity</strong>: No external cache dependency</li>
-<li><strong>Upgradeable</strong>: Can migrate to Redis if needed</li>
-<li><strong>Cost</strong>: No additional infrastructure needed</li>
+<li>Integrates with existing ML workflows.</li>
+<li>Standard artifact tracking and versioning.</li>
+<li>Rich ecosystem and UI.</li>
 </ol>
 <h2 id="related-documentation">Related Documentation</h2>
 <ul>
-<li><a href="../overview/">Architecture Overview</a> - High-level system architecture</li>
-<li><a href="../agents/">Agent System</a> - Agent architecture</li>
-<li><a href="../../api-reference/">API Reference</a> - API documentation</li>
+<li><a href="/architecture/overview">Architecture Overview</a></li>
+<li><a href="/architecture/agents">Agent System</a></li>
+<li><a href="/api-reference/introduction">API Reference</a></li>
 </ul>
-<blockquote>
-<p><strong>Note:</strong> Workflow and Service specifications are available in the <code>specs/</code> directory at the repository root.</p>
-</blockquote>
 
 
 
@@ -2785,7 +2507,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 6, 2026 13:47:44 UTC">March 6, 2026</span>
   </span>
 
     
@@ -2795,7 +2517,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 16, 2025 22:26:27 UTC">November 16, 2025</span>
   </span>
 
     

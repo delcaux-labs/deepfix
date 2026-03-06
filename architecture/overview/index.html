@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="automated testing tool for diagnosing ML bugs and providing prioritized solutions">
+        <meta name="description" content="High-level overview of the DeepFix architecture, components, and data flow.">
       
       
         <meta name="author" content="DeepFix Team">
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-overview" class="md-skip">
+        <a href="#system-overview" class="md-skip">
           Skip to content
         </a>
       
@@ -1171,8 +1171,6 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
-        
-      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -1215,8 +1213,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1248,10 +1244,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-deepfix-sdk-client" class="md-nav__link">
+  <a href="#deepfix-sdk-client" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. DeepFix SDK (Client)
+        DeepFix SDK (Client)
       
     </span>
   </a>
@@ -1259,10 +1255,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-deepfix-server" class="md-nav__link">
+  <a href="#deepfix-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. DeepFix Server
+        DeepFix Server
       
     </span>
   </a>
@@ -1270,10 +1266,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-deepfix-core" class="md-nav__link">
+  <a href="#deepfix-core" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. DeepFix Core
+        DeepFix Core
       
     </span>
   </a>
@@ -1281,10 +1277,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-knowledge-base" class="md-nav__link">
+  <a href="#knowledge-base" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Knowledge Base
+        Knowledge Base
       
     </span>
   </a>
@@ -1309,10 +1305,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-separation-of-concerns" class="md-nav__link">
+  <a href="#separation-of-concerns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Separation of Concerns
+        Separation of Concerns
       
     </span>
   </a>
@@ -1320,10 +1316,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-stateless-server" class="md-nav__link">
+  <a href="#stateless-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Stateless Server
+        Stateless Server
       
     </span>
   </a>
@@ -1331,10 +1327,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-artifact-storage" class="md-nav__link">
+  <a href="#artifact-storage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Artifact Storage
+        Artifact Storage
       
     </span>
   </a>
@@ -1342,10 +1338,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-agentic-analysis" class="md-nav__link">
+  <a href="#agentic-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Agentic Analysis
+        Agentic Analysis
       
     </span>
   </a>
@@ -1353,10 +1349,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-local-first-design" class="md-nav__link">
+  <a href="#local-first-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Local-First Design
+        Local-First Design
       
     </span>
   </a>
@@ -1480,28 +1476,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#request-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Request Format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#response-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Response Format
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1531,10 +1505,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#docker-deployment" class="md-nav__link">
+  <a href="#docker-compose-deployment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Deployment
+        Docker / Compose Deployment
       
     </span>
   </a>
@@ -1559,10 +1533,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-client-server" class="md-nav__link">
+  <a href="#why-clientserver" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Client-Server?
+        Why Client–Server?
       
     </span>
   </a>
@@ -1581,60 +1555,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#why-stateless-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Stateless Server?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#why-agentic-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
         Why Agentic Architecture?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Extensions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Future Extensions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#planned-enhancements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Planned Enhancements
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scalability-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalability Path
       
     </span>
   </a>
@@ -1680,7 +1604,7 @@
   <span class="md-ellipsis">
     
   
-    Client-Server Architecture
+    Client–Server Architecture
   
 
     
@@ -1980,8 +1904,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -2013,10 +1935,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-deepfix-sdk-client" class="md-nav__link">
+  <a href="#deepfix-sdk-client" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. DeepFix SDK (Client)
+        DeepFix SDK (Client)
       
     </span>
   </a>
@@ -2024,10 +1946,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-deepfix-server" class="md-nav__link">
+  <a href="#deepfix-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. DeepFix Server
+        DeepFix Server
       
     </span>
   </a>
@@ -2035,10 +1957,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-deepfix-core" class="md-nav__link">
+  <a href="#deepfix-core" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. DeepFix Core
+        DeepFix Core
       
     </span>
   </a>
@@ -2046,10 +1968,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-knowledge-base" class="md-nav__link">
+  <a href="#knowledge-base" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Knowledge Base
+        Knowledge Base
       
     </span>
   </a>
@@ -2074,10 +1996,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-separation-of-concerns" class="md-nav__link">
+  <a href="#separation-of-concerns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Separation of Concerns
+        Separation of Concerns
       
     </span>
   </a>
@@ -2085,10 +2007,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-stateless-server" class="md-nav__link">
+  <a href="#stateless-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Stateless Server
+        Stateless Server
       
     </span>
   </a>
@@ -2096,10 +2018,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-artifact-storage" class="md-nav__link">
+  <a href="#artifact-storage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Artifact Storage
+        Artifact Storage
       
     </span>
   </a>
@@ -2107,10 +2029,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-agentic-analysis" class="md-nav__link">
+  <a href="#agentic-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Agentic Analysis
+        Agentic Analysis
       
     </span>
   </a>
@@ -2118,10 +2040,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-local-first-design" class="md-nav__link">
+  <a href="#local-first-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Local-First Design
+        Local-First Design
       
     </span>
   </a>
@@ -2245,28 +2167,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#request-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Request Format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#response-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Response Format
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2296,10 +2196,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#docker-deployment" class="md-nav__link">
+  <a href="#docker-compose-deployment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Deployment
+        Docker / Compose Deployment
       
     </span>
   </a>
@@ -2324,10 +2224,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-client-server" class="md-nav__link">
+  <a href="#why-clientserver" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Client-Server?
+        Why Client–Server?
       
     </span>
   </a>
@@ -2346,60 +2246,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#why-stateless-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Stateless Server?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#why-agentic-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
         Why Agentic Architecture?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Extensions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Future Extensions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#planned-enhancements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Planned Enhancements
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scalability-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalability Path
       
     </span>
   </a>
@@ -2442,257 +2292,193 @@
   
 
 
-<h1 id="architecture-overview">Architecture Overview</h1>
-<p>This document provides a high-level overview of the DeepFix architecture, including system components, data flow, and design principles.</p>
+  <h1>Architecture Overview</h1>
+
+<p>This page gives a high-level overview of the DeepFix architecture: the main components, how they interact, and the guiding design principles.</p>
 <h2 id="system-overview">System Overview</h2>
-<p>DeepFix is a distributed system for AI-powered ML artifact analysis. It follows a client-server architecture that separates artifact computation from intelligent analysis.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│   DeepFix SDK   │────────▶│  DeepFix Server  │────────▶│  LLM Provider   │
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   (Client)      │         │   (Analysis)     │         │   (OpenAI/etc)  │
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└─────────────────┘         └──────────────────┘         └─────────────────┘
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        │                            │
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        │                            │
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        ▼                            ▼
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>┌─────────────────┐         ┌──────────────────┐
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│     MLflow      │         │  Knowledge Base  │
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│ (Artifact Store)│         │   (Best Practices│
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>└─────────────────┘         └──────────────────┘
-</span></code></pre></div>
+<p>DeepFix is a distributed system for AI-powered ML artifact analysis. It follows a client–server architecture that separates artifact computation from intelligent analysis.</p>
+<p><img alt="Architecture Diagram" src="../diagrams/architecture.png" /></p>
 <h2 id="core-components">Core Components</h2>
-<h3 id="1-deepfix-sdk-client">1. DeepFix SDK (Client)</h3>
+<h3 id="deepfix-sdk-client">DeepFix SDK (Client)</h3>
 <p>The SDK is responsible for:</p>
 <ul>
-<li><strong>Artifact Computation</strong>: Generating datasets, running checks, collecting metrics</li>
-<li><strong>Artifact Recording</strong>: Storing artifacts in MLflow</li>
-<li><strong>Workflow Integration</strong>: Integrating with PyTorch Lightning, MLflow, etc.</li>
-<li><strong>Client Communication</strong>: Sending analysis requests to the server</li>
+<li>Artifact computation (datasets, checks, metrics)</li>
+<li>Artifact recording in MLflow</li>
+<li>Workflow integration (PyTorch Lightning, ML pipelines)</li>
+<li>Client communication with the DeepFix server</li>
 </ul>
 <p><strong>Location</strong>: <code>deepfix-sdk/</code></p>
-<h3 id="2-deepfix-server">2. DeepFix Server</h3>
+<p>See also: <a href="/api-reference/sdk">SDK API Reference</a>.</p>
+<h3 id="deepfix-server">DeepFix Server</h3>
 <p>The server is responsible for:</p>
 <ul>
-<li><strong>Artifact Retrieval</strong>: Fetching artifacts from MLflow</li>
-<li><strong>AI-Powered Analysis</strong>: Running specialized analysis agents</li>
-<li><strong>Knowledge Retrieval</strong>: Querying best practices knowledge base</li>
-<li><strong>Result Synthesis</strong>: Combining agent results into actionable insights</li>
+<li>Running specialized analysis agents</li>
+<li>Querying the knowledge base</li>
+<li>Synthesizing and returning results</li>
 </ul>
 <p><strong>Location</strong>: <code>deepfix-server/</code></p>
-<h3 id="3-deepfix-core">3. DeepFix Core</h3>
+<p>See also: <a href="/architecture/client-server">Server Architecture</a> and <a href="/api-reference/server">Server API Reference</a>.</p>
+<h3 id="deepfix-core">DeepFix Core</h3>
 <p>Shared models and types:</p>
 <ul>
-<li><strong>Data Models</strong>: APIRequest, APIResponse, artifact types</li>
-<li><strong>Type Definitions</strong>: DataType, ArtifactPath, etc.</li>
+<li>Data models: <code>APIRequest</code>, <code>APIResponse</code>, artifact models</li>
+<li>Type definitions: data types, artifact paths, enums</li>
 </ul>
 <p><strong>Location</strong>: <code>deepfix-core/</code></p>
-<h3 id="4-knowledge-base">4. Knowledge Base</h3>
+<p>See also: <a href="/api-reference/core">Core API Reference</a>.</p>
+<h3 id="knowledge-base">Knowledge Base</h3>
 <p>Stores best practices and domain knowledge:</p>
 <ul>
-<li><strong>Architecture Best Practices</strong>: Model design patterns</li>
-<li><strong>Data Quality Best Practices</strong>: Dataset quality standards</li>
-<li><strong>Training Best Practices</strong>: Training optimization strategies</li>
+<li>Architecture best practices</li>
+<li>Data quality best practices</li>
+<li>Training best practices</li>
 </ul>
 <p><strong>Location</strong>: <code>deepfix-kb/</code>, <code>documents/</code></p>
 <h2 id="architecture-principles">Architecture Principles</h2>
-<h3 id="1-separation-of-concerns">1. Separation of Concerns</h3>
+<h3 id="separation-of-concerns">Separation of Concerns</h3>
 <ul>
-<li><strong>Client</strong>: Handles computation and workflow integration</li>
-<li><strong>Server</strong>: Focuses on AI-powered analysis</li>
-<li>Clear boundaries between components</li>
+<li>Client handles computation and workflow integration.</li>
+<li>Server focuses on AI-powered analysis and reasoning.</li>
+<li>Clear boundaries between SDK, Server, and Core.</li>
 </ul>
-<h3 id="2-stateless-server">2. Stateless Server</h3>
+<h3 id="stateless-server">Stateless Server</h3>
 <ul>
-<li>No session state between requests</li>
-<li>Enables horizontal scaling</li>
-<li>Easier deployment and maintenance</li>
+<li>No session state between requests.</li>
+<li>Enables horizontal scaling and simpler deployment.</li>
 </ul>
-<h3 id="3-artifact-storage">3. Artifact Storage</h3>
+<h3 id="artifact-storage">Artifact Storage</h3>
 <ul>
-<li>MLflow as the single source of truth for artifacts</li>
-<li>Server pulls artifacts on-demand</li>
-<li>Client handles artifact generation and storage</li>
+<li>MLflow is the source of truth for artifacts.</li>
+<li>Client generates artifacts and logs them to MLflow.</li>
 </ul>
-<h3 id="4-agentic-analysis">4. Agentic Analysis</h3>
+<h3 id="agentic-analysis">Agentic Analysis</h3>
 <ul>
-<li>Specialized agents for different artifact types</li>
-<li>Parallel agent execution where possible</li>
-<li>Cross-artifact reasoning for holistic insights</li>
+<li>Specialized agents for different artifact types (datasets, deepchecks, checkpoints, training).</li>
+<li>Parallel agent execution where possible.</li>
+<li>Cross-artifact reasoning for holistic insights.</li>
 </ul>
-<h3 id="5-local-first-design">5. Local-First Design</h3>
+<h3 id="local-first-design">Local-First Design</h3>
 <ul>
-<li>Designed for local deployment</li>
-<li>Can scale to cloud if needed</li>
-<li>Minimal external dependencies</li>
+<li>Designed for local deployment on a single machine.</li>
+<li>Can scale out to cloud and container deployments.</li>
+<li>Minimal external dependencies.</li>
 </ul>
 <h2 id="data-flow">Data Flow</h2>
 <h3 id="analysis-request-flow">Analysis Request Flow</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>1. Client computes artifacts (datasets, checks, metrics)
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>   ↓
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>2. Client stores artifacts in MLflow
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>   ↓
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>3. Client sends analysis request to server
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   ↓
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>4. Server retrieves artifacts from MLflow
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>   ↓
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>5. Server runs analysis agents in parallel
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>   ↓
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>6. Server queries knowledge base
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>   ↓
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>7. Server synthesizes results
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>   ↓
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>8. Server returns structured response to client
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>   ↓
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>9. Client displays results to user
-</span></code></pre></div>
+<p><img alt="Analysis Request Flow" src="../diagrams/workflow.png" /></p>
 <h3 id="agent-execution-flow">Agent Execution Flow</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>AnalyseArtifactsAPI
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    ↓
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>AgentContext (decode request)
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    ↓
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>ArtifactAnalysisCoordinator
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    ↓
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>┌─────────────────────────────────────┐
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│  Parallel Agent Execution           │
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│  - DatasetArtifactsAnalyzer         │
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│  - DeepchecksArtifactsAnalyzer      │
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│  - ModelCheckpointArtifactsAnalyzer │
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>│  - TrainingArtifactsAnalyzer        │
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>└─────────────────────────────────────┘
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    ↓
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>CrossArtifactReasoningAgent (sequential)
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    ↓
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>Synthesize results
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    ↓
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>APIResponse
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>AnalyseArtifactsAPI
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    ↓
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>AgentContext (decode request)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ↓
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>ArtifactAnalysisCoordinator
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    ↓
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>┌─────────────────────────────────────┐
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│  Parallel Agent Execution           │
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  - DatasetArtifactsAnalyzer         │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  - DeepchecksArtifactsAnalyzer      │
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  - ModelCheckpointArtifactsAnalyzer │
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│  - TrainingArtifactsAnalyzer        │
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└─────────────────────────────────────┘
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    ↓
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>CrossArtifactReasoningAgent (sequential)
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    ↓
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>Synthesize results
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    ↓
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>APIResponse
 </span></code></pre></div>
 <h2 id="technology-stack">Technology Stack</h2>
 <h3 id="client-sdk">Client (SDK)</h3>
 <ul>
-<li><strong>Language</strong>: Python 3.11+</li>
-<li><strong>Key Libraries</strong>:</li>
+<li>Language: Python 3.11+</li>
+<li>Key libraries:</li>
 <li><code>requests</code> for HTTP communication</li>
 <li><code>mlflow</code> for artifact tracking</li>
 <li><code>pydantic</code> for data validation</li>
 </ul>
 <h3 id="server">Server</h3>
 <ul>
-<li><strong>Language</strong>: Python 3.11+</li>
-<li><strong>Framework</strong>: FastAPI (via LitServe)</li>
-<li><strong>Key Libraries</strong>:</li>
+<li>Language: Python 3.11+</li>
+<li>Framework: FastAPI (via LitServe)</li>
+<li>Key libraries:</li>
 <li><code>dspy</code> for LLM orchestration</li>
-<li><code>litserve</code> for API serving</li>
+<li><code>litserve</code> for serving</li>
 <li><code>pydantic v2</code> for validation</li>
-<li><code>llama-index-retrievers-bm25</code> for knowledge retrieval</li>
+<li><code>llama-index-retrievers-bm25</code> for retrieval</li>
 </ul>
 <h3 id="core">Core</h3>
 <ul>
-<li><strong>Language</strong>: Python 3.11+</li>
-<li><strong>Key Libraries</strong>:</li>
-<li><code>pydantic</code> for data models</li>
+<li>Language: Python 3.11+</li>
+<li>Key libraries: <code>pydantic</code> for data models</li>
 </ul>
 <h2 id="communication-protocol">Communication Protocol</h2>
 <h3 id="rest-api">REST API</h3>
 <ul>
-<li><strong>Protocol</strong>: HTTP/HTTPS</li>
-<li><strong>Format</strong>: JSON</li>
-<li><strong>Endpoints</strong>:</li>
-<li><code>POST /v1/analyse</code> - Analyze artifacts</li>
+<li>Protocol: HTTP/HTTPS</li>
+<li>Format: JSON</li>
+<li>Main endpoint: <code>POST /v1/analyse</code></li>
 </ul>
-<h3 id="request-format">Request Format</h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;dataset_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-dataset&quot;</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;dataset_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;deepchecks_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;model_checkpoint_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;training_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;english&quot;</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">}</span>
+<p><strong>Example Request:</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;dataset_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-dataset&quot;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;dataset_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;deepchecks_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;model_checkpoint_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;training_artifacts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;english&quot;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
 </span></code></pre></div>
-<h3 id="response-format">Response Format</h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;agent_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;DatasetArtifactsAnalyzer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">&quot;DeepchecksArtifactsAnalyzer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="err">...</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Cross-artifact summary&quot;</span><span class="p">,</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">&quot;additional_outputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nt">&quot;error_messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">}</span>
+<p><strong>Example Response:</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;agent_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Cross-artifact summary&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;additional_outputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;error_messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="deployment-architecture">Deployment Architecture</h2>
 <h3 id="local-deployment">Local Deployment</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>┌─────────────────────────────────────┐
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>│         Local Machine               │
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>│                                     │
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>│  ┌──────────┐    ┌──────────────┐  │
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>│  │  Client  │───▶│    Server    │  │
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>│  └──────────┘    └──────────────┘  │
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>│       │                 │           │
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>│       ▼                 ▼           │
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>│  ┌──────────┐    ┌──────────────┐  │
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>│  │  MLflow  │    │ Knowledge KB │  │
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>│  └──────────┘    └──────────────┘  │
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>│                                     │
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>└─────────────────────────────────────┘
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>┌─────────────────────────────────────┐
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│           Local Machine             │
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>│                                     │
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│  ┌──────────┐    ┌──────────────┐  │
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│  │  Client  │───▶│    Server    │  │
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│  └──────────┘    └──────────────┘  │
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│       │                 │           │
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│       ▼                 ▼           │
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│  ┌──────────┐    ┌──────────────┐  │
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>│  │  MLflow  │    │ Knowledge KB │  │
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>│  └──────────┘    └──────────────┘  │
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>│                                     │
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>└─────────────────────────────────────┘
 </span></code></pre></div>
-<h3 id="docker-deployment">Docker Deployment</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>┌─────────────────────────────────────┐
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>│      Docker Compose                 │
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│                                     │
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│  ┌──────────────┐  ┌─────────────┐ │
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>│  │ deepfix-     │  │ mlflow      │ │
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│  │ server       │  │ server      │ │
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>│  │ container    │  │ container   │ │
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>│  └──────────────┘  └─────────────┘ │
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>│                                     │
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>└─────────────────────────────────────┘
-</span></code></pre></div>
+<h3 id="docker-compose-deployment">Docker / Compose Deployment</h3>
+<p>See <a href="/deployment/docker">Docker Deployment</a> for details on running DeepFix in containers alongside MLflow.</p>
 <h2 id="design-decisions">Design Decisions</h2>
-<h3 id="why-client-server">Why Client-Server?</h3>
+<h3 id="why-clientserver">Why Client–Server?</h3>
 <ul>
-<li><strong>Scalability</strong>: Independent scaling of analysis service</li>
-<li><strong>Separation</strong>: Clear separation of computation and analysis</li>
-<li><strong>Flexibility</strong>: Client can work offline with graceful degradation</li>
+<li>Scalability: independently scale analysis.</li>
+<li>Separation: clear boundary between computation and analysis.</li>
+<li>Flexibility: SDK can work in offline or degraded mode.</li>
 </ul>
 <h3 id="why-mlflow-for-artifacts">Why MLflow for Artifacts?</h3>
 <ul>
-<li><strong>Standardization</strong>: Industry-standard artifact storage</li>
-<li><strong>Integration</strong>: Works with existing ML workflows</li>
-<li><strong>Persistence</strong>: Reliable artifact storage and versioning</li>
-</ul>
-<h3 id="why-stateless-server">Why Stateless Server?</h3>
-<ul>
-<li><strong>Scalability</strong>: Easy horizontal scaling</li>
-<li><strong>Reliability</strong>: No session state to manage</li>
-<li><strong>Simplicity</strong>: Easier to deploy and maintain</li>
+<li>Standardized artifact storage and tracking.</li>
+<li>Integration with existing ML workflows.</li>
+<li>Versioning and reproducibility.</li>
 </ul>
 <h3 id="why-agentic-architecture">Why Agentic Architecture?</h3>
 <ul>
-<li><strong>Specialization</strong>: Each agent focuses on specific artifact type</li>
-<li><strong>Parallelism</strong>: Agents can run in parallel</li>
-<li><strong>Extensibility</strong>: Easy to add new agents</li>
+<li>Specialization per artifact type.</li>
+<li>Easy to add new agents.</li>
+<li>Parallelizable execution.</li>
 </ul>
-<h2 id="future-extensions">Future Extensions</h2>
-<h3 id="planned-enhancements">Planned Enhancements</h3>
-<ol>
-<li><strong>Multi-Tenancy</strong>: Support for multiple users/tenants</li>
-<li><strong>Authentication</strong>: User authentication and authorization</li>
-<li><strong>Result Persistence</strong>: Store analysis history</li>
-<li><strong>Streaming Analysis</strong>: Real-time analysis updates</li>
-<li><strong>Cloud Deployment</strong>: Support for cloud platforms</li>
-</ol>
-<h3 id="scalability-path">Scalability Path</h3>
-<ol>
-<li><strong>Current</strong>: Single server, local deployment</li>
-<li><strong>Next</strong>: Horizontal scaling with load balancer</li>
-<li><strong>Future</strong>: Distributed agents with message queue</li>
-</ol>
 <h2 id="related-documentation">Related Documentation</h2>
 <ul>
-<li><a href="../client-server/">Client-Server Architecture</a> - Detailed client-server design</li>
-<li><a href="../agents/">Agent System</a> - Agent architecture and execution</li>
-<li><a href="../../api-reference/">API Reference</a> - API documentation</li>
-<li><a href="../../deployment/docker/">Deployment Guide</a> - Deployment instructions</li>
+<li><a href="/architecture/client-server">Client–Server Architecture</a></li>
+<li><a href="/architecture/agents">Agent System</a></li>
+<li><a href="/api-reference/introduction">API Reference</a></li>
+<li><a href="/deployment/docker">Docker Deployment</a></li>
 </ul>
 
 
@@ -2716,7 +2502,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 6, 2026 13:47:44 UTC">March 6, 2026</span>
   </span>
 
     
@@ -2726,7 +2512,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 16, 2025 22:26:27 UTC">November 16, 2025</span>
   </span>
 
     

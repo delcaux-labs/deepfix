@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="automated testing tool for diagnosing ML bugs and providing prioritized solutions">
+        <meta name="description" content="How DeepFix’s multi-agent analysis system works, including agent types and execution flow.">
       
       
         <meta name="author" content="DeepFix Team">
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agent-system" class="md-skip">
+        <a href="#agent-architecture" class="md-skip">
           Skip to content
         </a>
       
@@ -1200,7 +1200,7 @@
   <span class="md-ellipsis">
     
   
-    Client-Server Architecture
+    Client–Server Architecture
   
 
     
@@ -1226,8 +1226,6 @@
       
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
-      
-        
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
@@ -1271,25 +1269,12 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#agent-architecture" class="md-nav__link">
@@ -1314,7 +1299,12 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#agent-types" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1327,10 +1317,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-datasetartifactsanalyzer" class="md-nav__link">
+  <a href="#datasetartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. DatasetArtifactsAnalyzer
+        DatasetArtifactsAnalyzer
       
     </span>
   </a>
@@ -1338,10 +1328,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-deepchecksartifactsanalyzer" class="md-nav__link">
+  <a href="#deepchecksartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. DeepchecksArtifactsAnalyzer
+        DeepchecksArtifactsAnalyzer
       
     </span>
   </a>
@@ -1349,10 +1339,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-modelcheckpointartifactsanalyzer" class="md-nav__link">
+  <a href="#modelcheckpointartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. ModelCheckpointArtifactsAnalyzer
+        ModelCheckpointArtifactsAnalyzer
       
     </span>
   </a>
@@ -1360,10 +1350,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-trainingartifactsanalyzer" class="md-nav__link">
+  <a href="#trainingartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. TrainingArtifactsAnalyzer
+        TrainingArtifactsAnalyzer
       
     </span>
   </a>
@@ -1371,18 +1361,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-crossartifactreasoningagent" class="md-nav__link">
+  <a href="#crossartifactreasoningagent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. CrossArtifactReasoningAgent
+        CrossArtifactReasoningAgent
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1431,22 +1416,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agent-implementation" class="md-nav__link">
+  <a href="#implementation-sketch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Implementation
+        Implementation Sketch
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Agent Implementation">
+    <nav class="md-nav" aria-label="Implementation Sketch">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#base-agent-class" class="md-nav__link">
+  <a href="#base-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Base Agent Class
+        Base Agent
       
     </span>
   </a>
@@ -1503,17 +1488,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1548,119 +1522,24 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agent-output" class="md-nav__link">
+  <a href="#performance-reliability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Output
+        Performance &amp; Reliability
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Agent Output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#individual-agent-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Individual Agent Results
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cross-artifact-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-Artifact Summary
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#performance" class="md-nav__link">
+  <a href="#extending-the-agent-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance
+        Extending the Agent System
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Performance">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#execution-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Execution Time
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#optimization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optimization
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-enhancements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Enhancements
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Future Enhancements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#planned-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Planned Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scalability" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalability
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1942,25 +1821,12 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#agent-architecture" class="md-nav__link">
@@ -1985,7 +1851,12 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#agent-types" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1998,10 +1869,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-datasetartifactsanalyzer" class="md-nav__link">
+  <a href="#datasetartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. DatasetArtifactsAnalyzer
+        DatasetArtifactsAnalyzer
       
     </span>
   </a>
@@ -2009,10 +1880,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-deepchecksartifactsanalyzer" class="md-nav__link">
+  <a href="#deepchecksartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. DeepchecksArtifactsAnalyzer
+        DeepchecksArtifactsAnalyzer
       
     </span>
   </a>
@@ -2020,10 +1891,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-modelcheckpointartifactsanalyzer" class="md-nav__link">
+  <a href="#modelcheckpointartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. ModelCheckpointArtifactsAnalyzer
+        ModelCheckpointArtifactsAnalyzer
       
     </span>
   </a>
@@ -2031,10 +1902,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-trainingartifactsanalyzer" class="md-nav__link">
+  <a href="#trainingartifactsanalyzer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. TrainingArtifactsAnalyzer
+        TrainingArtifactsAnalyzer
       
     </span>
   </a>
@@ -2042,18 +1913,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-crossartifactreasoningagent" class="md-nav__link">
+  <a href="#crossartifactreasoningagent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. CrossArtifactReasoningAgent
+        CrossArtifactReasoningAgent
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -2102,22 +1968,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agent-implementation" class="md-nav__link">
+  <a href="#implementation-sketch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Implementation
+        Implementation Sketch
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Agent Implementation">
+    <nav class="md-nav" aria-label="Implementation Sketch">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#base-agent-class" class="md-nav__link">
+  <a href="#base-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Base Agent Class
+        Base Agent
       
     </span>
   </a>
@@ -2174,17 +2040,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2219,119 +2074,24 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agent-output" class="md-nav__link">
+  <a href="#performance-reliability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Output
+        Performance &amp; Reliability
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Agent Output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#individual-agent-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Individual Agent Results
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cross-artifact-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-Artifact Summary
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#performance" class="md-nav__link">
+  <a href="#extending-the-agent-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance
+        Extending the Agent System
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Performance">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#execution-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Execution Time
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#optimization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optimization
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-enhancements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Enhancements
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Future Enhancements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#planned-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Planned Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scalability" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalability
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2366,271 +2126,184 @@
   
 
 
-<h1 id="agent-system">Agent System</h1>
-<p>This document describes the agentic analysis system used by DeepFix, including agent types, execution flow, and coordination mechanisms.</p>
-<h2 id="overview">Overview</h2>
-<p>DeepFix uses a multi-agent system where specialized agents analyze different aspects of ML artifacts. Agents work in parallel where possible and their results are synthesized by a cross-artifact reasoning agent.</p>
+  <h1>Agent System</h1>
+
+<p>DeepFix uses a multi-agent system where specialized agents analyze different aspects of ML artifacts. Agents run in parallel where possible and their results are synthesized by a cross-artifact reasoning agent.</p>
 <h2 id="agent-architecture">Agent Architecture</h2>
 <h3 id="agent-hierarchy">Agent Hierarchy</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ArtifactAnalysisCoordinator
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    │
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    ├─── DatasetArtifactsAnalyzer
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ├─── DeepchecksArtifactsAnalyzer
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    ├─── ModelCheckpointArtifactsAnalyzer
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    ├─── TrainingArtifactsAnalyzer
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    ├── DatasetArtifactsAnalyzer
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ├── DeepchecksArtifactsAnalyzer
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    ├── ModelCheckpointArtifactsAnalyzer
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    ├── TrainingArtifactsAnalyzer
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    │
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    └─── CrossArtifactReasoningAgent (sequential)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    └── CrossArtifactReasoningAgent (sequential)
 </span></code></pre></div>
-<h3 id="agent-types">Agent Types</h3>
-<h4 id="1-datasetartifactsanalyzer">1. DatasetArtifactsAnalyzer</h4>
-<p><strong>Purpose</strong>: Analyze dataset statistics and properties</p>
-<p><strong>Responsibilities:</strong>
-- Examine dataset metadata
-- Analyze class balance and distribution
-- Detect anomalies in dataset
-- Identify data quality issues</p>
-<p><strong>Input</strong>: <code>DatasetArtifacts</code>
-<strong>Output</strong>: Findings on dataset quality, balance, and anomalies</p>
-<p><strong>Execution</strong>: Parallel with other artifact analyzers</p>
-<h4 id="2-deepchecksartifactsanalyzer">2. DeepchecksArtifactsAnalyzer</h4>
-<p><strong>Purpose</strong>: Analyze deepchecks reports for data quality</p>
-<p><strong>Responsibilities:</strong>
-- Review data quality check results
-- Analyze data drift detection
-- Examine integrity check results
-- Identify data issues from deepchecks</p>
-<p><strong>Input</strong>: <code>DeepchecksArtifacts</code>
-<strong>Output</strong>: Findings on data quality, drift, and integrity</p>
-<p><strong>Execution</strong>: Parallel with other artifact analyzers</p>
-<h4 id="3-modelcheckpointartifactsanalyzer">3. ModelCheckpointArtifactsAnalyzer</h4>
-<p><strong>Purpose</strong>: Analyze model checkpoint integrity and readiness</p>
-<p><strong>Responsibilities:</strong>
-- Validate checkpoint integrity
-- Check configuration consistency
-- Assess deployment readiness
-- Identify model issues</p>
-<p><strong>Input</strong>: <code>ModelCheckpointArtifacts</code>
-<strong>Output</strong>: Findings on checkpoint quality and deployment readiness</p>
-<p><strong>Execution</strong>: Parallel with other artifact analyzers</p>
-<h4 id="4-trainingartifactsanalyzer">4. TrainingArtifactsAnalyzer</h4>
-<p><strong>Purpose</strong>: Analyze training dynamics and metrics</p>
-<p><strong>Responsibilities:</strong>
-- Review training metrics and curves
-- Analyze training dynamics
-- Identify training issues
-- Assess model convergence</p>
-<p><strong>Input</strong>: <code>TrainingArtifacts</code>
-<strong>Output</strong>: Findings on training quality and dynamics</p>
-<p><strong>Execution</strong>: Parallel with other artifact analyzers</p>
-<p><strong>Note</strong>: Currently scaffolded, not fully implemented</p>
-<h4 id="5-crossartifactreasoningagent">5. CrossArtifactReasoningAgent</h4>
-<p><strong>Purpose</strong>: Synthesize findings across all agents</p>
-<p><strong>Responsibilities:</strong>
-- Combine findings from all agents
-- Generate holistic insights
-- Create prioritized recommendations
-- Generate natural language summary</p>
-<p><strong>Input</strong>: Results from all artifact analyzers
-<strong>Output</strong>: Cross-artifact summary and recommendations</p>
-<p><strong>Execution</strong>: Sequential (after all other agents complete)</p>
+<h2 id="agent-types">Agent Types</h2>
+<h3 id="datasetartifactsanalyzer">DatasetArtifactsAnalyzer</h3>
+<p><strong>Purpose</strong>: Analyze dataset statistics and properties.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Examine dataset metadata.</li>
+<li>Analyze class balance and distributions.</li>
+<li>Detect dataset anomalies.</li>
+<li>Identify data quality issues.</li>
+</ul>
+<p>Input: <code>DatasetArtifacts</code>\
+Output: findings on dataset quality, balance, and anomalies.\
+Execution: in parallel with other artifact analyzers.</p>
+<h3 id="deepchecksartifactsanalyzer">DeepchecksArtifactsAnalyzer</h3>
+<p><strong>Purpose</strong>: Analyze Deepchecks reports for data quality.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Review Deepchecks data quality checks.</li>
+<li>Analyze drift detection results.</li>
+<li>Examine integrity checks.</li>
+<li>Highlight critical data issues.</li>
+</ul>
+<p>Input: <code>DeepchecksArtifacts</code>\
+Output: findings on data quality, drift, and integrity.\
+Execution: in parallel with other artifact analyzers.</p>
+<h3 id="modelcheckpointartifactsanalyzer">ModelCheckpointArtifactsAnalyzer</h3>
+<p><strong>Purpose</strong>: Analyze model checkpoint integrity and readiness.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Validate checkpoint integrity.</li>
+<li>Check configuration consistency.</li>
+<li>Assess deployment readiness.</li>
+<li>Identify model-related issues.</li>
+</ul>
+<p>Input: <code>ModelCheckpointArtifacts</code>\
+Output: findings on checkpoint quality and deployment readiness.\
+Execution: in parallel with other artifact analyzers.</p>
+<h3 id="trainingartifactsanalyzer">TrainingArtifactsAnalyzer</h3>
+<p><strong>Purpose</strong>: Analyze training dynamics and metrics.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Review training curves and metrics.</li>
+<li>Analyze training dynamics.</li>
+<li>Identify training issues and instabilities.</li>
+<li>Assess model convergence.</li>
+</ul>
+<p>Input: <code>TrainingArtifacts</code>\
+Output: findings on training quality and dynamics.\
+Execution: in parallel with other artifact analyzers.</p>
+<h3 id="crossartifactreasoningagent">CrossArtifactReasoningAgent</h3>
+<p><strong>Purpose</strong>: Synthesize findings across all artifact analyzers.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Combine findings from all agents.</li>
+<li>Generate holistic insights.</li>
+<li>Create prioritized recommendations.</li>
+<li>Produce a natural-language summary.</li>
+</ul>
+<p>Input: results from all artifact analyzers.\
+Output: cross-artifact summary, recommendations, and citations.\
+Execution: runs <strong>after</strong> the parallel agents complete.</p>
 <h2 id="agent-execution-flow">Agent Execution Flow</h2>
 <h3 id="parallel-execution">Parallel Execution</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─────────────────────────────────────┐
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│  Parallel Agent Execution           │
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│                                     │
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  ┌─────────────────────────────┐   │
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  │ DatasetArtifactsAnalyzer    │   │
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│  └─────────────────────────────┘   │
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│                                     │
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│  ┌─────────────────────────────┐   │
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│  │ DeepchecksArtifactsAnalyzer │   │
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│  └─────────────────────────────┘   │
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│                                     │
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│  ┌─────────────────────────────┐   │
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│  │ ModelCheckpointArtifacts    │   │
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│  │        Analyzer             │   │
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│  └─────────────────────────────┘   │
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│                                     │
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│  ┌─────────────────────────────┐   │
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│  │ TrainingArtifactsAnalyzer   │   │
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>│  └─────────────────────────────┘   │
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>│                                     │
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>└─────────────────────────────────────┘
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>              │
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>              ▼
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>┌─────────────────────────────────────┐
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>│  CrossArtifactReasoningAgent        │
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│  (Sequential)                       │
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>│                                     │
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│  - Synthesize findings              │
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│  - Generate summary                 │
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│  - Create recommendations           │
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>└─────────────────────────────────────┘
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  DatasetArtifactsAnalyzer           │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  DeepchecksArtifactsAnalyzer        │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│  ModelCheckpointArtifactsAnalyzer   │
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│  TrainingArtifactsAnalyzer          │
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└─────────────────────────────────────┘
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>              │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>              ▼
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>┌─────────────────────────────────────┐
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│  CrossArtifactReasoningAgent        │
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│  (Sequential)                       │
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>└─────────────────────────────────────┘
 </span></code></pre></div>
 <h3 id="execution-sequence">Execution Sequence</h3>
 <ol>
-<li><strong>Request Decoding</strong>: Convert API request to <code>AgentContext</code></li>
-<li><strong>Parallel Agent Execution</strong>: Run all artifact analyzers in parallel</li>
-<li><strong>Agent Result Collection</strong>: Collect results from all agents</li>
-<li><strong>Cross-Artifact Reasoning</strong>: Synthesize findings sequentially</li>
-<li><strong>Response Generation</strong>: Format final response</li>
+<li>Decode <code>APIRequest</code> into an <code>AgentContext</code>.</li>
+<li>Run all artifact analyzers in parallel.</li>
+<li>Collect results (with timeouts and partial failures).</li>
+<li>Run <code>CrossArtifactReasoningAgent</code>.</li>
+<li>Build final <code>APIResponse</code>.</li>
 </ol>
-<h2 id="agent-implementation">Agent Implementation</h2>
-<h3 id="base-agent-class">Base Agent Class</h3>
-<p>All agents inherit from a base <code>Agent</code> class:</p>
+<h2 id="implementation-sketch">Implementation Sketch</h2>
+<h3 id="base-agent">Base Agent</h3>
+<p>Each agent is implemented as a module using the configured LLM and knowledge bridge.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Agent</span><span class="p">(</span><span class="n">dspy</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base agent class for DeepFix analysis agents.&quot;&quot;&quot;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Base agent for DeepFix analysis.&quot;&quot;&quot;</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">llm_config</span><span class="p">:</span> <span class="n">LLMConfig</span><span class="p">):</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">configure_llm</span><span class="p">(</span><span class="n">llm_config</span><span class="p">)</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="c1"># Initialize agent-specific components</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">AgentContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentResult</span><span class="p">:</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Run analysis and return results.&quot;&quot;&quot;</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="c1"># Agent-specific analysis logic</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="k">pass</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">AgentContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentResult</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="c1"># Agent-specific analysis logic</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span></code></pre></div>
 <h3 id="agent-context">Agent Context</h3>
-<p>Agents receive an <code>AgentContext</code> containing:</p>
+<p>Each agent receives an <code>AgentContext</code> containing:</p>
 <ul>
-<li><code>dataset_artifacts</code>: Dataset metadata and statistics</li>
-<li><code>deepchecks_artifacts</code>: Deepchecks reports</li>
-<li><code>model_checkpoint_artifacts</code>: Model checkpoint information</li>
-<li><code>training_artifacts</code>: Training metrics and logs</li>
-<li><code>dataset_name</code>: Name of the dataset</li>
-<li><code>language</code>: Output language</li>
+<li>Dataset artifacts.</li>
+<li>Deepchecks artifacts.</li>
+<li>Model checkpoint artifacts.</li>
+<li>Training artifacts.</li>
+<li>Dataset name and language.</li>
 </ul>
+<p>Agents focus only on the subset they need.</p>
 <h3 id="agent-result">Agent Result</h3>
-<p>Agents return an <code>AgentResult</code> containing:</p>
+<p>Agents return an <code>AgentResult</code> with:</p>
 <ul>
-<li><code>findings</code>: List of findings/issues identified</li>
-<li><code>confidence</code>: Confidence score (0.0-1.0)</li>
-<li><code>severity</code>: Severity level (low/medium/high/critical)</li>
-<li><code>recommendations</code>: List of recommended actions</li>
-<li><code>metadata</code>: Additional agent-specific metadata</li>
+<li>Findings (issues, observations).</li>
+<li>Severity and confidence.</li>
+<li>Recommendations.</li>
+<li>Optional metadata.</li>
 </ul>
 <h2 id="coordination">Coordination</h2>
 <h3 id="artifactanalysiscoordinator">ArtifactAnalysisCoordinator</h3>
 <p>The coordinator orchestrates agent execution:</p>
-<p><strong>Responsibilities:</strong>
-- Decode API requests into agent context
-- Dispatch artifacts to appropriate agents
-- Coordinate parallel agent execution
-- Collect and aggregate agent results
-- Handle agent errors and timeouts
-- Generate final response</p>
-<p><strong>Execution Flow:</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>1. Receive APIRequest
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   ↓
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>2. Decode to AgentContext
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>   ↓
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>3. Start parallel agents
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>   │
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>   ├── DatasetArtifactsAnalyzer
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>   ├── DeepchecksArtifactsAnalyzer
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>   ├── ModelCheckpointArtifactsAnalyzer
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>   └── TrainingArtifactsAnalyzer
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>   ↓
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>4. Wait for all agents (with timeout)
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>   ↓
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>5. Collect results (handle partial failures)
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>   ↓
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>6. Run CrossArtifactReasoningAgent
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>   ↓
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>7. Generate APIResponse
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>   ↓
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>8. Return response
-</span></code></pre></div>
-<h3 id="error-handling">Error Handling</h3>
-<p><strong>Agent Timeout:</strong>
-- Individual agent timeout: 60s
-- Overall timeout: 300s
-- Partial results returned if some agents fail</p>
-<p><strong>Agent Failure:</strong>
-- Log error but continue with other agents
-- Include error message in response
-- Provide partial results when possible</p>
-<p><strong>LLM Errors:</strong>
-- Retry with exponential backoff
-- Fallback to cached knowledge if available
-- Return error in agent result</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Decode API requests into an agent context.</li>
+<li>Dispatch artifacts to appropriate agents.</li>
+<li>Run analyzers in parallel with timeouts.</li>
+<li>Handle agent errors and partial failures.</li>
+<li>Run cross-artifact reasoning.</li>
+<li>Produce the final API response.</li>
+</ul>
 <h2 id="knowledge-integration">Knowledge Integration</h2>
 <h3 id="knowledgebridge">KnowledgeBridge</h3>
-<p>Agents use KnowledgeBridge to query best practices:</p>
-<p><strong>Knowledge Sources:</strong>
-- Architecture best practices
-- Data quality best practices
-- Training best practices
-- Research papers and documentation</p>
-<p><strong>Query Process:</strong>
-1. Agent formulates query based on context
-2. Query sent to KnowledgeBridge
-3. KnowledgeBridge retrieves relevant knowledge
-4. Knowledge integrated into agent analysis
-5. Citations included in results</p>
-<p><strong>Caching:</strong>
-- Knowledge queries cached for 24 hours
-- Cache key: hash(query + domain + query_type)
-- LRU eviction when cache full</p>
-<h2 id="agent-output">Agent Output</h2>
-<h3 id="individual-agent-results">Individual Agent Results</h3>
-<p>Each agent produces structured results:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;agent_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DatasetArtifactsAnalyzer&quot;</span><span class="p">,</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;findings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;issue&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Class imbalance detected&quot;</span><span class="p">,</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;high&quot;</span><span class="p">,</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.95</span><span class="p">,</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">      </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="nt">&quot;recommendations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span><span class="p">],</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.95</span><span class="p">,</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;high&quot;</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
-</span></code></pre></div>
-<h3 id="cross-artifact-summary">Cross-Artifact Summary</h3>
-<p>The cross-artifact reasoning agent generates:</p>
+<p>Agents use the knowledge bridge to query best practices and prior knowledge.</p>
+<p>Knowledge sources:</p>
 <ul>
-<li><strong>Summary</strong>: Natural language summary of all findings</li>
-<li><strong>Prioritized Recommendations</strong>: Ranked list of actions</li>
-<li><strong>Citations</strong>: References to best practices used</li>
-<li><strong>Additional Outputs</strong>: Agent-specific insights</li>
+<li>Architecture and training best practices.</li>
+<li>Data quality and drift playbooks.</li>
+<li>Internal notes and examples.</li>
 </ul>
-<h2 id="performance">Performance</h2>
-<h3 id="execution-time">Execution Time</h3>
+<p>Caching:</p>
 <ul>
-<li><strong>Typical</strong>: 30-60 seconds for full analysis</li>
-<li><strong>Fast</strong>: 10-20 seconds with cached knowledge</li>
-<li><strong>Slow</strong>: Up to 5 minutes for complex analyses</li>
+<li>Queries cached with LRU.</li>
+<li>Cache key: hash of <code>(query, domain, type)</code>.</li>
+<li>TTL on entries (e.g. 24h).</li>
 </ul>
-<h3 id="optimization">Optimization</h3>
+<h2 id="performance-reliability">Performance &amp; Reliability</h2>
+<ul>
+<li>Typical analysis: 30–60 seconds.</li>
+<li>Knowledge cache improves latency.</li>
+<li>Per-agent timeouts avoid hangs.</li>
+<li>Partial results returned when some agents fail.</li>
+</ul>
+<h2 id="extending-the-agent-system">Extending the Agent System</h2>
+<p>To add a new agent:</p>
 <ol>
-<li><strong>Parallel Execution</strong>: All artifact analyzers run in parallel</li>
-<li><strong>Knowledge Caching</strong>: Cache knowledge queries</li>
-<li><strong>Timeout Handling</strong>: Individual agent timeouts prevent hanging</li>
-<li><strong>Partial Results</strong>: Return partial results on failures</li>
-</ol>
-<h2 id="future-enhancements">Future Enhancements</h2>
-<h3 id="planned-features">Planned Features</h3>
-<ol>
-<li><strong>Streaming Results</strong>: Real-time result streaming</li>
-<li><strong>Custom Agents</strong>: User-defined custom agents</li>
-<li><strong>Agent Composition</strong>: Chain agents together</li>
-<li><strong>Agent Learning</strong>: Agents learn from feedback</li>
-</ol>
-<h3 id="scalability">Scalability</h3>
-<ol>
-<li><strong>Distributed Agents</strong>: Agents on different machines</li>
-<li><strong>Agent Pool</strong>: Pool of agents for load balancing</li>
-<li><strong>Message Queue</strong>: Use message queue for coordination</li>
+<li>Implement a new <code>Agent</code> subclass.</li>
+<li>Register it in the coordinator.</li>
+<li>Wire any new artifacts or knowledge sources.</li>
+<li>Add tests and documentation.</li>
 </ol>
 <h2 id="related-documentation">Related Documentation</h2>
 <ul>
-<li><a href="../overview/">Architecture Overview</a> - High-level system architecture</li>
-<li><a href="../client-server/">Client-Server Architecture</a> - Component responsibilities</li>
-<li><a href="../../api-reference/">API Reference</a> - API documentation</li>
+<li><a href="/architecture/overview">Architecture Overview</a></li>
+<li><a href="/architecture/client-server">Client–Server Architecture</a></li>
+<li><a href="/api-reference/server">Server API Reference</a></li>
 </ul>
 
 
@@ -2654,7 +2327,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 6, 2026 13:47:44 UTC">March 6, 2026</span>
   </span>
 
     
@@ -2664,7 +2337,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 17, 2025 14:07:21 UTC">December 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 16, 2025 22:26:27 UTC">November 16, 2025</span>
   </span>
 
     
