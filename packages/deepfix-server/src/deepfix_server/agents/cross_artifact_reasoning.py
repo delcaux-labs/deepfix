@@ -28,9 +28,7 @@ class CrossArtifactReasoningAgent(Agent):
         previous_analyses: Dict[str, AgentResult],
         output_language: str = "english",
     ) -> AgentResult:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.arun(previous_analyses, output_language))
-            return future.result()
+        return asyncio.run(self.arun(previous_analyses, output_language))
 
     async def arun(
         self,
@@ -50,9 +48,7 @@ class CrossArtifactReasoningAgent(Agent):
         previous_analyses: Dict[str, AgentResult],
         output_language: str = "english",
     ) -> AgentResult:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(previous_analyses, output_language))
-            return future.result()
+        return asyncio.run(self.aforward(previous_analyses, output_language))
 
     async def aforward(
         self,

@@ -101,9 +101,7 @@ class ArtifactAnalysisCoordinator(Agent):
 
     def forward(self, context: AgentContext) -> ArtifactAnalysisResult:
         """Run aforward synchronously in a separate thread to avoid event loop conflicts."""
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(context))
-            return future.result()
+        return asyncio.run(self.aforward(context))
 
     async def arun(self, context: AgentContext) -> ArtifactAnalysisResult:
         """Run the coordinator asynchronously with error handling.
@@ -136,9 +134,7 @@ class ArtifactAnalysisCoordinator(Agent):
         Returns:
             ArtifactAnalysisResult containing analysis results from all agents.
         """
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.arun(context))
-            return future.result()
+        return asyncio.run(self.arun(context))
 
     def _get_analyzer_agent(self, artifact: Artifacts) -> ArtifactAnalyzer:
         for analyzer_agent in self.analyzer_agents:

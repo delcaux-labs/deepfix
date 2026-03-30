@@ -157,9 +157,7 @@ class ArtifactAnalyzer(Agent):
         Returns:
             AgentResult with analysis or error message if execution fails.
         """
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.arun(context))
-            return future.result()
+        return asyncio.run(self.arun(context))
 
     async def arun(self, context: AgentContext) -> AgentResult:
         """Run the analyzer asynchronously with error handling.
@@ -185,9 +183,7 @@ class ArtifactAnalyzer(Agent):
         Returns:
             AgentResult containing analysis results and analyzed artifact types.
         """
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(context))
-            return future.result()
+        return asyncio.run(self.aforward(context))
 
     async def aforward(self, context: AgentContext) -> AgentResult:
         """Analyze artifacts asynchronously and return results.

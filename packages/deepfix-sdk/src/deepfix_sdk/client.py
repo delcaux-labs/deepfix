@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Optional, Union
 
+import httpx
 import requests
 from deepfix_core.models import APIRequest, APIResponse, ArtifactPath, DataType
 from rich.console import Console
@@ -195,6 +196,41 @@ class DeepFixClient:
             language=language,
         )
 
+    async def aget_diagnosis(
+        self,
+        train_data: BaseDataset,
+        test_data: Optional[BaseDataset] = None,
+        model: Any = None,
+        model_name: Optional[str] = None,
+        batch_size: int = 8,
+        language: str = "english",
+    ) -> APIResponse:
+        """Asynchronously ingest and diagnose a model in a single operation."""
+        assert isinstance(train_data, BaseDataset), (
+            "train_data must be an instance of BaseDataset"
+        )
+        assert test_data is None or isinstance(test_data, BaseDataset), (
+            "test_data must be an instance of BaseDataset"
+        )
+
+        dataset_name = self.get_dataset_name(train_data, test_data)
+
+        # Ingestion is primarily local disk operations and MLflow tracking,
+        # so keeping it synchronous is acceptable for now.
+        self.ingest(
+            train_data=train_data,
+            test_data=test_data,
+            model=model,
+            model_name=model_name,
+            batch_size=batch_size,
+            overwrite=True,
+        )
+        return await self.adiagnose(
+            dataset_name=dataset_name,
+            model_name=model_name,
+            language=language,
+        )
+
     def diagnose(
         self,
         dataset_name: str,
@@ -233,6 +269,21 @@ class DeepFixClient:
             language=language,
         )
         response = self._send_request(request)
+        return response
+
+    async def adiagnose(
+        self,
+        dataset_name: str,
+        language: str = "english",
+        model_name: Optional[str] = None,
+    ) -> APIResponse:
+        """Asynchronously analyze a run and return diagnostic results."""
+        request = self._create_request(
+            dataset_name=dataset_name,
+            model_name=model_name,
+            language=language,
+        )
+        response = await self._asend_request(request)
         return response
 
     def _load_artifacts(self, dataset_name: str, model_name: str) -> dict:
@@ -397,6 +448,43 @@ class DeepFixClient:
                 timeout=self.timeout,
                 headers=headers,
             )
+
+            if response.status_code != 200:
+                console.print("[red]✗[/red] Analysis failed", style="bold red")
+                raise RuntimeError(
+                    f"Error during analysis: status code: {response.status_code} \nand message: {response.text}"
+                )
+            out = APIResponse(**response.json())
+
+        if isinstance(out.error_messages, dict) and any(out.error_messages.values()):
+            console.print("[red]✗[/red] Errors during analysis", style="bold red")
+            console.print(
+                f"Error during analysis: {out.error_messages}"
+            )
+
+        console.print("[green]✓[/green] Analysis complete!", style="bold green")
+        return out
+
+    async def _asend_request(self, request: APIRequest) -> APIResponse:
+        """Asynchronously send an analysis request to the DeepFix server."""
+        console.print(
+            f"[dim]Connecting to: {self._analyze_endpoint} (Async)[/dim]",
+            style="dim",
+        )
+        with Live(
+            Spinner("dots", text="[cyan]Running analysis...[/cyan]", style="cyan"),
+            console=console,
+            refresh_per_second=10,
+        ):
+            payload = request.model_dump()
+            headers = {"Authorization": f"Bearer {os.getenv('DEEPFIX_API_KEY')}"}
+
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    self._analyze_endpoint,
+                    json=payload,
+                    headers=headers,
+                )
 
             if response.status_code != 200:
                 console.print("[red]✗[/red] Analysis failed", style="bold red")

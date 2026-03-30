@@ -228,7 +228,8 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
                 Be specific, avoid guessing names of files or values that are not present in the artifacts, and prefer concrete, actionable guidance over generic advice."""
 
     def load_model_summary(self, path: str) -> Dict[str, Any]:
-        raise NotImplementedError
+        """Mock implementation to satisfy abstract requirement."""
+        return {"summary": "Model summary not implemented."}
 
     @property
     def supported_artifact_types(self):
@@ -282,9 +283,6 @@ class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
 
     def _run(self, context: AgentContext) -> AgentResult:
         """Main analysis method following the specification"""
-
-        raise NotImplementedError("TrainingArtifactsAnalyzer is not implemented yet")
-
         # Find training artifacts
         training_artifacts = self._get_training_artifacts(context.artifacts)
         if not training_artifacts:
@@ -310,16 +308,35 @@ class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
                     )
 
             # Generate recommendations based on findings
+            analysis_text = self._format_analysis_output(findings, recommendations)
 
             return AgentResult(
                 agent_name=self.agent_name,
-                analysis=self._format_analysis_output(findings, recommendations),
+                analysis=analysis_text,
                 analyzed_artifacts=["TrainingArtifacts"],
             )
 
         except (ValueError, KeyError, AttributeError) as e:
             self.logger.error("Training dynamics analysis failed: %s", str(e))
             return self._error_result(str(e))
+
+    def _format_analysis_output(self, findings: List[Finding], recommendations: List[Any]) -> str:
+        """Format the analysis output."""
+        if not findings:
+            return "No significant issues found in training dynamics."
+
+        output = "Training Dynamics Analysis:\n\n"
+        output += "Findings:\n"
+        for finding in findings:
+            output += f"- [{finding.severity.value.upper()}] {finding.description}\n"
+            output += f"  Evidence: {finding.evidence}\n"
+
+        if recommendations:
+            output += "\nRecommendations:\n"
+            for rec in recommendations:
+                output += f"- {getattr(rec, 'action', str(rec))}\n"
+
+        return output
 
     def _get_training_artifacts(self, artifacts: List) -> Optional[TrainingArtifacts]:
         """Extract training artifacts from context"""

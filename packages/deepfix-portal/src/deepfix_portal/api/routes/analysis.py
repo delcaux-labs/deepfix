@@ -12,18 +12,14 @@ import time
 import traceback
 from typing import Any, Optional
 
-import dspy
+import httpx
 from deepfix_core.models import APIRequest, APIResponse, DatasetArtifacts
-from deepfix_server.config import LLMConfig
-from deepfix_server.coordinators import ArtifactAnalysisCoordinator
-from deepfix_server.models import AgentContext
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from langfuse import get_client, observe
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..dependencies import get_api_key_user
-from ..dspy_cache import DSPyDatabaseCache
 from ..models import RequestLog
 from ..schemas import APIKeyValidationResponse
 
@@ -31,54 +27,7 @@ router = APIRouter()
 
 LOGGER = logging.getLogger(__name__)
 
-
-# Singleton instances
-_coordinator: Optional[ArtifactAnalysisCoordinator] = None
-_llm_config: Optional[LLMConfig] = None
-_dspy_cache: Optional[DSPyDatabaseCache] = None
-
-if os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"):
-    from openinference.instrumentation.dspy import DSPyInstrumentor
-
-    DSPyInstrumentor().instrument()
-    langfuse = get_client()
-
-    # Verify connection
-    if langfuse.auth_check():
-        LOGGER.info("Langfuse client is authenticated and ready!")
-    else:
-        LOGGER.warning("Authentication failed. Please check your credentials and host.")
-
-
-def _get_llm_config() -> LLMConfig:
-    """Get or create the LLM configuration from environment variables."""
-    global _llm_config
-    if _llm_config is None:
-        _llm_config = LLMConfig.load_from_env()
-    return _llm_config
-
-
-def _get_dspy_cache() -> DSPyDatabaseCache:
-    """Get or create the singleton DSPy database cache instance."""
-    global _dspy_cache
-    if _dspy_cache is None:
-        _dspy_cache = DSPyDatabaseCache()
-        # Set as the global DSPy cache
-        dspy.cache = _dspy_cache
-        LOGGER.info("DSPy database cache initialized and configured")
-    return _dspy_cache
-
-
-def _get_coordinator() -> ArtifactAnalysisCoordinator:
-    """Get or create the singleton coordinator instance."""
-    global _coordinator
-    if _coordinator is None:
-        # Initialize DSPy cache before creating coordinator
-        _get_dspy_cache()
-
-        llm_config = _get_llm_config()
-        _coordinator = ArtifactAnalysisCoordinator(config=llm_config)
-    return _coordinator
+DEEPFIX_SERVER_URL = os.getenv("DEEPFIX_SERVER_URL", "http://localhost:4141/api/v1/analyse")
 
 
 def _serialize_to_json(obj: Any) -> Optional[str]:
@@ -106,14 +55,14 @@ def _serialize_to_json(obj: Any) -> Optional[str]:
         return None
 
 
-def _decode_request(request: APIRequest) -> AgentContext:
-    """Decode API request into AgentContext.
+def _decode_request(request: APIRequest) -> APIRequest:
+    """Decode API request into APIRequest validating artifacts.
 
     Args:
         request: APIRequest containing artifacts and configuration.
 
     Returns:
-        AgentContext with artifacts and settings.
+        request: Validated APIRequest.
 
     Raises:
         HTTPException: If request decoding fails (status 400).
@@ -127,14 +76,7 @@ def _decode_request(request: APIRequest) -> AgentContext:
         ):
             raise ValueError("Dataset artifacts must be a DatasetArtifacts object")
 
-        return AgentContext(
-            dataset_artifacts=dataset_artifacts,
-            training_artifacts=request.training_artifacts,
-            deepchecks_artifacts=request.deepchecks_artifacts,
-            model_checkpoint_artifacts=request.model_checkpoint_artifacts,
-            dataset_name=request.dataset_name,
-            language=request.language,
-        )
+        return request
     except Exception as exc:
         raise HTTPException(
             status_code=400,
@@ -215,22 +157,27 @@ async def analyse_artifacts(
     endpoint = "/analyse"
 
     try:
-        # 1. Decode request into AgentContext
-        agent_context = _decode_request(request)
+        # 1. Decode request
+        _decode_request(request)
 
-        # 2. Get coordinator and run analysis
-        coordinator = _get_coordinator()
-        results = await coordinator.arun(agent_context)
+        # 2. Forward request to deepfix-server
+        async with httpx.AsyncClient() as client:
+            server_response = await client.post(
+                DEEPFIX_SERVER_URL,
+                json=request.model_dump(),
+                timeout=300.0,
+            )
 
-        # 3. Build response
-        response = APIResponse(
-            agent_results=results.get_agent_results(),
-            summary=results.summary,
-            additional_outputs=results.additional_outputs,
-            error_messages=results.get_error_messages(),
-        )
+            if server_response.status_code != 200:
+                raise HTTPException(
+                    status_code=server_response.status_code,
+                    detail=f"Error from analysis server: {server_response.text}"
+                )
 
-        # 4. Log successful request
+            out = server_response.json()
+            response = APIResponse(**out)
+
+        # 3. Log successful request
         duration_ms = (time.perf_counter() - start_time) * 1000
         await _log_request(
             db=db,
@@ -261,6 +208,5 @@ async def analysis_health():
     return {
         "status": "ok",
         "service": "analysis",
-        "coordinator_initialized": _coordinator is not None,
-        "dspy_cache_initialized": _dspy_cache is not None,
+        "server_url": DEEPFIX_SERVER_URL,
     }
