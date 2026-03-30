@@ -23,12 +23,30 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware - configure for your frontend
+# CORS configuration
+# Defaults for local development
+default_origins = ["http://localhost:5173", "http://localhost:8844"]
+
+# Allowed origins from environment variable (comma-separated list)
+cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+allowed_origins = (
+    [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+    if cors_origins_env
+    else []
+)
+
+# Add FRONTEND_URL if present
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+
+# Use defaults if no origins specified via environment
+if not allowed_origins:
+    allowed_origins = default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*",
-    ],  # Add your frontend URLs
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
