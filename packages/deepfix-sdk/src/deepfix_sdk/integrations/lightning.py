@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import lightning as L
+import torch
 from lightning.pytorch.callbacks import Callback
 
 from ..pipelines.factory import TrainLoggingPipeline
@@ -74,6 +75,19 @@ class DeepSightCallback(Callback):
         )
         return None
 
-    # TODO: make sure that on_fit_end pl_module is the best model, automatically loaded by trainer
     def on_fit_end(self, trainer: L.Trainer, pl_module: L.LightningModule):
+        if (
+            trainer.checkpoint_callback
+            and trainer.checkpoint_callback.best_model_path
+        ):
+            LOGGER.info(
+                f"Loading best model from {trainer.checkpoint_callback.best_model_path}"
+            )
+            checkpoint = torch.load(
+                trainer.checkpoint_callback.best_model_path,
+                map_location="cpu",
+                weights_only=True,
+            )
+            pl_module.load_state_dict(checkpoint["state_dict"])
+
         self.run(trainer=trainer, pl_module=pl_module)
