@@ -1,6 +1,6 @@
 """DSPy signatures for agent reasoning"""
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import dspy
 from deepfix_core.models import Analysis
@@ -45,7 +45,7 @@ class ArtifactAnalysisSignature(dspy.Signature):
 class CrossArtifactReasoningSignature(dspy.Signature):
     """Integrate findings from multiple artifact analyzers"""
 
-    previous_analyses: List[AgentResult] = dspy.InputField(
+    previous_analyses: Dict[str, AgentResult] = dspy.InputField(
         desc="Results from multiple artifact analyzers"
     )
     output_language: str = dspy.InputField(desc="Language of the output analysis")

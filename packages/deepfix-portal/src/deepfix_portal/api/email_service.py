@@ -2,84 +2,14 @@
 Email service for sending verification and password reset emails
 """
 
-import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 from urllib.parse import urlparse
 
+from .config import settings
+
 import aiosmtplib
-
-
-def get_smtp_config():
-    """
-    Get SMTP configuration from environment variables
-    """
-    return {
-        "host": os.getenv("SMTP_HOST", "smtp.gmail.com"),
-        "port": int(os.getenv("SMTP_PORT", "587")),
-        "username": os.getenv("SMTP_USER"),
-        "password": os.getenv("SMTP_PASSWORD"),
-        "from_email": os.getenv(
-            "SMTP_FROM_EMAIL", os.getenv("SMTP_USER", "noreply@deepfix.com")
-        ),
-        "from_name": os.getenv("SMTP_FROM_NAME", "DeepFix"),
-        "use_tls": os.getenv("SMTP_USE_TLS", "true").lower() == "true",
-    }
-
-
-def get_frontend_url() -> str:
-    """
-    Get frontend URL from environment variable and validate it.
-
-    In production, FRONTEND_URL must be set to a valid domain (not localhost).
-    This ensures verification links work correctly in production environments.
-
-    Returns:
-        str: The frontend URL, normalized (trailing slashes removed)
-
-    Raises:
-        ValueError: If FRONTEND_URL is not set or is invalid in production
-    """
-    frontend_url = os.getenv("FRONTEND_URL")
-
-    # Check if FRONTEND_URL is set
-    if not frontend_url:
-        # In development, allow localhost default
-        # In production, this should be explicitly set
-        is_production = os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
-        if is_production:
-            raise ValueError(
-                "FRONTEND_URL environment variable must be set in production. "
-                "Please set it to your production domain (e.g., https://app.deepfix.com)"
-            )
-        # Development fallback
-        frontend_url = "http://localhost:5173"
-        print(
-            "[WARNING] FRONTEND_URL not set, using default localhost. "
-            "Set FRONTEND_URL environment variable for production."
-        )
-
-    # Normalize the URL (remove trailing slashes)
-    frontend_url = frontend_url.rstrip("/")
-
-    # Validate URL format
-    try:
-        parsed = urlparse(frontend_url)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError(f"Invalid FRONTEND_URL format: {frontend_url}")
-    except Exception as e:
-        raise ValueError(f"Invalid FRONTEND_URL format: {frontend_url}. Error: {e}")
-
-    # Warn if using localhost in production-like environments
-    is_production = os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
-    if is_production and ("localhost" in frontend_url or "127.0.0.1" in frontend_url):
-        raise ValueError(
-            f"FRONTEND_URL cannot be localhost in production: {frontend_url}. "
-            "Please set FRONTEND_URL to your production domain."
-        )
-
-    return frontend_url
 
 
 async def send_verification_email(
@@ -93,8 +23,8 @@ async def send_verification_email(
         token: Verification token
         name: User's name (optional)
     """
-    config = get_smtp_config()
-    frontend_url = get_frontend_url()
+    config = settings.get_smtp_config()
+    frontend_url = settings.get_frontend_url()
 
     # Check if SMTP is configured
     if not config["username"] or not config["password"]:
@@ -188,8 +118,8 @@ async def send_password_reset_email(
         token: Password reset token
         name: User's name (optional)
     """
-    config = get_smtp_config()
-    frontend_url = get_frontend_url()
+    config = settings.get_smtp_config()
+    frontend_url = settings.get_frontend_url()
 
     # Check if SMTP is configured
     if not config["username"] or not config["password"]:

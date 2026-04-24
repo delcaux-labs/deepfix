@@ -10,6 +10,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from deepfix_portal.api.database import Base
+from deepfix_portal.api.models import User, APIKey
+from deepfix_core.models import DatabaseBase
 
 # this is the Alembic Config object
 config = context.config
@@ -23,7 +25,8 @@ database_url = os.getenv("DATABASE_URL", "sqlite:///./deepfix.db")
 config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here for 'autogenerate' support
-target_metadata = Base.metadata
+# We combine metadata from deepfix-portal and deepfix-core (RequestLog)
+target_metadata = [Base.metadata, DatabaseBase.metadata]
 
 
 def run_migrations_offline() -> None:

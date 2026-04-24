@@ -16,6 +16,7 @@ dependencies = [
     "deepfix-core",
     "langfuse>=3.10.6",
     "openinference-instrumentation-dspy>=0.1.11",
+    "tenacity>=9.1.4",
 ]
 
 [tool.ruff]

@@ -56,12 +56,12 @@ COPY --from=frontend-builder /app/dist/public ${STATIC_DIR}
 WORKDIR /app/packages/deepfix-portal
 
 # Create directories with proper permissions for the app user
-RUN mkdir -p .deepfix .cache .mplconfig && chown -R app:app .deepfix .cache .mplconfig
+RUN mkdir -p .deepfix .cache .mplconfig .dspy-cache && chown -R app:app .deepfix .cache .mplconfig .dspy-cache
 
 USER app
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV DEEPFIX_HOME=/app/packages/deepfix-portal/.deepfix
-ENV DSPY_CACHEDIR=/app/packages/deepfix-portal/.cache
+ENV DSPY_CACHEDIR=/app/packages/deepfix-portal/.dspy-cache
 ENV MPLCONFIGDIR=/app/packages/deepfix-portal/.mplconfig
 
 EXPOSE 5041

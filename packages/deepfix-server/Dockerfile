@@ -39,6 +39,7 @@ ENV PATH="/app/.venv/bin:${PATH}"
 ENV DEEPFIX_HOME=/app/.deepfix
 ENV DSPY_CACHEDIR=/app/.deepfix/.dspy_cache
 ENV MPLCONFIGDIR=/tmp/matplotlib
+ENV DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
 
 # Expose ports
 EXPOSE 8844

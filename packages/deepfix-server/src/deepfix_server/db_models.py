@@ -1,11 +1,13 @@
 import uuid
 from datetime import datetime
 
-from deepfix_core.models import DatabaseBase, AnalysisJobStatus, RequestLog
+from deepfix_core.models import AnalysisJobStatus
 from sqlalchemy import Column, DateTime, Enum, String, Text
 
+from .database import Base
 
-class AnalysisJob(DatabaseBase):
+
+class AnalysisJob(Base):
     """Model to track background analysis jobs."""
 
     __tablename__ = "analysis_jobs"

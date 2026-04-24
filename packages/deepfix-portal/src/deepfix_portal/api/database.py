@@ -10,18 +10,17 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from .config import settings
+
 # Enable defensive checks for stale/broken connections (e.g., Postgres idle
 # timeouts). This prevents "Software caused connection abort" errors from
 # bubbling up as 500s on first use after an idle period.
 POOL_PRE_PING_DEFAULT = True
 POOL_RECYCLE_SECONDS_DEFAULT = 1800  # 30 minutes
 
-# Database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./deepfix.db")
-
 
 def _build_engine():
-    is_sqlite = DATABASE_URL.startswith("sqlite")
+    is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
     # SQLite requires a special flag for multithreading; other engines do not
     connect_args = {"check_same_thread": False} if is_sqlite else {}
@@ -30,12 +29,10 @@ def _build_engine():
     pool_kwargs = {}
     if not is_sqlite:
         pool_kwargs["pool_pre_ping"] = POOL_PRE_PING_DEFAULT
-        pool_kwargs["pool_recycle"] = int(
-            os.getenv("DB_POOL_RECYCLE", POOL_RECYCLE_SECONDS_DEFAULT)
-        )
+        pool_kwargs["pool_recycle"] = settings.DB_POOL_RECYCLE
 
     return create_engine(
-        DATABASE_URL,
+        settings.DATABASE_URL,
         echo=False,
         connect_args=connect_args,
         **pool_kwargs,

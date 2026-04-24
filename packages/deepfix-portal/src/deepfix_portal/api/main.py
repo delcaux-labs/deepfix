@@ -4,19 +4,17 @@ FastAPI main application entry point
 
 import os
 
-from deepfix_core.models import DatabaseBase  # Base for RequestLog table
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from .config import settings
 from .database import Base, engine
 from .routes import analysis, api_keys, auth, request_logs, users
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
-# Also create tables from deepfix_core (request_logs table)
-DatabaseBase.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="DeepFix Portal Backend",
@@ -36,24 +34,28 @@ app.add_middleware(
 )
 
 
-# Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(api_keys.router, prefix="/api/api-keys", tags=["api-keys"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(
-    request_logs.router, prefix="/api/request-logs", tags=["request-logs"]
+# Include routers with global /api prefix
+api_router = APIRouter(prefix="/api")
+
+api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
+api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(
+    request_logs.router, prefix="/request-logs", tags=["request-logs"]
 )
-app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
+api_router.include_router(analysis.router, prefix="", tags=["analysis"])
+
+app.include_router(api_router)
 
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "message": "DeepFix Portal Backend is running"}
 
 
 # Serve frontend static files
-static_dir = os.getenv("STATIC_DIR")
+static_dir = settings.STATIC_DIR
 if static_dir and os.path.exists(static_dir):
     # Mount the static files directory
     # Note: We don't mount at "/" directly to avoid conflicting with the routers

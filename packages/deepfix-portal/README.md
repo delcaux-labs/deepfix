@@ -138,7 +138,7 @@ The default setup uses a local SQLite file (`deepfix.db`). For production deploy
 Alembic migration scripts live under `deepfix_portal/api/migrations`. A typical upgrade command looks like:
 
 ```bash
-alembic -c deepfix_portal/api/alembic.ini upgrade head
+uv run alembic -c deepfix_portal/api/alembic.ini upgrade head
 ```
 
 Ensure that your `DATABASE_URL` is set before running migrations.

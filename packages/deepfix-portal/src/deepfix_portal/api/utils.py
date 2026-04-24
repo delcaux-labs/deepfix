@@ -11,6 +11,8 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from .config import settings
+
 # Use SHA256 truncation for passwords longer than 72 bytes (bcrypt limit)
 pwd_context = CryptContext(
     schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=True
@@ -19,25 +21,16 @@ pwd_context = CryptContext(
 
 def get_secret_key() -> str:
     """
-    Get the secret key from the environment
+    Get the secret key from settings
     """
-    SECRET_KEY = os.getenv("DEEPFIX_PORTAL_SECRET_KEY")
-    if SECRET_KEY is None or SECRET_KEY == "":
-        raise ValueError("DEEPFIX_PORTAL_SECRET_KEY is not set")
-    return SECRET_KEY
+    return settings.DEEPFIX_PORTAL_SECRET_KEY
 
 
 def get_algorithm() -> str:
     """
-    Get the algorithm from the environment
+    Get the algorithm from settings
     """
-    ALGORITHM = os.getenv("DEEPFIX_PORTAL_ALGORITHM")
-    if ALGORITHM is None or ALGORITHM == "":
-        raise ValueError("DEEPFIX_PORTAL_ALGORITHM is not set")
-    return ALGORITHM
-
-
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    return settings.DEEPFIX_PORTAL_ALGORITHM
 
 
 def hash_password(password: str) -> str:
@@ -71,7 +64,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, get_secret_key(), algorithm=get_algorithm())

@@ -5,6 +5,7 @@ Database configuration and session management for deepfix-server.
 from typing import Optional
 
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -13,6 +14,8 @@ from sqlalchemy.orm import Session, sessionmaker
 _engine: Optional[Engine] = None
 _SessionLocal: Optional[sessionmaker] = None
 
+# Base class for models
+Base = declarative_base()
 
 def init_database(database_url: str, database_echo: bool = False) -> None:
     """Initialize the database engine and session factory.

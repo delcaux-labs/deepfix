@@ -50,7 +50,7 @@ class DeepFixClient:
         api_url: str = "https://deepfix.delcaux.com/api/v2/analyse",
         mlflow_config: Optional[MLflowConfig] = None,
         artifact_config: Optional[ArtifactConfig] = None,
-        timeout: int = 120,
+        timeout: int = 360,
     ):
         """Initialize the DeepFixClient.
 
@@ -65,7 +65,7 @@ class DeepFixClient:
         Example:
             >>> client = DeepFixClient(
             ...     api_url="http://localhost:8844/api/v2/analyse",
-            ...     timeout=120
+            ...     timeout=360
             ... )
         """
         self.mlflow_config = mlflow_config or MLflowConfig()

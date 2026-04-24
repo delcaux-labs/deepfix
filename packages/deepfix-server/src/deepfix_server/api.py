@@ -11,7 +11,6 @@ from deepfix_core.models import (
     APIRequest,
     APIResponse,
     DatasetArtifacts,
-    DatabaseBase,
     AnalysisJobStatus,
     APIJobResponse,
 )
@@ -20,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from .config import settings, LLMConfig
 from .coordinators import ArtifactAnalysisCoordinator
-from .database import get_db, get_engine, init_database
+from .database import get_db, get_engine, init_database, Base
 from .db_models import AnalysisJob
 from .logging import get_logger, setup_dspy_logging
 from .models import AgentContext
@@ -53,7 +52,7 @@ async def lifespan(app: FastAPI):
     # Create tables if they don't exist
     engine = get_engine()
     if engine:
-        DatabaseBase.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
         LOGGER.info("Database tables initialized.")
 
     # Start periodic cleanup task (every hour)
