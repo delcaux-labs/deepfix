@@ -8,7 +8,7 @@ from omegaconf import DictConfig, OmegaConf
 from platformdirs import user_data_dir
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from deepfix_core.models import DataType
+from deepfix_core.models import DataType, DeepchecksConfig
 
 # Defaults
 logger = logging.getLogger(__name__)
@@ -386,81 +386,3 @@ class IngestionPipelineConfig(BaseModel):
         """Convert config to kwargs expected by `IngestionPipeline`."""
         data = self.model_dump()
         return data
-
-
-class DeepchecksConfig(BaseModel):
-    """Configuration for Deepchecks validation suites.
-
-    Attributes:
-        train_test_validation: Whether to run the train-test validation suite.
-        data_integrity: Whether to run the data integrity suite.
-        model_evaluation: Whether to run the model evaluation suite.
-        max_samples: Optional maximum number of samples to use for validation.
-        random_state: Random seed for reproducibility. Defaults to 42.
-        save_results: Whether to save validation results to disk.
-        output_dir: Optional directory to save results.
-        batch_size: Batch size for processing. Defaults to 16.
-        data_type: Type of data (vision, tabular, nlp). Defaults to VISION.
-    """
-
-    train_test_validation: bool = Field(
-        default=True, description="Whether to run the train_test_validation suite"
-    )
-    data_integrity: bool = Field(
-        default=True, description="Whether to run the data_integrity suite"
-    )
-    model_evaluation: bool = Field(
-        default=False, description="Whether to run the model_evaluation suite"
-    )
-    max_samples: Optional[int] = Field(
-        default=None, description="Maximum number of samples to run the suites on"
-    )
-    random_state: int = Field(
-        default=42, description="Random seed to use for the suites"
-    )
-    save_results: bool = Field(default=False, description="Whether to save the results")
-    output_dir: Optional[str] = Field(
-        default=None, description="Output directory to save the results"
-    )
-    batch_size: int = Field(default=16, description="Batch size to use for the suites")
-    data_type: DataType = Field(
-        default=DataType.VISION, description="Type of data to run the suites on"
-    )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert config to dictionary.
-
-        Returns:
-            Dictionary with data_type converted to its string value.
-        """
-        dumped_dict = self.model_dump()
-        dumped_dict["data_type"] = self.data_type.value
-        return dumped_dict
-
-    @classmethod
-    def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
-        """Create DeepchecksConfig from a dictionary.
-
-        Args:
-            config: Dictionary or DictConfig containing configuration.
-
-        Returns:
-            DeepchecksConfig instance.
-        """
-        return cls(**config)
-
-    @classmethod
-    def from_file(cls, file_path: str) -> "DeepchecksConfig":
-        """Load DeepchecksConfig from a file.
-
-        Args:
-            file_path: Path to the configuration file (YAML/OmegaConf format).
-
-        Returns:
-            DeepchecksConfig instance loaded from file.
-
-        Raises:
-            FileNotFoundError: If the file does not exist.
-            OmegaConfException: If the file contains invalid configuration.
-        """
-        return cls.from_dict(OmegaConf.load(file_path))

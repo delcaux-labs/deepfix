@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from deepfix_core.models import DeepchecksConfig
+from ..config import DeepchecksConfig
 
 from ..integrations.deepchecks import get_deepchecks_runner
 from .base import Step

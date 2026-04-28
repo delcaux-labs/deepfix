@@ -8,6 +8,7 @@ import pandas as pd
 import yaml
 from omegaconf import DictConfig
 from pydantic import BaseModel, Field, field_validator
+from .defaults import DataType, TaskType
 
 
 # Artifacts models
@@ -27,6 +28,84 @@ class ArtifactPath(StrEnum):
     DEEPCHECKS = "deepchecks"
     # dataset artifacts
     DATASET = "dataset"
+
+
+class DeepchecksConfig(BaseModel):
+    """Configuration for Deepchecks validation suites.
+
+    Attributes:
+        train_test_validation: Whether to run the train-test validation suite.
+        data_integrity: Whether to run the data integrity suite.
+        model_evaluation: Whether to run the model evaluation suite.
+        max_samples: Optional maximum number of samples to use for validation.
+        random_state: Random seed for reproducibility. Defaults to 42.
+        save_results: Whether to save validation results to disk.
+        output_dir: Optional directory to save results.
+        batch_size: Batch size for processing. Defaults to 16.
+        data_type: Type of data (vision, tabular, nlp). Defaults to VISION.
+    """
+
+    train_test_validation: bool = Field(
+        default=True, description="Whether to run the train_test_validation suite"
+    )
+    data_integrity: bool = Field(
+        default=True, description="Whether to run the data_integrity suite"
+    )
+    model_evaluation: bool = Field(
+        default=False, description="Whether to run the model_evaluation suite"
+    )
+    max_samples: Optional[int] = Field(
+        default=None, description="Maximum number of samples to run the suites on"
+    )
+    random_state: int = Field(
+        default=42, description="Random seed to use for the suites"
+    )
+    save_results: bool = Field(default=False, description="Whether to save the results")
+    output_dir: Optional[str] = Field(
+        default=None, description="Output directory to save the results"
+    )
+    batch_size: int = Field(default=16, description="Batch size to use for the suites")
+    data_type: DataType = Field(
+        default=DataType.VISION, description="Type of data to run the suites on"
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary.
+
+        Returns:
+            Dictionary with data_type converted to its string value.
+        """
+        dumped_dict = self.model_dump()
+        dumped_dict["data_type"] = self.data_type.value
+        return dumped_dict
+
+    @classmethod
+    def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
+        """Create DeepchecksConfig from a dictionary.
+
+        Args:
+            config: Dictionary or DictConfig containing configuration.
+
+        Returns:
+            DeepchecksConfig instance.
+        """
+        return cls(**config)
+
+    @classmethod
+    def from_file(cls, file_path: str) -> "DeepchecksConfig":
+        """Load DeepchecksConfig from a file.
+
+        Args:
+            file_path: Path to the configuration file (YAML/OmegaConf format).
+
+        Returns:
+            DeepchecksConfig instance loaded from file.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            OmegaConfException: If the file contains invalid configuration.
+        """
+        return cls.from_dict(OmegaConf.load(file_path))
 
 
 ## Deepchecks
@@ -785,6 +864,51 @@ class NLPStatistics(BaseDatasetStatistics):
         return cls(**d)
 
 
+class IRStatistics(BaseDatasetStatistics):
+    """Statistics specific to Information Retrieval (IR) datasets.
+
+    Composite of NLP and Tabular statistics, plus IR-specific metrics.
+    """
+
+    num_samples: int = Field(..., description="Total number of samples")
+    num_queries: Optional[int] = Field(
+        default=None, description="Total number of unique queries"
+    )
+    num_relevant_docs: Optional[int] = Field(
+        default=None, description="Total number of relevant documents"
+    )
+    num_non_relevant_docs: Optional[int] = Field(
+        default=None, description="Total number of non-relevant documents"
+    )
+    nlp_statistics: Optional[NLPStatistics] = Field(
+        default=None, description="NLP-specific statistics"
+    )
+    tabular_statistics: Optional[TabularStatistics] = Field(
+        default=None, description="Tabular-specific statistics"
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert IR statistics to a dictionary."""
+        dumped_dict = self.model_dump()
+        if self.nlp_statistics:
+            dumped_dict["nlp_statistics"] = self.nlp_statistics.to_dict()
+        if self.tabular_statistics:
+            dumped_dict["tabular_statistics"] = self.tabular_statistics.to_dict()
+        # Remove None values for cleaner output
+        return {k: v for k, v in dumped_dict.items() if v is not None}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "IRStatistics":
+        """Create IRStatistics from a dictionary."""
+        if "nlp_statistics" in d and d["nlp_statistics"]:
+            d["nlp_statistics"] = NLPStatistics.from_dict(d["nlp_statistics"])
+        if "tabular_statistics" in d and d["tabular_statistics"]:
+            d["tabular_statistics"] = TabularStatistics.from_dict(
+                d["tabular_statistics"]
+            )
+        return cls(**d)
+
+
 ## Dataset
 class DatasetArtifacts(Artifacts):
     """Artifacts containing dataset statistics and metadata.
@@ -801,7 +925,7 @@ class DatasetArtifacts(Artifacts):
     train_statistics: BaseDatasetStatistics = Field(
         ..., description="Train statistics of the dataset"
     )
-    task_type: str = Field(..., description="Task type of the dataset")
+    task_type: TaskType = Field(..., description="Task type of the dataset")
     test_statistics: Optional[BaseDatasetStatistics] = Field(
         default=None, description="Test statistics of the dataset"
     )
@@ -861,6 +985,8 @@ class DatasetArtifacts(Artifacts):
                 TaskType.TEXT_TOKEN_CLASSIFICATION,
             ]:
                 return NLPStatistics.from_dict(d)
+            elif task_type == TaskType.INFORMATION_RETRIEVAL:
+                return IRStatistics.from_dict(d)
             else:
                 raise ValueError(f"Invalid task type: {task_type.value}")
 
@@ -870,3 +996,7 @@ class DatasetArtifacts(Artifacts):
             d["test_statistics"] = load_statistics(d["test_statistics"])
 
         return cls(**d)
+
+
+IRStatistics.model_rebuild()
+DatasetArtifacts.model_rebuild()

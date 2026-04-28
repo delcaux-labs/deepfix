@@ -23,3 +23,4 @@ class TaskType(StrEnum):
     # NLP tasks
     TEXT_CLASSIFICATION = "text_classification"
     TEXT_TOKEN_CLASSIFICATION = "text_token_classification"
+    INFORMATION_RETRIEVAL = "information_retrieval"

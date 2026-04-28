@@ -57,7 +57,7 @@ from deepfix_core.models import (
 from sklearn.base import BaseEstimator
 
 from ..config import DeepchecksConfig, DefaultPaths
-from ..data.datasets import TabularDataset, InformationRetrievalDataset
+from ..data.datasets import TabularDataset, InformationRetrievalDataset, NLPDataset
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -205,8 +205,10 @@ class CheckResultsParser:
 
 
 SupportedDatasetType = Union[
-    VisionData, TabularDataset, TextData, InformationRetrievalDataset
+    VisionData, TabularDataset, NLPDataset, InformationRetrievalDataset
 ]
+TClassPred = Union[Sequence[int], Sequence[str], Sequence[Sequence[int]]]
+TTextProba = Sequence[Sequence[float]]
 
 
 class BaseDeepchecksRunner(ABC):
@@ -364,13 +366,19 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         """
         Run both NLP and Tabular Deepchecks suites for IR data.
         """
+        assert isinstance(train_data, InformationRetrievalDataset), (
+            f"Expected InformationRetrievalDataset but got {type(train_data).__name__}"
+        )
+        assert isinstance(test_data, InformationRetrievalDataset), (
+            f"Expected InformationRetrievalDataset but got {type(test_data).__name__}"
+        )
         LOGGER.info("Running unified IR validation for %s", dataset_name)
 
         # 1. Run NLP suites
         nlp_artifact = self.nlp_runner.run_suites(
-            train_data=train_data.dataset,
+            train_data=train_data,
             dataset_name=f"{dataset_name}_nlp",
-            test_data=test_data.dataset if test_data else None,
+            test_data=test_data if test_data else None,
             model=model,
             model_name=model_name,
             **kwargs,
@@ -624,10 +632,6 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
             )
 
 
-TClassPred = Union[Sequence[int], Sequence[str], Sequence[Sequence[int]]]
-TTextProba = Sequence[Sequence[float]]
-
-
 class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
     """
     Deepchecks integration for automated model validation and testing on text/NLP data.
@@ -647,8 +651,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_train_test_validation(
         self,
-        train_data: SupportedDatasetType,
-        test_data: Optional[SupportedDatasetType] = None,
+        train_data: NLPDataset,
+        test_data: Optional[NLPDataset] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -666,16 +670,16 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         """
         LOGGER.info("Running train-test validation suite for NLP text data")
         return self.suite_train_test_validation.run(
-            train_dataset=train_data,
-            test_dataset=test_data,
+            train_dataset=train_data.dataset,
+            test_dataset=test_data.dataset if test_data is not None else None,
             random_state=self.config.random_state,
             **kwargs,
         )
 
     def run_suite_model_evaluation(
         self,
-        train_data: SupportedDatasetType,
-        test_data: Optional[SupportedDatasetType] = None,
+        train_data: NLPDataset,
+        test_data: Optional[NLPDataset] = None,
         model: Optional[Any] = None,
         model_classes: Optional[List[str]] = None,
         train_predictions: Optional[TClassPred] = None,
@@ -691,8 +695,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
         # Deepchecks NLP suite.run accepts these arguments
         return self.suite_model_evaluation.run(
-            train_dataset=train_data,
-            test_dataset=test_data,
+            train_dataset=train_data.dataset,
+            test_dataset=test_data.dataset if test_data is not None else None,
             train_predictions=train_predictions,
             test_predictions=test_predictions,
             train_probabilities=train_probabilities,
@@ -704,8 +708,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_data_integrity(
         self,
-        train_data: SupportedDatasetType,
-        test_data: Optional[SupportedDatasetType] = None,
+        train_data: NLPDataset,
+        test_data: Optional[NLPDataset] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -718,8 +722,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             NotImplementedError: This suite is not available for NLP data
         """
         return self.suite_data_integrity.run(
-            train_dataset=train_data,
-            test_dataset=test_data,
+            train_dataset=train_data.dataset,
+            test_dataset=test_data.dataset if test_data is not None else None,
             random_state=self.config.random_state,
             **kwargs,
         )

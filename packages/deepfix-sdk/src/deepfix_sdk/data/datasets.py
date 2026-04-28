@@ -284,8 +284,8 @@ class NLPDataset(BaseDataset):
         self.dataset = dataset
         self.dataset_name = dataset_name
 
-    def to_loader(self, *args, **kwargs) -> TextData:
-        return self.dataset
+    def to_loader(self, *args, **kwargs) -> "NLPDataset":
+        return self
 
     def __len__(self):
         return len(self.dataset)
@@ -337,6 +337,9 @@ class InformationRetrievalDataset(NLPDataset):
     def data_type(self) -> DataType:
         return DataType.IR
 
+    def to_loader(self, *args, **kwargs) -> "InformationRetrievalDataset":
+        return self
+
     @classmethod
     def split_by_query(
         cls,
@@ -366,18 +369,6 @@ class InformationRetrievalDataset(NLPDataset):
         if tokenizer is None:
             tokenizer = tiktoken.get_encoding("o200k_base")
         return tokenizer.encode(text)
-
-    @classmethod
-    def _get_token_overlap(
-        cls, q_text: str, e_text: str, tokenizer: Optional[tiktoken.Encoding] = None
-    ) -> float:
-        """Calculate token overlap ratio between query and document."""
-        q_tokens = cls.get_tokens(q_text.lower(), tokenizer)
-        e_tokens = cls.get_tokens(e_text.lower(), tokenizer)
-        if not q_tokens:
-            return 0.0
-        overlap = set(q_tokens).intersection(set(e_tokens))
-        return len(overlap) / len(q_tokens)
 
     @classmethod
     def from_ir_data(
@@ -411,11 +402,8 @@ class InformationRetrievalDataset(NLPDataset):
                 "query_length": len(q_text.split()),
                 "query_token_count": len(cls.get_tokens(q_text)),
                 "doc_token_count": len(cls.get_tokens(e_text)),
-                "query_doc_token_overlap": cls._get_token_overlap(q_text, e_text),
                 "query_id": q_id,
                 "entity_id": e_id,
-                "gt_rank": rank,
-                "is_hard_negative": 1 if (str(relevance) == "0") else 0,
             }
             if query_embeddings is not None and corpus_embeddings is not None:
                 q_emb = query_embeddings.get(q_id)
@@ -494,5 +482,5 @@ class InformationRetrievalDataset(NLPDataset):
             dataset_name=f"{self.dataset_name}_tabular",
             dataset=df,
             label=label_name,
-            cat_features=["query_id", "entity_id"],
+            cat_features=self.dataset.categorical_metadata,
         )

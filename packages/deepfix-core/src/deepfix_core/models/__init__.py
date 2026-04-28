@@ -14,6 +14,7 @@ from .artifacts import (
     DeepchecksArtifacts,
     DeepchecksCheckResult,
     DeepchecksConditionResult,
+    DeepchecksConfig,
     DeepchecksParsedResult,
     DeepchecksResultHeaders,
     ModelCheckpointArtifacts,
@@ -22,6 +23,7 @@ from .artifacts import (
     TabularStatistics,
     TrainingArtifacts,
     VisionStatistics,
+    IRStatistics,
 )
 from .defaults import DataType, TaskType
 
@@ -32,6 +34,7 @@ __all__ = [
     "ModelCheckpointArtifacts",
     "TrainingArtifacts",
     "DatasetArtifacts",
+    "DeepchecksConfig",
     "AgentResult",
     "AnalysisJobStatus",
     "Severity",
@@ -52,5 +55,6 @@ __all__ = [
     "VisionStatistics",
     "TabularStatistics",
     "NLPStatistics",
+    "IRStatistics",
     "BaseDatasetStatistics",
 ]

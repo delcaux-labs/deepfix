@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from deepchecks.nlp import TextData
+from deepchecks.core.errors import DeepchecksNotSupportedError
 from deepfix_core.models import (
     BaseDatasetStatistics,
     DataType,
@@ -12,6 +13,7 @@ from deepfix_core.models import (
     TabularStatistics,
     TaskType,
     VisionStatistics,
+    IRStatistics,
 )
 from deepfix_core.models.artifacts import (
     LabelStatistics,
@@ -23,6 +25,7 @@ from tqdm import tqdm
 from .datasets import (
     BaseDataset,
     ImageClassificationDataset,
+    InformationRetrievalDataset,
     NLPDataset,
     ObjectDetectionDataset,
     SemanticSegmentationDataset,
@@ -46,6 +49,10 @@ def get_data_statistics(
         ).get_statistics()
     elif data_type == DataType.NLP:
         return NLPDataStatistics(
+            train_data=train_data, test_data=test_data
+        ).get_statistics()
+    elif data_type == DataType.IR:
+        return IRDataStatistics(
             train_data=train_data, test_data=test_data
         ).get_statistics()
     else:
@@ -472,7 +479,7 @@ class NLPDataStatistics(BaseDataStatistics):
                     properties_statistics = PropertiesStatistics(**props_stats)
                 categorical_properties = dataset.categorical_properties or []
                 numerical_properties = dataset.numerical_properties or []
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError, DeepchecksNotSupportedError):
             pass
 
         # Metadata information (if metadata exists)
@@ -482,7 +489,7 @@ class NLPDataStatistics(BaseDataStatistics):
             if dataset.metadata is not None:
                 categorical_metadata = dataset.categorical_metadata or []
                 numerical_metadata = dataset.numerical_metadata or []
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError, DeepchecksNotSupportedError):
             pass
 
         return NLPStatistics(
@@ -590,3 +597,64 @@ class NLPDataStatistics(BaseDataStatistics):
             "number_unique_values": number_unique_values,
             "percentage_unique_values": percentage_unique_values,
         }
+
+
+class IRDataStatistics(BaseDataStatistics):
+    def __init__(
+        self,
+        train_data: InformationRetrievalDataset,
+        test_data: Optional[InformationRetrievalDataset] = None,
+    ):
+        assert isinstance(train_data, InformationRetrievalDataset), (
+            f"train_data must be an instance of InformationRetrievalDataset, got {type(train_data)}"
+        )
+        self.train_data = train_data
+
+        if test_data is not None:
+            assert isinstance(test_data, InformationRetrievalDataset), (
+                f"test_data must be an instance of InformationRetrievalDataset, got {type(test_data)}"
+            )
+            self.test_data = test_data
+        else:
+            self.test_data = None
+        self.task_type = TaskType.INFORMATION_RETRIEVAL
+
+    def get_train_statistics(self) -> IRStatistics:
+        return self._compute_statistics(self.train_data)
+
+    def get_test_statistics(self) -> IRStatistics:
+        if self.test_data is None:
+            raise ValueError("test_data is None, cannot compute test statistics")
+        return self._compute_statistics(self.test_data)
+
+    def _compute_statistics(self, dataset: InformationRetrievalDataset) -> IRStatistics:
+        """Compute composite statistics for an IR dataset (NLP + Tabular)."""
+        # 1. Get NLP statistics
+        nlp_data_stats = NLPDataStatistics(train_data=dataset)
+        nlp_stats = nlp_data_stats.get_train_statistics()
+
+        # 2. Get Tabular statistics
+        tabular_dataset = dataset.to_tabular()
+        tabular_data_stats = TabularDataStatistics(train_data=tabular_dataset)
+        tabular_stats = tabular_data_stats.get_train_statistics()
+
+        # 3. Compute IR-specific fields
+        num_queries = int(dataset.qrels["query_id"].nunique())
+        num_relevant_docs = int(
+            dataset.qrels[dataset.qrels["relevance"].astype(int) >= 1][
+                "entity_id"
+            ].nunique()
+        )
+        num_non_relevant_docs = int(
+            dataset.qrels[dataset.qrels["relevance"].astype(int) < 1][
+                "entity_id"
+            ].nunique()
+        )
+
+        return IRStatistics(
+            num_samples=len(dataset),
+            num_queries=num_queries,
+            num_relevant_docs=num_relevant_docs,
+            nlp_statistics=nlp_stats,
+            tabular_statistics=tabular_stats,
+        )
