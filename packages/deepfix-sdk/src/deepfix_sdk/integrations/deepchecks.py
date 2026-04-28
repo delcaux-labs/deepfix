@@ -57,7 +57,7 @@ from deepfix_core.models import (
 )
 from sklearn.base import BaseEstimator
 
-from ..data.datasets import TabularDataset
+from ..data.datasets import TabularDataset, InformationRetrievalDataset
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -204,7 +204,9 @@ class CheckResultsParser:
         return txts
 
 
-DataType = Union[VisionData, TabularDataset, TextData]
+SupportedDatasetType = Union[
+    VisionData, TabularDataset, TextData, InformationRetrievalDataset
+]
 
 
 class BaseDeepchecksRunner(ABC):
@@ -238,9 +240,9 @@ class BaseDeepchecksRunner(ABC):
 
     def run_suites(
         self,
-        train_data: DataType,
+        train_data: SupportedDatasetType,
         dataset_name: str,
-        test_data: Optional[DataType] = None,
+        test_data: Optional[SupportedDatasetType] = None,
         model: Optional[BaseEstimator] = None,
         model_name: Optional[str] = None,
         **kwargs,
@@ -278,13 +280,19 @@ class BaseDeepchecksRunner(ABC):
 
     @abstractmethod
     def run_suite_train_test_validation(
-        self, train_data: DataType, test_data: Optional[DataType] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         pass
 
     @abstractmethod
     def run_suite_data_integrity(
-        self, train_data: DataType, test_data: Optional[DataType] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         pass
 
@@ -292,8 +300,8 @@ class BaseDeepchecksRunner(ABC):
     def run_suite_model_evaluation(
         self,
         model: Any,
-        train_data: DataType,
-        test_data: Optional[DataType] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         pass
@@ -319,8 +327,114 @@ def get_deepchecks_runner(
         return DeepchecksRunnerForTabular(config=config)
     elif _type == DataType.NLP:
         return DeepchecksRunnerForNLP(config=config)
+    elif _type == DataType.IR:
+        return DeepchecksRunnerForIR(config=config)
     else:
         raise ValueError(f"Unsupported data type: {_type}")
+
+
+class DeepchecksRunnerForIR(BaseDeepchecksRunner):
+    """
+    Unified Deepchecks runner for Information Retrieval tasks.
+    Orchestrates both NLP and Tabular validation suites.
+    """
+
+    def __init__(self, config: Optional[DeepchecksConfig] = None):
+        """
+        Initialize the IR runner with both NLP and Tabular sub-runners.
+        """
+        super().__init__(
+            config=config,
+            suite_train_test_validation=None,
+            suite_data_integrity=None,
+            suite_model_evaluation=None,
+        )
+        self.nlp_runner = DeepchecksRunnerForNLP(config=config)
+        self.tabular_runner = DeepchecksRunnerForTabular(config=config)
+
+    def run_suites(
+        self,
+        train_data: InformationRetrievalDataset,
+        dataset_name: str,
+        test_data: Optional[InformationRetrievalDataset] = None,
+        model: Optional[BaseEstimator] = None,
+        model_name: Optional[str] = None,
+        **kwargs,
+    ) -> DeepchecksArtifacts:
+        """
+        Run both NLP and Tabular Deepchecks suites for IR data.
+        """
+        LOGGER.info("Running unified IR validation for %s", dataset_name)
+
+        # 1. Run NLP suites
+        nlp_artifact = self.nlp_runner.run_suites(
+            train_data=train_data.dataset,
+            dataset_name=f"{dataset_name}_nlp",
+            test_data=test_data.dataset if test_data else None,
+            model=model,
+            model_name=model_name,
+            **kwargs,
+        )
+
+        # 2. Run Tabular suites
+        tabular_artifact = self.tabular_runner.run_suites(
+            train_data=train_data.to_tabular(),
+            dataset_name=f"{dataset_name}_tabular",
+            test_data=test_data.to_tabular() if test_data else None,
+            model=model,
+            model_name=model_name,
+            **kwargs,
+        )
+
+        # 3. Combine results into a single artifact
+        combined_results = {}
+        for category, results in nlp_artifact.results.items():
+            combined_results[f"nlp_{category}"] = results
+        for category, results in tabular_artifact.results.items():
+            combined_results[f"tabular_{category}"] = results
+
+        artifact = DeepchecksArtifacts(
+            dataset_name=dataset_name,
+            model_name=model_name,
+            results=combined_results,
+            config=self.config,
+        )
+
+        if self.config.save_results:
+            self._save_artifact(artifact=artifact, dataset_name=dataset_name)
+
+        return artifact
+
+    def run_suite_train_test_validation(
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
+    ) -> SuiteResult:
+        raise NotImplementedError(
+            "Direct suite execution is not supported for IR runner"
+        )
+
+    def run_suite_data_integrity(
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
+    ) -> SuiteResult:
+        raise NotImplementedError(
+            "Direct suite execution is not supported for IR runner"
+        )
+
+    def run_suite_model_evaluation(
+        self,
+        model: Any,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
+    ) -> SuiteResult:
+        raise NotImplementedError(
+            "Direct suite execution is not supported for IR runner"
+        )
 
 
 class DeepchecksRunnerForVision(BaseDeepchecksRunner):
@@ -341,7 +455,10 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def run_suite_train_test_validation(
-        self, train_data: VisionData, test_data: Optional[VisionData] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         LOGGER.info("Running train-test validation suite")
         self._check_inputs(train_data, test_data)
@@ -353,7 +470,10 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def run_suite_data_integrity(
-        self, train_data: VisionData, test_data: Optional[VisionData] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         LOGGER.info("Running data integrity suite")
         self._check_inputs(train_data, test_data)
@@ -367,8 +487,8 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
     def run_suite_model_evaluation(
         self,
         model: Any,
-        train_data: VisionData,
-        test_data: Optional[VisionData] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         raise NotImplementedError("TODO: debug this method")
@@ -413,8 +533,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
 
     def run_suite_train_test_validation(
         self,
-        train_data: TabularDataset,
-        test_data: Optional[TabularDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -440,8 +560,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
 
     def run_suite_data_integrity(
         self,
-        train_data: TabularDataset,
-        test_data: Optional[TabularDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -467,8 +587,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
     def run_suite_model_evaluation(
         self,
         model: BaseEstimator,
-        train_data: TabularDataset,
-        test_data: Optional[TabularDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -526,7 +646,10 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         )
 
     def run_suite_train_test_validation(
-        self, train_data: TextData, test_data: Optional[TextData] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Run train-test validation suite on NLP text data.
@@ -551,8 +674,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_model_evaluation(
         self,
-        train_data: TextData,
-        test_data: Optional[TextData] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         model: Optional[Any] = None,
         model_classes: Optional[List[str]] = None,
         train_predictions: Optional[TClassPred] = None,
@@ -580,7 +703,10 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         )
 
     def run_suite_data_integrity(
-        self, train_data: TextData, test_data: Optional[TextData] = None, **kwargs
+        self,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Not implemented for NLP text data.

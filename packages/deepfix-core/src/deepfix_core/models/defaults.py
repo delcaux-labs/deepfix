@@ -185,6 +185,7 @@ class DataType(StrEnum):
     VISION = "vision"
     TABULAR = "tabular"
     NLP = "nlp"
+    IR = "ir"
 
 
 class TaskType(StrEnum):

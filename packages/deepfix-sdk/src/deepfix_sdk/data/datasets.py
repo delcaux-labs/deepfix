@@ -1,5 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Union, Tuple
 
+import re
+import string
 import numpy as np
 import pandas as pd
 from deepchecks.nlp import TextData
@@ -9,6 +11,7 @@ from deepchecks.vision import VisionData
 from deepfix_core.models import DataType
 from supervision.dataset.core import DetectionDataset
 from supervision.detection.core import Detections
+import tiktoken
 from torch import Tensor
 from torch.utils.data import Dataset
 from typing_extensions import runtime_checkable
@@ -328,16 +331,53 @@ class InformationRetrievalDataset(NLPDataset):
         self.model_classes = ["0", "1"]
         self.fp_probabilities = [1.0, 0.0]
 
+        self.tokenizer = None
+
+    @property
+    def data_type(self) -> DataType:
+        return DataType.IR
+
+    @classmethod
+    def split_by_query(
+        cls,
+        qrels: List[Dict[str, Any]],
+        train_ratio: float = 0.8,
+        random_seed: int = 42,
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Split qrels into train and test sets by query_id to avoid data leakage."""
+        df = pd.DataFrame(qrels)
+        query_ids = df["query_id"].unique()
+
+        np.random.seed(random_seed)
+        np.random.shuffle(query_ids)
+
+        split_idx = int(len(query_ids) * train_ratio)
+        train_queries = set(query_ids[:split_idx])
+
+        train_qrels = [q for q in qrels if q["query_id"] in train_queries]
+        test_qrels = [q for q in qrels if q["query_id"] not in train_queries]
+
+        return train_qrels, test_qrels
+
     @staticmethod
-    def get_cosine_similarity(q_emb: np.ndarray, e_emb: np.ndarray) -> float:
-        dot_product = np.dot(q_emb, e_emb)
-        norm_q = np.linalg.norm(q_emb)
-        norm_e = np.linalg.norm(e_emb)
-        if norm_q > 0 and norm_e > 0:
-            sim = dot_product / (norm_q * norm_e)
-        else:
-            sim = 0.0
-        return float(sim)
+    def get_tokens(
+        text: str, tokenizer: Optional[tiktoken.Encoding] = None
+    ) -> np.ndarray:
+        if tokenizer is None:
+            tokenizer = tiktoken.get_encoding("o200k_base")
+        return tokenizer.encode(text)
+
+    @classmethod
+    def _get_token_overlap(
+        cls, q_text: str, e_text: str, tokenizer: Optional[tiktoken.Encoding] = None
+    ) -> float:
+        """Calculate token overlap ratio between query and document."""
+        q_tokens = cls.get_tokens(q_text.lower(), tokenizer)
+        e_tokens = cls.get_tokens(e_text.lower(), tokenizer)
+        if not q_tokens:
+            return 0.0
+        overlap = set(q_tokens).intersection(set(e_tokens))
+        return len(overlap) / len(q_tokens)
 
     @classmethod
     def from_ir_data(
@@ -355,19 +395,27 @@ class InformationRetrievalDataset(NLPDataset):
             q_id = qrel["query_id"]
             e_id = qrel["entity_id"]
             relevance = qrel["relevance"]
-            rank = qrel["rank"]
+            rank = qrel.get("rank")
             q = queries[q_id]
             e = corpus[e_id]
 
-            text = f"{q['query']} [SEP] {e['text']}"
+            q_text = q.get("query", "")
+            e_text = e.get("text", "")
+
+            text = f"<query> {q_text} </query> <sep> <document> {e_text} </document>"
             pairs.append(text)
             labels.append(str(relevance))
+
             row = {
-                "desc_length": len(e.get("text", "").split()),
-                "query_length": len(q.get("query", "").split()),
+                "desc_length": len(e_text.split()),
+                "query_length": len(q_text.split()),
+                "query_token_count": len(cls.get_tokens(q_text)),
+                "doc_token_count": len(cls.get_tokens(e_text)),
+                "query_doc_token_overlap": cls._get_token_overlap(q_text, e_text),
                 "query_id": q_id,
                 "entity_id": e_id,
                 "gt_rank": rank,
+                "is_hard_negative": 1 if (str(relevance) == "0") else 0,
             }
             if query_embeddings is not None and corpus_embeddings is not None:
                 q_emb = query_embeddings.get(q_id)
@@ -377,7 +425,19 @@ class InformationRetrievalDataset(NLPDataset):
             rows.append(row)
 
         metadata_df = pd.DataFrame(rows)
-        categorical_metadata = ["desc_length", "query_length", "query_id", "entity_id"]
+        categorical_metadata = ["query_id", "entity_id"]
+        # Numeric features that should be treated as such
+        numeric_features = [
+            "desc_length",
+            "query_length",
+            "query_token_count",
+            "doc_token_count",
+            "query_doc_token_overlap",
+            "gt_rank",
+            "is_hard_negative",
+        ]
+        if "cosine_similarity" in metadata_df.columns:
+            numeric_features.append("cosine_similarity")
 
         text_data = TextData(
             raw_text=pairs,
@@ -423,3 +483,16 @@ class InformationRetrievalDataset(NLPDataset):
         )
 
         return None
+
+    def to_tabular(self) -> TabularDataset:
+        """Convert the IR dataset to a TabularDataset view for Deepchecks Tabular suites."""
+        df = self.dataset.metadata.copy()
+        label_name = "relevance"
+        df[label_name] = self.dataset.label
+
+        return TabularDataset(
+            dataset_name=f"{self.dataset_name}_tabular",
+            dataset=df,
+            label=label_name,
+            cat_features=["query_id", "entity_id"],
+        )
