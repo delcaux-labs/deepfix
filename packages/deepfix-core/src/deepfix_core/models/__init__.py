@@ -23,7 +23,7 @@ from .artifacts import (
     TrainingArtifacts,
     VisionStatistics,
 )
-from .defaults import DataType, DeepchecksConfig, DefaultPaths, TaskType
+from .defaults import DataType, TaskType
 
 __all__ = [
     "Artifacts",
@@ -41,9 +41,7 @@ __all__ = [
     "APIRequest",
     "APIResponse",
     "APIJobResponse",
-    "DefaultPaths",
     "DataType",
-    "DeepchecksConfig",
     "DeepchecksParsedResult",
     "DeepchecksCheckResult",
     "DeepchecksResultHeaders",

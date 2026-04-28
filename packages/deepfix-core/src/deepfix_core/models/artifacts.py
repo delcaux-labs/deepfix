@@ -9,8 +9,6 @@ import yaml
 from omegaconf import DictConfig
 from pydantic import BaseModel, Field, field_validator
 
-from .defaults import DeepchecksConfig, TaskType
-
 
 # Artifacts models
 class ArtifactPath(StrEnum):
@@ -246,9 +244,7 @@ class DeepchecksArtifacts(Artifacts):
     results: Dict[str, List[DeepchecksParsedResult]] = Field(
         description="Results of the artifact"
     )
-    config: Optional[DeepchecksConfig] = Field(
-        default=None, description="Config of the artifact"
-    )
+    config: Optional[Any] = Field(default=None, description="Config of the artifact")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Deepchecks artifacts to a dictionary.
@@ -805,7 +801,7 @@ class DatasetArtifacts(Artifacts):
     train_statistics: BaseDatasetStatistics = Field(
         ..., description="Train statistics of the dataset"
     )
-    task_type: TaskType = Field(..., description="Task type of the dataset")
+    task_type: str = Field(..., description="Task type of the dataset")
     test_statistics: Optional[BaseDatasetStatistics] = Field(
         default=None, description="Test statistics of the dataset"
     )

@@ -51,12 +51,12 @@ from deepfix_core.models import (
     DeepchecksArtifacts,
     DeepchecksCheckResult,
     DeepchecksConditionResult,
-    DeepchecksConfig,
     DeepchecksParsedResult,
     DeepchecksResultHeaders,
 )
 from sklearn.base import BaseEstimator
 
+from ..config import DeepchecksConfig, DefaultPaths
 from ..data.datasets import TabularDataset, InformationRetrievalDataset
 from ..utils.logging import get_logger
 

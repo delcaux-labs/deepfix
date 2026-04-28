@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 import typer
-from deepfix_core.models import DefaultPaths
+from .config import DefaultPaths
 
 app = typer.Typer(
     name="deepfix-sdk",

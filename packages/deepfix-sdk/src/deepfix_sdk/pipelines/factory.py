@@ -1,10 +1,16 @@
 from typing import Any, Callable, List, Optional, Union
 
 import torch
-from deepfix_core.models import ArtifactPath, DataType, DeepchecksConfig
+from deepfix_core.models import ArtifactPath, DataType
 
 from ..artifacts import ArtifactRepository, ArtifactsManager
-from ..config import ArtifactConfig, DefaultPaths, IngestionPipelineConfig, MLflowConfig
+from ..config import (
+    ArtifactConfig,
+    DeepchecksConfig,
+    DefaultPaths,
+    IngestionPipelineConfig,
+    MLflowConfig,
+)
 from ..data import BaseDataset
 from ..integrations import MLflowManager
 from ..utils.logging import get_logger
