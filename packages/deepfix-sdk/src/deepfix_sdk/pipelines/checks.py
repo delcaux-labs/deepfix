@@ -41,6 +41,7 @@ class Checks(Step):
             model=model or context.get("model"),
             model_name=model_name,
             dataset_name=dataset_name,
+            **kwargs,
         )
         context["checks_artifacts"] = artifacts
         return context

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -310,3 +310,116 @@ class NLPDataset(BaseDataset):
     @property
     def name(self) -> str:
         return self.dataset_name
+
+
+class InformationRetrievalDataset(NLPDataset):
+    def __init__(
+        self,
+        dataset_name: str,
+        dataset: TextData,
+        qrels: Union[List[Dict[str, Any]], pd.DataFrame],
+    ):
+        super().__init__(dataset_name, dataset)
+        self.qrels = pd.DataFrame(qrels) if isinstance(qrels, list) else qrels
+        self.predictions = None
+        self.probabilities = None
+
+        # Classes are strictly binary relevance "0" and "1"
+        self.model_classes = ["0", "1"]
+        self.fp_probabilities = [1.0, 0.0]
+
+    @staticmethod
+    def get_cosine_similarity(q_emb: np.ndarray, e_emb: np.ndarray) -> float:
+        dot_product = np.dot(q_emb, e_emb)
+        norm_q = np.linalg.norm(q_emb)
+        norm_e = np.linalg.norm(e_emb)
+        if norm_q > 0 and norm_e > 0:
+            sim = dot_product / (norm_q * norm_e)
+        else:
+            sim = 0.0
+        return float(sim)
+
+    @classmethod
+    def from_ir_data(
+        cls,
+        dataset_name: str,
+        queries: Dict[str, Dict[str, Any]],
+        corpus: Dict[str, Dict[str, Any]],
+        qrels: List[Dict[str, Any]],
+        query_embeddings: Optional[Dict[str, np.ndarray]] = None,
+        corpus_embeddings: Optional[Dict[str, np.ndarray]] = None,
+    ) -> "InformationRetrievalDataset":
+        pairs, labels, rows = [], [], []
+
+        for qrel in qrels:
+            q_id = qrel["query_id"]
+            e_id = qrel["entity_id"]
+            relevance = qrel["relevance"]
+            rank = qrel["rank"]
+            q = queries[q_id]
+            e = corpus[e_id]
+
+            text = f"{q['query']} [SEP] {e['text']}"
+            pairs.append(text)
+            labels.append(str(relevance))
+            row = {
+                "desc_length": len(e.get("text", "").split()),
+                "query_length": len(q.get("query", "").split()),
+                "query_id": q_id,
+                "entity_id": e_id,
+                "gt_rank": rank,
+            }
+            if query_embeddings is not None and corpus_embeddings is not None:
+                q_emb = query_embeddings.get(q_id)
+                e_emb = corpus_embeddings.get(e_id)
+                if q_emb is not None and e_emb is not None:
+                    row["cosine_similarity"] = cls.get_cosine_similarity(q_emb, e_emb)
+            rows.append(row)
+
+        metadata_df = pd.DataFrame(rows)
+        categorical_metadata = ["desc_length", "query_length", "query_id", "entity_id"]
+
+        text_data = TextData(
+            raw_text=pairs,
+            label=labels,
+            name=dataset_name,
+            task_type="text_classification",
+            metadata=metadata_df,
+            categorical_metadata=categorical_metadata,
+        )
+
+        return cls(dataset_name=dataset_name, dataset=text_data, qrels=qrels)
+
+    def set_predictions(
+        self,
+        retrievals: pd.DataFrame,
+        rank_to_grade: Optional[Callable[[float], int]] = None,
+    ) -> None:
+
+        results_df = retrievals.copy()
+        qrels_df = self.qrels
+
+        assert np.array([a for a in results_df["score"]]).shape[1] == len(
+            self.model_classes
+        ), "score should be a vector of size equal to number of classes"
+
+        # Left join: unranked entities get score=NaN, rank=NaN
+        pairs_df = qrels_df.merge(
+            results_df[["query_id", "entity_id", "score", "rank", "relevance"]],
+            on=["query_id", "entity_id"],
+            how="left",
+            suffixes=("_gt", ""),
+        )
+        # Predictions are binary relevance from the model
+        self.predictions = (
+            pairs_df["relevance"].fillna(0).astype(int).astype(str).tolist()
+        )
+
+        # Probabilities: Use retrieved score or default to [1.0, 0.0] for false positives
+        self.probabilities = (
+            pairs_df["score"]
+            .apply(lambda x: self.fp_probabilities if pd.isna(x) is True else x)
+            .tolist()
+        )
+
+        return None

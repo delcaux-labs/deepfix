@@ -14,7 +14,7 @@ import re
 import traceback
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
 
 from deepchecks.core import CheckFailure, CheckResult, SuiteResult
 from deepchecks.nlp import TextData
@@ -204,6 +204,9 @@ class CheckResultsParser:
         return txts
 
 
+DataType = Union[VisionData, TabularDataset, TextData]
+
+
 class BaseDeepchecksRunner(ABC):
     def __init__(
         self,
@@ -235,29 +238,29 @@ class BaseDeepchecksRunner(ABC):
 
     def run_suites(
         self,
-        train_data: Union[VisionData, TabularDataset, "TextData"],
+        train_data: DataType,
         dataset_name: str,
-        test_data: Optional[Union[VisionData, TabularDataset, "TextData"]] = None,
+        test_data: Optional[DataType] = None,
         model: Optional[BaseEstimator] = None,
         model_name: Optional[str] = None,
+        **kwargs,
     ) -> DeepchecksArtifacts:
         output = {}
         if self.config.train_test_validation:
             out_train_test_validation = self.run_suite_train_test_validation(
-                train_data, test_data=test_data
+                train_data, test_data=test_data, **kwargs
             )
             output["train_test_validation"] = self.parser.run(out_train_test_validation)
 
         if self.config.data_integrity:
             out_data_integrity = self.run_suite_data_integrity(
-                train_data, test_data=test_data
+                train_data, test_data=test_data, **kwargs
             )
             output["data_integrity"] = self.parser.run(out_data_integrity)
 
         if self.config.model_evaluation:
-            assert model is not None, "model must be provided for model evaluation"
             out_model_evaluation = self.run_suite_model_evaluation(
-                model=model, train_data=train_data, test_data=test_data
+                model=model, train_data=train_data, test_data=test_data, **kwargs
             )
             output["model_evaluation"] = self.parser.run(out_model_evaluation)
 
@@ -275,17 +278,13 @@ class BaseDeepchecksRunner(ABC):
 
     @abstractmethod
     def run_suite_train_test_validation(
-        self,
-        train_data: Union[VisionData, TabularDataset, "TextData"],
-        test_data: Optional[Union[VisionData, TabularDataset, "TextData"]] = None,
+        self, train_data: DataType, test_data: Optional[DataType] = None, **kwargs
     ) -> SuiteResult:
         pass
 
     @abstractmethod
     def run_suite_data_integrity(
-        self,
-        train_data: Union[VisionData, TabularDataset, "TextData"],
-        test_data: Optional[Union[VisionData, TabularDataset, "TextData"]] = None,
+        self, train_data: DataType, test_data: Optional[DataType] = None, **kwargs
     ) -> SuiteResult:
         pass
 
@@ -293,8 +292,9 @@ class BaseDeepchecksRunner(ABC):
     def run_suite_model_evaluation(
         self,
         model: Any,
-        train_data: Union[VisionData, TabularDataset, "TextData"],
-        test_data: Optional[Union[VisionData, TabularDataset, "TextData"]] = None,
+        train_data: DataType,
+        test_data: Optional[DataType] = None,
+        **kwargs,
     ) -> SuiteResult:
         pass
 
@@ -341,7 +341,7 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def run_suite_train_test_validation(
-        self, train_data: VisionData, test_data: Optional[VisionData] = None
+        self, train_data: VisionData, test_data: Optional[VisionData] = None, **kwargs
     ) -> SuiteResult:
         LOGGER.info("Running train-test validation suite")
         self._check_inputs(train_data, test_data)
@@ -353,7 +353,7 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def run_suite_data_integrity(
-        self, train_data: VisionData, test_data: Optional[VisionData] = None
+        self, train_data: VisionData, test_data: Optional[VisionData] = None, **kwargs
     ) -> SuiteResult:
         LOGGER.info("Running data integrity suite")
         self._check_inputs(train_data, test_data)
@@ -365,7 +365,11 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def run_suite_model_evaluation(
-        self, model: Any, train_data: VisionData, test_data: Optional[VisionData] = None
+        self,
+        model: Any,
+        train_data: VisionData,
+        test_data: Optional[VisionData] = None,
+        **kwargs,
     ) -> SuiteResult:
         raise NotImplementedError("TODO: debug this method")
         self._check_inputs(train_data, test_data)
@@ -408,7 +412,10 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         )
 
     def run_suite_train_test_validation(
-        self, train_data: TabularDataset, test_data: Optional[TabularDataset] = None
+        self,
+        train_data: TabularDataset,
+        test_data: Optional[TabularDataset] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Run train-test validation suite on tabular data.
@@ -432,7 +439,10 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         )
 
     def run_suite_data_integrity(
-        self, train_data: TabularDataset, test_data: Optional[TabularDataset] = None
+        self,
+        train_data: TabularDataset,
+        test_data: Optional[TabularDataset] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Run data integrity suite on tabular data.
@@ -459,6 +469,7 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         model: BaseEstimator,
         train_data: TabularDataset,
         test_data: Optional[TabularDataset] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Run model evaluation suite on tabular data.
@@ -493,6 +504,10 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
             )
 
 
+TClassPred = Union[Sequence[int], Sequence[str], Sequence[Sequence[int]]]
+TTextProba = Sequence[Sequence[float]]
+
+
 class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
     """
     Deepchecks integration for automated model validation and testing on text/NLP data.
@@ -511,7 +526,7 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         )
 
     def run_suite_train_test_validation(
-        self, train_data: TextData, test_data: Optional[TextData] = None
+        self, train_data: TextData, test_data: Optional[TextData] = None, **kwargs
     ) -> SuiteResult:
         """
         Run train-test validation suite on NLP text data.
@@ -531,36 +546,41 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             train_dataset=train_data,
             test_dataset=test_data,
             random_state=self.config.random_state,
+            **kwargs,
         )
 
     def run_suite_model_evaluation(
-        self, model: Any, train_data: TextData, test_data: Optional[TextData] = None
+        self,
+        train_data: TextData,
+        test_data: Optional[TextData] = None,
+        model: Optional[Any] = None,
+        model_classes: Optional[List[str]] = None,
+        train_predictions: Optional[TClassPred] = None,
+        train_probabilities: Optional[TTextProba] = None,
+        test_predictions: Optional[TClassPred] = None,
+        test_probabilities: Optional[TTextProba] = None,
+        **kwargs,
     ) -> SuiteResult:
         """
         Run model evaluation suite on NLP text data.
-
-        Assesses a trained model's performance on text tasks, examining metrics,
-        identifying underperforming segments, and comparing to baseline models.
-
-        Args:
-            train_data: Training dataset as Deepchecks TextData
-            test_data: Optional test dataset as Deepchecks TextData
-
-        Returns:
-            SuiteResult containing model evaluation results
         """
         LOGGER.info("Running model evaluation suite for NLP text data")
-        raise NotImplementedError(
-            "TODO: make compute the inputs of the suite test beforehand!"
-        )
+
+        # Deepchecks NLP suite.run accepts these arguments
         return self.suite_model_evaluation.run(
             train_dataset=train_data,
             test_dataset=test_data,
+            train_predictions=train_predictions,
+            test_predictions=test_predictions,
+            train_probabilities=train_probabilities,
+            test_probabilities=test_probabilities,
+            model_classes=model_classes,
             random_state=self.config.random_state,
+            **kwargs,
         )
 
     def run_suite_data_integrity(
-        self, train_data: TextData, test_data: Optional[TextData] = None
+        self, train_data: TextData, test_data: Optional[TextData] = None, **kwargs
     ) -> SuiteResult:
         """
         Not implemented for NLP text data.
@@ -575,4 +595,5 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             train_dataset=train_data,
             test_dataset=test_data,
             random_state=self.config.random_state,
+            **kwargs,
         )
