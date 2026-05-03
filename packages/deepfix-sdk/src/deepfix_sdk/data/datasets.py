@@ -779,6 +779,8 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         if "doc_id" in df.columns:
             df.drop(columns=["doc_id",], inplace=True)
             cat_features.remove('doc_id')
+
+        # TODO: provide embeddings as features for tabular dataset?
         
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
