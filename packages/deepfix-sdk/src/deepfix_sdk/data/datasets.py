@@ -350,7 +350,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         """
         Args:
             dataset_name: Human-readable name for the dataset.
-            topics: DataFrame with columns ``qid`` and ``query``.
+            topics: DataFrame with columns ``qid`` and ``query`` or ``text``.
             qrels: DataFrame with columns ``qid``, ``docno``, and ``label``.
             corpus_iter: A callable that returns an iterable of dicts,
                 each with at least ``docno`` and ``text`` keys.
@@ -374,7 +374,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
     # ------------------------------------------------------------------
 
     def get_topics(self, variant: Optional[str] = None) -> pd.DataFrame:
-        """Return topics as a DataFrame with ``qid`` and ``query`` columns."""
+        """Return topics as a DataFrame with ``qid`` and ``query``/``text`` columns."""
         return self._topics
 
     def get_qrels(self, variant: Optional[str] = None) -> pd.DataFrame:
@@ -410,20 +410,33 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         logger.info("Materialising TextData for '%s' …", self.dataset_name)
 
         # Build lookup dicts
-        queries = {str(row["qid"]): row["query"] for _, row in self._topics.iterrows()}
+        q = "query" if "query" in self._topics.columns else "text"
+        queries = {str(row["qid"]): row[q] for _, row in self._topics.iterrows()}
 
         needed_docnos = set(self._qrels["docno"].astype(str).unique())
         corpus: Dict[str, str] = {}
-        for doc in self._corpus_iter():
-            docno = str(doc["docno"])
-            if docno in needed_docnos:
-                corpus[docno] = doc.get("text", doc.get("body", None))
-                if corpus[docno] is None:
-                    raise ValueError(
-                        f"Document {docno} has no text or body. Found {list(doc.keys())}."
-                    )
-                if len(corpus) == len(needed_docnos):
-                    break
+        try:
+            for doc in self._corpus_iter():
+                docno = str(doc["docno"])
+                if docno in needed_docnos:
+                    corpus[docno] = doc.get("text", doc.get("body", None))
+                    if corpus[docno] is None:
+                        raise ValueError(
+                            f"Document {docno} has no text or body. Found {list(doc.keys())}."
+                        )
+                    if len(corpus) == len(needed_docnos):
+                        break
+        except (ValueError, EOFError, OSError) as e:
+            logger.warning(
+                "Corpus iteration stopped early for '%s' due to error: %s. "
+                "Found %d / %d needed documents. This may happen with corrupted/truncated caches.",
+                self.dataset_name,
+                e,
+                len(corpus),
+                len(needed_docnos),
+            )
+            if len(corpus) == 0:
+                raise
 
         pairs, labels, rows = [], [], []
         for _, row in self._qrels.iterrows():
@@ -440,17 +453,12 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
             rows.append(
                 {
-                    "desc_length": len(e_text.split()),
-                    "query_length": len(q_text.split()),
                     "query_token_count": len(self.get_tokens(q_text)),
                     "doc_token_count": len(self.get_tokens(e_text)),
-                    "query_id": q_id,
-                    "entity_id": e_id,
                 }
             )
 
         metadata_df = pd.DataFrame(rows)
-        categorical_metadata = ["query_id", "entity_id"]
 
         return TextData(
             raw_text=pairs,
@@ -458,7 +466,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
             name=self.dataset_name,
             task_type="text_classification",
             metadata=metadata_df,
-            categorical_metadata=categorical_metadata,
+            categorical_metadata=["query_token_count", "doc_token_count"]
         )
 
     @property

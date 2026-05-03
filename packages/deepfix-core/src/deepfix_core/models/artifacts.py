@@ -323,7 +323,7 @@ class DeepchecksArtifacts(Artifacts):
     results: Dict[str, List[DeepchecksParsedResult]] = Field(
         description="Results of the artifact"
     )
-    config: Optional[Any] = Field(default=None, description="Config of the artifact")
+    config: Optional[DeepchecksConfig] = Field(default=None, description="Config of the artifact")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Deepchecks artifacts to a dictionary.

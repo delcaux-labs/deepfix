@@ -6,7 +6,9 @@ including metadata extraction for logging and artifact management.
 """
 
 from .utils import get_model_metadata
+from .ir_model import IRLookupModel
 
 __all__ = [
     "get_model_metadata",
+    "IRLookupModel",
 ]

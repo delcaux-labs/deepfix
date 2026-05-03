@@ -260,12 +260,16 @@ class IngestionPipeline(Pipeline):
         self,
         run_name: str,
     ) -> None:
+        mlflow_run_ids = set()
         for artifact_key in ArtifactPath.__members__.values():
-            self.artifact_mgr.delete_artifact(run_name, artifact_key)
             mlflow_run_id = self.artifact_mgr.get_mlflow_run_id(
                 run_id=run_name, artifact_key=artifact_key
             )
-        if mlflow_run_id:
+            if mlflow_run_id:
+                mlflow_run_ids.add(mlflow_run_id)
+            self.artifact_mgr.delete_artifact(run_name, artifact_key)
+            
+        for mlflow_run_id in mlflow_run_ids:
             self.mlflow_manager.delete_run(mlflow_run_id)
             LOGGER.info(f"Deleted MLflow run `{mlflow_run_id}`")
 

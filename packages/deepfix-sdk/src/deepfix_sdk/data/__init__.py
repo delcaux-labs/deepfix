@@ -1,6 +1,7 @@
 from .datasets import (
     BaseDataset,
     ImageClassificationDataset,
+    InformationRetrievalDataset,
     ObjectDetectionDataset,
     TabularDataset,
     VisionDataset,
@@ -17,6 +18,7 @@ __all__ = [
     "ClassificationVisionDataLoader",
     "BaseDataset",
     "ImageClassificationDataset",
+    "InformationRetrievalDataset",
     "ObjectDetectionDataset",
     "TabularDataset",
     "VisionDataStatistics",

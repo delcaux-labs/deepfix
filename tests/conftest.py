@@ -101,7 +101,7 @@ def check_response():
         )
 
         print("\nDeepFix Analysis Summary:")
-        print(response.summary)
+        print(response.to_text())
 
         return True
 

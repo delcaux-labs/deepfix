@@ -56,9 +56,9 @@ def simulate_retrievals(
     )
 
 
-def load_ir_data(subset_queries: int = 100):
+def load_ir_data(subset_queries: int = 50):
     """Load BEIR dbpedia-entity data using PyTerrier and prepare IR datasets."""
-    name = "irds:beir/dbpedia-entity/test"
+    name = "irds:beir/scidocs"
     dataset = pt.get_dataset(name)
 
     # 1. Get all topics and qrels, subset for fast testing
@@ -99,17 +99,22 @@ class TestIRWorkflowE2E:
         print("2. Client initialized.")
 
         # 2. Prepare Data
-        print("3. Preparing PyTerrier IR data (DBPedia)...")
-        train_data, test_data = load_ir_data(subset_queries=3)
+        print("3. Preparing PyTerrier IR data...")
+        train_data, test_data = load_ir_data()
         print(
             f"4. IR data prepared. Train samples: {len(train_data)}, Test samples: {len(test_data)}"
         )
+
+        from deepfix_sdk.models import IRLookupModel
+        model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
 
         # 3. Run Diagnosis
         print("5. Running diagnosis...")
         response = client.get_diagnosis(
             train_data=train_data,
             test_data=test_data,
+            model=model,
+            model_name="random",
             language="english",
         )
 
