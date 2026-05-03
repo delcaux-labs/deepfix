@@ -507,7 +507,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
     @property
     def categorical_metadata(self) -> list[str]:
-        return self._categorical_metadata
+        return list(self._categorical_metadata)
 
     @property
     def X(self) -> Sequence[str]:
@@ -771,11 +771,20 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         if self.cosine_sim is not None:
             df["cosine_sim"] = self.cosine_sim
 
+        # Remove id columns from categorical features
+        cat_features = list(self.categorical_metadata)        
+        if "query_id" in df.columns:
+            df.drop(columns=["query_id",], inplace=True)
+            cat_features.remove('query_id')
+        if "doc_id" in df.columns:
+            df.drop(columns=["doc_id",], inplace=True)
+            cat_features.remove('doc_id')
+        
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
             dataset=df,
             label=label_name,
-            cat_features=self.categorical_metadata,
+            cat_features=cat_features,
         )
 
     def to_nlp_dataset(self) -> NLPDataset:

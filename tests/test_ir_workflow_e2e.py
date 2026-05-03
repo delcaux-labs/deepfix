@@ -4,6 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import pyterrier as pt
+import hashlib
 from pathlib import Path
 from deepfix_sdk import DeepFixClient
 from deepfix_sdk.data.datasets import InformationRetrievalDataset
@@ -57,6 +58,18 @@ def simulate_retrievals(
     )
 
 
+def random_embedder(text: str, dim: int = 10) -> np.ndarray:
+    """Compute a deterministic random embedding for a given text.
+
+    Args:
+        text: Input string.
+        dim: Embedding dimension.
+    """
+    seed = int(hashlib.md5(text.encode()).hexdigest(), 16) % (2**32)
+    rng = np.random.default_rng(seed)
+    return rng.random(dim)
+
+
 def load_ir_data(subset_queries: int = 50):
     """Load BEIR dbpedia-entity data using PyTerrier and prepare IR datasets."""
     name = "irds:beir/scidocs"
@@ -83,6 +96,10 @@ def load_ir_data(subset_queries: int = 50):
     # 3. Simulate retrievals and set predictions
     train_ir_ds.set_predictions(simulate_retrievals(train_ir_ds.qrels))
     test_ir_ds.set_predictions(simulate_retrievals(test_ir_ds.qrels))
+
+    # 4. Set embeddings for diagnostic suites
+    train_ir_ds.set_embeddings(random_embedder)
+    test_ir_ds.set_embeddings(random_embedder)
 
     return train_ir_ds, test_ir_ds
 
