@@ -629,8 +629,9 @@ class IRDataStatistics(BaseDataStatistics):
 
     def _compute_statistics(self, dataset: InformationRetrievalDataset) -> IRStatistics:
         """Compute composite statistics for an IR dataset (NLP + Tabular)."""
-        # 1. Get NLP statistics
-        nlp_data_stats = NLPDataStatistics(train_data=dataset)
+        # 1. Get NLP statistics (wrap as NLPDataset since IR no longer inherits from it)
+        nlp_dataset = dataset.to_nlp_dataset()
+        nlp_data_stats = NLPDataStatistics(train_data=nlp_dataset)
         nlp_stats = nlp_data_stats.get_train_statistics()
 
         # 2. Get Tabular statistics

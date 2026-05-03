@@ -1,4 +1,16 @@
-from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Union, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Sequence,
+    Union,
+    Tuple,
+)
+from functools import cached_property
 
 import re
 import string
@@ -12,6 +24,7 @@ from deepfix_core.models import DataType
 from supervision.dataset.core import DetectionDataset
 from supervision.detection.core import Detections
 import tiktoken
+import pyterrier as pt
 from torch import Tensor
 from torch.utils.data import Dataset
 from typing_extensions import runtime_checkable
@@ -315,15 +328,38 @@ class NLPDataset(BaseDataset):
         return self.dataset_name
 
 
-class InformationRetrievalDataset(NLPDataset):
+class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
+    """An IR dataset backed by PyTerrier's Dataset interface.
+
+    Stores topics, qrels, and a corpus source lazily. The Deepchecks TextData
+    representation is only materialized on first access to ``.dataset``.
+
+    Can be constructed:
+    - Directly via ``__init__`` with DataFrames and a corpus iterator factory.
+    - From a PyTerrier dataset via ``from_pyterrier(pt_dataset)``.
+    - From raw dicts via ``from_ir_data(...)`` (backward compatible).
+    """
+
     def __init__(
         self,
         dataset_name: str,
-        dataset: TextData,
-        qrels: Union[List[Dict[str, Any]], pd.DataFrame],
+        topics: pd.DataFrame,
+        qrels: pd.DataFrame,
+        corpus_iter: Callable[[], Iterable[Dict[str, Any]]],
     ):
-        super().__init__(dataset_name, dataset)
-        self.qrels = pd.DataFrame(qrels) if isinstance(qrels, list) else qrels
+        """
+        Args:
+            dataset_name: Human-readable name for the dataset.
+            topics: DataFrame with columns ``qid`` and ``query``.
+            qrels: DataFrame with columns ``qid``, ``docno``, and ``label``.
+            corpus_iter: A callable that returns an iterable of dicts,
+                each with at least ``docno`` and ``text`` keys.
+        """
+        self.dataset_name = dataset_name
+        self._topics = topics
+        self._qrels = qrels
+        self._corpus_iter = corpus_iter
+
         self.predictions = None
         self.probabilities = None
 
@@ -333,42 +369,154 @@ class InformationRetrievalDataset(NLPDataset):
 
         self.tokenizer = None
 
+    # ------------------------------------------------------------------
+    # pt.datasets.Dataset interface
+    # ------------------------------------------------------------------
+
+    def get_topics(self, variant: Optional[str] = None) -> pd.DataFrame:
+        """Return topics as a DataFrame with ``qid`` and ``query`` columns."""
+        return self._topics
+
+    def get_qrels(self, variant: Optional[str] = None) -> pd.DataFrame:
+        """Return qrels as a DataFrame with ``qid``, ``docno``, and ``label`` columns."""
+        return self._qrels
+
+    def get_corpus_iter(self, *, verbose: bool = True) -> Iterable[Dict[str, Any]]:
+        """Yield dicts with ``docno`` and ``text`` keys."""
+        return self._corpus_iter()
+
+    # ------------------------------------------------------------------
+    # BaseDataset protocol
+    # ------------------------------------------------------------------
+
     @property
     def data_type(self) -> DataType:
         return DataType.IR
 
+    @property
+    def name(self) -> str:
+        return self.dataset_name
+
     def to_loader(self, *args, **kwargs) -> "InformationRetrievalDataset":
         return self
 
+    # ------------------------------------------------------------------
+    # Lazy Deepchecks materialisation
+    # ------------------------------------------------------------------
+
+    @cached_property
+    def dataset(self) -> TextData:
+        """Lazily materialise the Deepchecks ``TextData`` from topics + qrels + corpus."""
+        logger.info("Materialising TextData for '%s' …", self.dataset_name)
+
+        # Build lookup dicts
+        queries = {str(row["qid"]): row["query"] for _, row in self._topics.iterrows()}
+
+        needed_docnos = set(self._qrels["docno"].astype(str).unique())
+        corpus: Dict[str, str] = {}
+        for doc in self._corpus_iter():
+            docno = str(doc["docno"])
+            if docno in needed_docnos:
+                corpus[docno] = doc.get("text", doc.get("body", None))
+                if corpus[docno] is None:
+                    raise ValueError(
+                        f"Document {docno} has no text or body. Found {list(doc.keys())}."
+                    )
+                if len(corpus) == len(needed_docnos):
+                    break
+
+        pairs, labels, rows = [], [], []
+        for _, row in self._qrels.iterrows():
+            q_id = str(row["qid"])
+            e_id = str(row["docno"])
+            relevance = int(row["label"])
+
+            q_text = queries.get(q_id, "")
+            e_text = corpus.get(e_id, "")
+
+            text = f"<query> {q_text} </query> <sep> <document> {e_text} </document>"
+            pairs.append(text)
+            labels.append(str(relevance))
+
+            rows.append(
+                {
+                    "desc_length": len(e_text.split()),
+                    "query_length": len(q_text.split()),
+                    "query_token_count": len(self.get_tokens(q_text)),
+                    "doc_token_count": len(self.get_tokens(e_text)),
+                    "query_id": q_id,
+                    "entity_id": e_id,
+                }
+            )
+
+        metadata_df = pd.DataFrame(rows)
+        categorical_metadata = ["query_id", "entity_id"]
+
+        return TextData(
+            raw_text=pairs,
+            label=labels,
+            name=self.dataset_name,
+            task_type="text_classification",
+            metadata=metadata_df,
+            categorical_metadata=categorical_metadata,
+        )
+
+    @property
+    def qrels(self) -> pd.DataFrame:
+        """Return qrels in the internal format (query_id, entity_id, relevance)."""
+        return self._qrels.rename(
+            columns={"qid": "query_id", "docno": "entity_id", "label": "relevance"}
+        )
+
+    @property
+    def data(self) -> TextData:
+        return self.dataset
+
+    @property
+    def X(self) -> Sequence[str]:
+        return self.dataset.text
+
+    @property
+    def y(self) -> TTextLabel:
+        return self.dataset.label
+
+    @property
+    def embeddings(self) -> np.ndarray:
+        return self.dataset.embeddings
+
+    def __len__(self):
+        return len(self._qrels)
+
+    # ------------------------------------------------------------------
+    # Constructors
+    # ------------------------------------------------------------------
+
     @classmethod
-    def split_by_query(
+    def from_pyterrier(
         cls,
-        qrels: List[Dict[str, Any]],
-        train_ratio: float = 0.8,
-        random_seed: int = 42,
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Split qrels into train and test sets by query_id to avoid data leakage."""
-        df = pd.DataFrame(qrels)
-        query_ids = df["query_id"].unique()
+        pt_dataset: Any,
+        dataset_name: Optional[str] = None,
+    ) -> "InformationRetrievalDataset":
+        """Create from an existing PyTerrier dataset (e.g. ``pt.get_dataset(...)``).
 
-        np.random.seed(random_seed)
-        np.random.shuffle(query_ids)
+        Data is NOT loaded into memory at construction time; the corpus is
+        streamed lazily on first access to ``.dataset``.
 
-        split_idx = int(len(query_ids) * train_ratio)
-        train_queries = set(query_ids[:split_idx])
+        Args:
+            pt_dataset: A PyTerrier dataset object.
+            dataset_name: Optional override name.
+        """
+        if dataset_name is None:
+            dataset_name = (
+                getattr(pt_dataset, "info_url", lambda: None)() or "pyterrier_dataset"
+            )
 
-        train_qrels = [q for q in qrels if q["query_id"] in train_queries]
-        test_qrels = [q for q in qrels if q["query_id"] not in train_queries]
-
-        return train_qrels, test_qrels
-
-    @staticmethod
-    def get_tokens(
-        text: str, tokenizer: Optional[tiktoken.Encoding] = None
-    ) -> np.ndarray:
-        if tokenizer is None:
-            tokenizer = tiktoken.get_encoding("o200k_base")
-        return tokenizer.encode(text)
+        return cls(
+            dataset_name=dataset_name,
+            topics=pt_dataset.get_topics(),
+            qrels=pt_dataset.get_qrels(),
+            corpus_iter=lambda: pt_dataset.get_corpus_iter(),
+        )
 
     @classmethod
     def from_ir_data(
@@ -380,63 +528,104 @@ class InformationRetrievalDataset(NLPDataset):
         query_embeddings: Optional[Dict[str, np.ndarray]] = None,
         corpus_embeddings: Optional[Dict[str, np.ndarray]] = None,
     ) -> "InformationRetrievalDataset":
-        pairs, labels, rows = [], [], []
+        """Backward-compatible constructor from raw dicts.
 
-        for qrel in qrels:
-            q_id = qrel["query_id"]
-            e_id = qrel["entity_id"]
-            relevance = qrel["relevance"]
-            rank = qrel.get("rank")
-            q = queries[q_id]
-            e = corpus[e_id]
-
-            q_text = q.get("query", "")
-            e_text = e.get("text", "")
-
-            text = f"<query> {q_text} </query> <sep> <document> {e_text} </document>"
-            pairs.append(text)
-            labels.append(str(relevance))
-
-            row = {
-                "desc_length": len(e_text.split()),
-                "query_length": len(q_text.split()),
-                "query_token_count": len(cls.get_tokens(q_text)),
-                "doc_token_count": len(cls.get_tokens(e_text)),
-                "query_id": q_id,
-                "entity_id": e_id,
-            }
-            if query_embeddings is not None and corpus_embeddings is not None:
-                q_emb = query_embeddings.get(q_id)
-                e_emb = corpus_embeddings.get(e_id)
-                if q_emb is not None and e_emb is not None:
-                    row["cosine_similarity"] = cls.get_cosine_similarity(q_emb, e_emb)
-            rows.append(row)
-
-        metadata_df = pd.DataFrame(rows)
-        categorical_metadata = ["query_id", "entity_id"]
-        # Numeric features that should be treated as such
-        numeric_features = [
-            "desc_length",
-            "query_length",
-            "query_token_count",
-            "doc_token_count",
-            "query_doc_token_overlap",
-            "gt_rank",
-            "is_hard_negative",
+        Converts the raw dict-based IR data into the PyTerrier-native format
+        (topics, qrels, corpus DataFrames / iterators).
+        """
+        # Build topics DataFrame
+        topics_rows = [
+            {"qid": qid, "query": q_data.get("query", "")}
+            for qid, q_data in queries.items()
         ]
-        if "cosine_similarity" in metadata_df.columns:
-            numeric_features.append("cosine_similarity")
+        topics_df = pd.DataFrame(topics_rows)
 
-        text_data = TextData(
-            raw_text=pairs,
-            label=labels,
-            name=dataset_name,
-            task_type="text_classification",
-            metadata=metadata_df,
-            categorical_metadata=categorical_metadata,
+        # Build qrels DataFrame
+        qrels_rows = [
+            {"qid": q["query_id"], "docno": q["entity_id"], "label": q["relevance"]}
+            for q in qrels
+        ]
+        qrels_df = pd.DataFrame(qrels_rows)
+
+        # Build corpus iterator factory from in-memory dict
+        def _corpus_iter():
+            for docno, doc_data in corpus.items():
+                yield {"docno": docno, "text": doc_data.get("text", "")}
+
+        return cls(
+            dataset_name=dataset_name,
+            topics=topics_df,
+            qrels=qrels_df,
+            corpus_iter=_corpus_iter,
         )
 
-        return cls(dataset_name=dataset_name, dataset=text_data, qrels=qrels)
+    # ------------------------------------------------------------------
+    # Utilities
+    # ------------------------------------------------------------------
+
+    def split(
+        self,
+        train_size: float = 0.8,
+        random_state: int = 42,
+    ) -> Tuple["InformationRetrievalDataset", "InformationRetrievalDataset"]:
+        """Split the dataset into two non-overlapping train/test partitions.
+
+        Uses stratified sampling on the relevance labels so that the label
+        distribution is preserved in both partitions.
+
+        Args:
+            train_size: Fraction of qrel rows to include in the train split.
+            random_state: Random seed for reproducibility.
+
+        Returns:
+            A ``(train_dataset, test_dataset)`` tuple, each sharing the same
+            corpus iterator factory as the original dataset.
+        """
+        from sklearn.model_selection import train_test_split
+
+        qrels_df = self._qrels.copy()
+
+        train_df, test_df = train_test_split(
+            qrels_df,
+            train_size=train_size,
+            random_state=random_state,
+            stratify=qrels_df["label"],
+        )
+
+        parent_corpus_iter = self._corpus_iter
+        train_docnos = set(train_df["docno"].astype(str).unique())
+        test_docnos = set(test_df["docno"].astype(str).unique())
+
+        def _filtered_corpus_iter(docnos):
+            def _iter():
+                for doc in parent_corpus_iter():
+                    if str(doc["docno"]) in docnos:
+                        yield doc
+
+            return _iter
+
+        train_ds = InformationRetrievalDataset(
+            dataset_name=f"{self.dataset_name}_train",
+            topics=self._topics,
+            qrels=train_df.reset_index(drop=True),
+            corpus_iter=_filtered_corpus_iter(train_docnos),
+        )
+        test_ds = InformationRetrievalDataset(
+            dataset_name=f"{self.dataset_name}_test",
+            topics=self._topics,
+            qrels=test_df.reset_index(drop=True),
+            corpus_iter=_filtered_corpus_iter(test_docnos),
+        )
+
+        return train_ds, test_ds
+
+    @staticmethod
+    def get_tokens(
+        text: str, tokenizer: Optional[tiktoken.Encoding] = None
+    ) -> np.ndarray:
+        if tokenizer is None:
+            tokenizer = tiktoken.get_encoding("o200k_base")
+        return tokenizer.encode(text)
 
     def set_predictions(
         self,
@@ -484,3 +673,7 @@ class InformationRetrievalDataset(NLPDataset):
             label=label_name,
             cat_features=self.dataset.categorical_metadata,
         )
+
+    def to_nlp_dataset(self) -> NLPDataset:
+        """Wrap the materialised TextData as an NLPDataset for Deepchecks NLP suites."""
+        return NLPDataset(dataset_name=self.dataset_name, dataset=self.dataset)

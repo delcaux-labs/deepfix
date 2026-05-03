@@ -374,11 +374,11 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         )
         LOGGER.info("Running unified IR validation for %s", dataset_name)
 
-        # 1. Run NLP suites
+        # 1. Run NLP suites (wrap as NLPDataset since IR no longer inherits from it)
         nlp_artifact = self.nlp_runner.run_suites(
-            train_data=train_data,
+            train_data=train_data.to_nlp_dataset(),
             dataset_name=f"{dataset_name}_nlp",
-            test_data=test_data if test_data else None,
+            test_data=test_data.to_nlp_dataset() if test_data else None,
             model=model,
             model_name=model_name,
             **kwargs,
