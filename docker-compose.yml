@@ -52,8 +52,6 @@ services:
     image: deepfix-server:latest
     env_file:
       - .env
-    #environment:
-    #  - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
     restart: unless-stopped
     networks:
       - deepfix-network

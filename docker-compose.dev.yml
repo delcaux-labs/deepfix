@@ -1,16 +1,5 @@
 services:
 
-
-  tunnel:
-    image: cloudflare/cloudflared:1811-8aebc38b2fc4
-    container_name: tunnel-deepfix
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-  
   deepfix-portal:
     build:
       context: .
@@ -39,8 +28,6 @@ services:
     image: deepfix-server:latest
     env_file:
       - .env
-    #environment:
-    #  - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
     restart: unless-stopped
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
     ports:
