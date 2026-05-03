@@ -449,7 +449,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
             text = f"<query> {q_text} </query> <sep> <document> {e_text} </document>"
             pairs.append(text)
-            labels.append(str(relevance))
+            labels.append(relevance)
 
             rows.append(
                 {
@@ -481,6 +481,10 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
     @property
     def data(self) -> TextData:
         return self.dataset
+    
+    @property
+    def metadata(self) -> pd.DataFrame:
+        return self.dataset.metadata
 
     @property
     def X(self) -> Sequence[str]:
@@ -659,7 +663,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         )
         # Predictions are binary relevance from the model
         self.predictions = (
-            pairs_df["relevance"].fillna(0).astype(int).astype(str).tolist()
+            pairs_df["relevance"].fillna(0).astype(int).tolist()
         )
 
         # Probabilities: Use retrieved score or default to [1.0, 0.0] for false positives
@@ -673,9 +677,9 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
     def to_tabular(self) -> TabularDataset:
         """Convert the IR dataset to a TabularDataset view for Deepchecks Tabular suites."""
-        df = self.dataset.metadata.copy()
+        df = self.metadata.copy()
         label_name = "relevance"
-        df[label_name] = self.dataset.label
+        df[label_name] = self.y
         df[label_name] = df[label_name].apply(int)
 
         return TabularDataset(

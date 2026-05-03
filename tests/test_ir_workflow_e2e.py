@@ -98,13 +98,13 @@ class TestIRWorkflowE2E:
         model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
 
         # 3. Get metadata from test_data (where Deepchecks will look for X)
-        X = test_data.dataset.metadata
+        X = test_data.metadata
 
         # 4. Predict
         preds = model.predict(X)
         assert len(preds) == len(test_data.predictions)
         # IRLookupModel returns strings to match Deepchecks expectations
-        assert all(p == str(expected) for p, expected in zip(preds, test_data.predictions))
+        assert all(p == expected for p, expected in zip(preds, test_data.predictions))
 
         # 5. Predict Proba
         probas = model.predict_proba(X)

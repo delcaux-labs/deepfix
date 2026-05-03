@@ -361,6 +361,10 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         test_data: Optional[InformationRetrievalDataset] = None,
         model: Optional[BaseEstimator] = None,
         model_name: Optional[str] = None,
+        train_predictions: Optional[TClassPred] = None,
+        test_predictions: Optional[TClassPred] = None,
+        train_probabilities: Optional[TTextProba] = None,
+        test_probabilities: Optional[TTextProba] = None,
         **kwargs,
     ) -> DeepchecksArtifacts:
         """
@@ -375,16 +379,23 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         LOGGER.info("Running unified IR validation for %s", dataset_name)
 
         # 1. Run NLP suites (wrap as NLPDataset since IR no longer inherits from it)
+        print("== "*10, "NLP", "== "*10)
         nlp_artifact = self.nlp_runner.run_suites(
             train_data=train_data.to_nlp_dataset(),
             dataset_name=f"{dataset_name}_nlp",
             test_data=test_data.to_nlp_dataset() if test_data else None,
             model=model,
             model_name=model_name,
+            train_predictions=train_predictions,
+            test_predictions=test_predictions,
+            train_probabilities=train_probabilities,
+            test_probabilities=test_probabilities,
             **kwargs,
         )
 
         # 2. Run Tabular suites
+        print("\n")
+        print("== "*10, "tabular", "== "*10)
         tabular_artifact = self.tabular_runner.run_suites(
             train_data=train_data.to_tabular(),
             dataset_name=f"{dataset_name}_tabular",
