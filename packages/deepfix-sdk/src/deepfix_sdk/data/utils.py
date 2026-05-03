@@ -643,12 +643,12 @@ class IRDataStatistics(BaseDataStatistics):
         num_queries = int(dataset.qrels["query_id"].nunique())
         num_relevant_docs = int(
             dataset.qrels[dataset.qrels["relevance"].astype(int) >= 1][
-                "entity_id"
+                "doc_id"
             ].nunique()
         )
         num_non_relevant_docs = int(
             dataset.qrels[dataset.qrels["relevance"].astype(int) < 1][
-                "entity_id"
+                "doc_id"
             ].nunique()
         )
 

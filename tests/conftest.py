@@ -29,22 +29,6 @@ except ImportError:
 
 
 @pytest.fixture
-def deepchecks_config_no_save() -> DeepchecksConfig:
-    """
-    Fixture providing a DeepchecksConfig with save_results disabled.
-    This prevents tests from writing files to disk.
-    """
-    return DeepchecksConfig(
-        save_results=False,
-        train_test_validation=True,
-        data_integrity=False,
-        model_evaluation=False,
-        max_samples=50,
-        random_state=42,
-    )
-
-
-@pytest.fixture
 def minimal_deepchecks_config() -> DeepchecksConfig:
     """
     Fixture providing minimal DeepchecksConfig for quick test execution.
@@ -53,9 +37,8 @@ def minimal_deepchecks_config() -> DeepchecksConfig:
     return DeepchecksConfig(
         save_results=False,
         train_test_validation=True,
-        data_integrity=False,
-        model_evaluation=False,
-        max_samples=20,
+        data_integrity=True,
+        model_evaluation=True,
         random_state=42,
     )
 

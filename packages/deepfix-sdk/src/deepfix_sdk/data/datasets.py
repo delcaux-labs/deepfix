@@ -455,6 +455,8 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
                 {
                     "query_token_count": len(self.get_tokens(q_text)),
                     "doc_token_count": len(self.get_tokens(e_text)),
+                    "query_id": q_id,
+                    "doc_id": e_id,
                 }
             )
 
@@ -471,9 +473,9 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
     @property
     def qrels(self) -> pd.DataFrame:
-        """Return qrels in the internal format (query_id, entity_id, relevance)."""
+        """Return qrels in the internal format (query_id, doc_id, relevance)."""
         return self._qrels.rename(
-            columns={"qid": "query_id", "docno": "entity_id", "label": "relevance"}
+            columns={"qid": "query_id", "docno": "doc_id", "label": "relevance"}
         )
 
     @property
@@ -550,7 +552,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
         # Build qrels DataFrame
         qrels_rows = [
-            {"qid": q["query_id"], "docno": q["entity_id"], "label": q["relevance"]}
+            {"qid": q["query_id"], "docno": q["doc_id"], "label": q["relevance"]}
             for q in qrels
         ]
         qrels_df = pd.DataFrame(qrels_rows)
@@ -650,8 +652,8 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
         # Left join: unranked entities get score=NaN, rank=NaN
         pairs_df = qrels_df.merge(
-            results_df[["query_id", "entity_id", "score", "rank", "relevance"]],
-            on=["query_id", "entity_id"],
+            results_df[["query_id", "doc_id", "score", "rank", "relevance"]],
+            on=["query_id", "doc_id"],
             how="left",
             suffixes=("_gt", ""),
         )
@@ -674,6 +676,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         df = self.dataset.metadata.copy()
         label_name = "relevance"
         df[label_name] = self.dataset.label
+        df[label_name] = df[label_name].apply(int)
 
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",

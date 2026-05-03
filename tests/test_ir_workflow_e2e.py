@@ -9,6 +9,7 @@ from deepfix_sdk import DeepFixClient
 from deepfix_sdk.data.datasets import InformationRetrievalDataset
 from deepfix_core.models import APIResponse
 from deepfix_sdk.config import DeepchecksConfig
+from deepfix_sdk.models import IRLookupModel
 
 
 def simulate_retrievals(
@@ -17,7 +18,7 @@ def simulate_retrievals(
     """Simulate model retrievals from a qrels DataFrame.
 
     Args:
-        qrels_df: DataFrame with ``query_id``, ``entity_id``, ``relevance`` columns.
+        qrels_df: DataFrame with ``query_id``, ``doc_id``, ``relevance`` columns.
         retrieval_rate: Fraction of qrel pairs "found" by the model.
         seed: Random seed for reproducibility.
     """
@@ -48,7 +49,7 @@ def simulate_retrievals(
     return pd.DataFrame(
         {
             "query_id": df["query_id"].values,
-            "entity_id": df["entity_id"].values,
+            "doc_id": df["doc_id"].values,
             "score": [[s0, s1] for s0, s1 in zip(score_class0, score_class1)],
             "relevance": (score_class1 > score_class0).astype(int),
             "rank": rng.integers(1, 101, size=m),
@@ -88,6 +89,34 @@ def load_ir_data(subset_queries: int = 50):
 
 class TestIRWorkflowE2E:
     """End-to-end tests for the Information Retrieval (IR) workflow using real CISI data."""
+    def test_ir_model(self):
+        """Verify that IRLookupModel correctly retrieves predictions and probabilities."""
+        # 1. Load data
+        train_data, test_data = load_ir_data(subset_queries=10)
+
+        # 2. Initialize model
+        model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
+
+        # 3. Get metadata from test_data (where Deepchecks will look for X)
+        X = test_data.dataset.metadata
+
+        # 4. Predict
+        preds = model.predict(X)
+        assert len(preds) == len(test_data.predictions)
+        # IRLookupModel returns strings to match Deepchecks expectations
+        assert all(p == str(expected) for p, expected in zip(preds, test_data.predictions))
+
+        # 5. Predict Proba
+        probas = model.predict_proba(X)
+        assert probas.shape == (len(test_data.probabilities), 2)
+        # Check if probabilities match
+        for i, expected_proba in enumerate(test_data.probabilities):
+            np.testing.assert_array_almost_equal(probas[i], expected_proba)
+
+        # 6. Test KeyError for missing pairs
+        missing_X = pd.DataFrame({"query_id": ["missing_q"], "doc_id": ["missing_d"]})
+        with pytest.raises(KeyError, match="not found in lookup table"):
+            model.predict(missing_X)
 
     def test_ir_diagnosis_workflow(self, api_url: str, check_response: callable):
         """
@@ -105,7 +134,6 @@ class TestIRWorkflowE2E:
             f"4. IR data prepared. Train samples: {len(train_data)}, Test samples: {len(test_data)}"
         )
 
-        from deepfix_sdk.models import IRLookupModel
         model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
 
         # 3. Run Diagnosis
