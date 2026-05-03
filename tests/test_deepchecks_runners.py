@@ -173,10 +173,22 @@ class TestDeepchecksRunnerForIR:
         # Initialize runner with minimal config
         runner = DeepchecksRunnerForTabular(config=minimal_deepchecks_config)
 
+        print(f"columns:{train_data.to_tabular().X.columns}")
+        
         # Run suites (no test_data for this simple case)
         artifact = runner.run_suites(
             train_data=train_data.to_tabular(),
-            dataset_name="test_adult",
+            dataset_name="test_ir",
             test_data=test_data.to_tabular(),
             model=model
+        )
+
+        # Verify artifact structure
+        assert isinstance(artifact, DeepchecksArtifacts), "Expected DeepchecksArtifacts"
+        assert artifact.dataset_name == "test_ir", "Dataset name should match"
+        assert artifact.results is not None, "Results should not be None"
+        assert isinstance(artifact.results, dict), "Results should be a dictionary"
+        assert len(artifact.results) > 0, "Results should contain suite results"
+        assert "train_test_validation" in artifact.results, (
+            "Should contain train_test_validation results"
         )

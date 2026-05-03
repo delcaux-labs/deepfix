@@ -298,6 +298,8 @@ class NLPDataset(BaseDataset):
         self.dataset_name = dataset_name
 
     def to_loader(self, *args, **kwargs) -> "NLPDataset":
+        """Compute properties of the dataset and return it."""
+        self.dataset.calculate_builtin_properties()
         return self
 
     def __len__(self):
@@ -360,8 +362,15 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         self._qrels = qrels
         self._corpus_iter = corpus_iter
 
-        self.predictions = None
-        self.probabilities = None
+        self.predictions: Optional[list[int]] = None
+        self.probabilities: Optional[list[float]] = None
+        self._embeddings: Optional[np.ndarray] = None
+        self._l1_norm: Optional[np.ndarray] = None
+        self._cosine_sim: Optional[np.ndarray] = None
+        self._metadata: Optional[pd.DataFrame] = None
+        self._categorical_metadata: Optional[list[str]] = None
+
+        self._text_data: Optional[TextData] = None
 
         # Classes are strictly binary relevance "0" and "1"
         self.model_classes = ["0", "1"]
@@ -404,9 +413,13 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
     # Lazy Deepchecks materialisation
     # ------------------------------------------------------------------
 
-    @cached_property
+    @property
     def dataset(self) -> TextData:
         """Lazily materialise the Deepchecks ``TextData`` from topics + qrels + corpus."""
+
+        if self._text_data is not None:
+            return self._text_data
+            
         logger.info("Materialising TextData for '%s' …", self.dataset_name)
 
         # Build lookup dicts
@@ -447,7 +460,7 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
             q_text = queries.get(q_id, "")
             e_text = corpus.get(e_id, "")
 
-            text = f"<query> {q_text} </query> <sep> <document> {e_text} </document>"
+            text = self.format_pair(q_text, e_text)
             pairs.append(text)
             labels.append(relevance)
 
@@ -460,16 +473,26 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
                 }
             )
 
-        metadata_df = pd.DataFrame(rows)
-
-        return TextData(
+        self._metadata = pd.DataFrame(rows)
+        self._categorical_metadata=["query_token_count", "doc_token_count","query_id","doc_id"]
+        # create dataset instance from deepchecks
+        self._text_data = TextData(
             raw_text=pairs,
             label=labels,
             name=self.dataset_name,
             task_type="text_classification",
-            metadata=metadata_df,
-            categorical_metadata=["query_token_count", "doc_token_count"]
+            metadata=self._metadata.copy(),
+            categorical_metadata=self._categorical_metadata[:]
         )
+        self.calculate_text_properties()
+        return self._text_data
+    
+    def calculate_text_properties(self):
+        self._text_data.calculate_builtin_properties()
+        if self._text_data.properties is not None:
+            self._categorical_metadata.extend(self._text_data.categorical_properties)
+            self._metadata = pd.concat([self._metadata, self._text_data.properties], axis=1).reset_index(drop=True)
+
 
     @property
     def qrels(self) -> pd.DataFrame:
@@ -477,14 +500,14 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         return self._qrels.rename(
             columns={"qid": "query_id", "docno": "doc_id", "label": "relevance"}
         )
-
-    @property
-    def data(self) -> TextData:
-        return self.dataset
     
     @property
     def metadata(self) -> pd.DataFrame:
-        return self.dataset.metadata
+        return self._metadata
+
+    @property
+    def categorical_metadata(self) -> list[str]:
+        return self._categorical_metadata
 
     @property
     def X(self) -> Sequence[str]:
@@ -495,8 +518,8 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         return self.dataset.label
 
     @property
-    def embeddings(self) -> np.ndarray:
-        return self.dataset.embeddings
+    def embeddings(self) -> Optional[np.ndarray]:
+        return self._embeddings
 
     def __len__(self):
         return len(self._qrels)
@@ -634,6 +657,20 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
         return train_ds, test_ds
 
     @staticmethod
+    def format_pair(query: str, document: str) -> str:
+        """Combine query and document into a formatted string."""
+        return f"<query> {query} </query> <document> {document} </document>"
+
+    @staticmethod
+    def parse_pair(text: str) -> Tuple[str, str]:
+        """Extract query and document from a formatted string."""
+        query_match = re.search(r"<query>(.*?)</query>", text, re.DOTALL)
+        doc_match = re.search(r"<document>(.*?)</document>", text, re.DOTALL)
+        q_text = query_match.group(1).strip() if query_match else ""
+        d_text = doc_match.group(1).strip() if doc_match else ""
+        return q_text, d_text
+
+    @staticmethod
     def get_tokens(
         text: str, tokenizer: Optional[tiktoken.Encoding] = None
     ) -> np.ndarray:
@@ -675,18 +712,70 @@ class InformationRetrievalDataset(pt.datasets.Dataset, BaseDataset):
 
         return None
 
+    def set_embeddings(self, embedder: Callable[[str], np.ndarray]) -> None:
+        """Compute and set embeddings for the dataset using the provided embedder.
+
+        The embedder is applied to queries and documents separately, and the
+        resulting pair embedding is the difference (query - document).
+        """
+        logger.info("Computing embeddings for '%s' ...", self.dataset_name)
+
+        self.dataset # ensure properties are computed
+
+        cache: Dict[str, np.ndarray] = {}
+
+        def get_embedding(text: str) -> np.ndarray:
+            if text not in cache:
+                cache[text] = embedder(text)
+            return cache[text]
+
+        embeddings = []
+        l1_norm = []
+        cosine_sim = []
+        for text in self._text_data.text:
+            q_text, d_text = self.parse_pair(text)
+            q_emb = get_embedding(q_text)
+            d_emb = get_embedding(d_text)
+            embeddings.append(q_emb - d_emb)
+            l1_norm.append(np.linalg.norm(q_emb - d_emb, ord=1))
+            cosine_sim.append(np.dot(q_emb, d_emb) / (np.linalg.norm(q_emb) * np.linalg.norm(d_emb)))
+        
+        self._l1_norm = np.array(l1_norm)
+        self._cosine_sim = np.array(cosine_sim)
+        self._embeddings = np.array(embeddings)
+
+        # Update Deepchecks TextData with the computed embeddings
+        self._text_data.set_embeddings(self._embeddings)
+
+        return None
+
+    @property
+    def l1_norm(self) -> np.ndarray:
+        return self._l1_norm
+
+    @property
+    def cosine_sim(self) -> np.ndarray:
+        return self._cosine_sim
+
     def to_tabular(self) -> TabularDataset:
         """Convert the IR dataset to a TabularDataset view for Deepchecks Tabular suites."""
+        self.dataset # ensure properties are computed
+
         df = self.metadata.copy()
         label_name = "relevance"
         df[label_name] = self.y
         df[label_name] = df[label_name].apply(int)
 
+        if self.l1_norm is not None:
+            df["l1_norm"] = self.l1_norm
+        if self.cosine_sim is not None:
+            df["cosine_sim"] = self.cosine_sim
+
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
             dataset=df,
             label=label_name,
-            cat_features=self.dataset.categorical_metadata,
+            cat_features=self.categorical_metadata,
         )
 
     def to_nlp_dataset(self) -> NLPDataset:

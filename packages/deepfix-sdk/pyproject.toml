@@ -45,6 +45,7 @@ dependencies = [
     "pyterrier-dr>=0.7.0",
     "ir-datasets>=0.5.11",
     "tiktoken>=0.12.0",
+    "fasttext",
 ]
 
 [tool.ruff]
@@ -66,6 +67,7 @@ line-ending = "auto"
 [tool.uv.sources]
 deepchecks = { git = "https://github.com/delcaux-labs/deepchecks.git" }
 deepfix-core = {workspace = true}
+fasttext = { git = "https://github.com/delcaux-labs/fastText.git" }
 
 [project.scripts]
 deepfix-sdk = "deepfix_sdk.cli:main"
