@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, List
+import dspy
 
 if TYPE_CHECKING:
     from ..bridge import KnowledgeBridge
@@ -30,7 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _run_async(coro):
+def _run_sync(coro):
     """Run async coroutine in sync context.
 
     DSPy tools are typically called synchronously, so we need to
@@ -40,9 +42,7 @@ def _run_async(coro):
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If we're already in an async context, create a new task
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, coro)
                 return future.result()
         else:
@@ -98,7 +98,7 @@ class WebSearchTool:
         logger.info(f"WebSearchTool: {query[:80]}...")
 
         try:
-            response = _run_async(
+            response = _run_sync(
                 self.bridge.query(
                     query=query,
                     sources=["web"],
@@ -185,7 +185,7 @@ class ResearchTool:
         logger.info(f"ResearchTool: {query[:80]}...")
 
         try:
-            response = _run_async(
+            response = _run_sync(
                 self.bridge.query(
                     query=query,
                     sources=["perplexity"],
@@ -276,7 +276,7 @@ class KnowledgeLookupTool:
         logger.info(f"KnowledgeLookupTool: {query[:80]}...")
 
         try:
-            response = _run_async(
+            response = _run_sync(
                 self.bridge.query(
                     query=query,
                     sources=["local_kb"],
@@ -364,7 +364,7 @@ class HybridSearchTool:
         logger.info(f"HybridSearchTool: {query[:80]}...")
 
         try:
-            response = _run_async(
+            response = _run_sync(
                 self.bridge.query(
                     query=query,
                     sources=None,  # All sources
@@ -404,7 +404,7 @@ class HybridSearchTool:
     def to_dspy_tool(self):
         """Convert to DSPy Tool format if dspy is available."""
         try:
-            import dspy
+            
 
             return dspy.Tool(
                 func=self._search,
@@ -419,7 +419,7 @@ class HybridSearchTool:
 
 def create_knowledge_tools(
     bridge: "KnowledgeBridge",
-    include_hybrid: bool = True,
+    include_hybrid: bool = False,
 ) -> List:
     """Create all knowledge tools for agent consumption.
 

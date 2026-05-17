@@ -274,7 +274,7 @@ class PerplexitySonarRetriever(BaseRetriever):
                 )
 
             self._lm = dspy.LM(
-                model=f"openai/openrouter/{self.model}",
+                model=f"openai/{self.model}",
                 api_key=self._api_key,
                 api_base=self._api_base,
                 temperature=self.temperature,

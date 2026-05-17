@@ -29,7 +29,7 @@ class CrossArtifactReasoningAgent(Agent):
             {"__doc__": self.system_prompt},
         )
         if self.knowledge_bridge:
-            tools = create_knowledge_tools(self.knowledge_bridge)
+            tools = create_knowledge_tools(self.knowledge_bridge, include_hybrid=False)
             self.llm = dspy.ReAct(signature, tools=tools)
         else:
             self.llm = dspy.ChainOfThought(signature)
