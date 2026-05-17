@@ -37,8 +37,6 @@ from deepfix_kb.tools import create_knowledge_tools
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
 @pytest.fixture
 def mock_tavily_response():
     """Mock Tavily API response."""
@@ -90,8 +88,6 @@ def mock_retrieval_result():
 # ============================================================================
 # Configuration Tests
 # ============================================================================
-
-
 class TestKnowledgeBridgeConfig:
     """Tests for configuration models."""
 
@@ -137,8 +133,6 @@ class TestKnowledgeBridgeConfig:
 # ============================================================================
 # Retriever Tests
 # ============================================================================
-
-
 class TestTavilySearchRetriever:
     """Tests for Tavily Search retriever."""
 
@@ -205,8 +199,6 @@ class TestPerplexitySonarRetriever:
 # ============================================================================
 # Hybrid Retriever Tests
 # ============================================================================
-
-
 class TestHybridRetriever:
     """Tests for Hybrid retriever orchestration."""
 
@@ -269,8 +261,6 @@ class TestHybridRetriever:
 # ============================================================================
 # KnowledgeBridge Integration Tests
 # ============================================================================
-
-
 class TestKnowledgeBridgeIntegration:
     """Integration tests for KnowledgeBridge."""
 
@@ -352,8 +342,6 @@ class TestKnowledgeBridgeIntegration:
 # ============================================================================
 # DSPy Tools Tests
 # ============================================================================
-
-
 class TestDSPyTools:
     """Tests for DSPy tool wrappers."""
 
@@ -385,8 +373,6 @@ class TestDSPyTools:
 # ============================================================================
 # Error Handling Tests
 # ============================================================================
-
-
 class TestErrorHandling:
     """Tests for error handling."""
 
@@ -412,8 +398,6 @@ class TestErrorHandling:
 # ============================================================================
 # Live Integration Tests (require API keys)
 # ============================================================================
-
-
 @pytest.mark.skipif(not os.getenv("TAVILY_API_KEY"), reason="TAVILY_API_KEY not set")
 class TestLiveTavilyIntegration:
     """Live integration tests for Tavily (requires API key)."""
@@ -431,6 +415,7 @@ class TestLiveTavilyIntegration:
         assert len(results) > 0
         assert all(r.source_type == "web" for r in results)
         assert all(r.url is not None for r in results)
+        print(results)
 
 
 @pytest.mark.skipif(
@@ -452,3 +437,4 @@ class TestLivePerplexityIntegration:
         assert result is not None
         assert result.source_type == "perplexity"
         assert len(result.content) > 100
+        print(result)

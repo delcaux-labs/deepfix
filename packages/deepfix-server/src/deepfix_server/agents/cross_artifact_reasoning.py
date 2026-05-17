@@ -90,7 +90,8 @@ class CrossArtifactReasoningAgent(Agent):
                 completions.append(completion)
 
             # Compare and consolidate the predictions
-            out = await self.compare.acall(
+            out = await asyncio.to_thread(
+                self.compare,
                 previous_analyses=previous_analyses,
                 output_language=output_language,
                 completions=completions,
