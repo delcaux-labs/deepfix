@@ -20,9 +20,11 @@ class CrossArtifactReasoningAgent(Agent):
         self,
         llm_config: Optional[LLMConfig] = None,
         knowledge_bridge: Optional[KnowledgeBridge] = None,
+        num_attempts: int = 3,
     ):
         super().__init__(config=llm_config)
         self.knowledge_bridge = knowledge_bridge
+        self.num_attempts = num_attempts
         signature = type(
             f"{self.agent_name}Signature",
             (CrossArtifactReasoningSignature,),
@@ -30,9 +32,10 @@ class CrossArtifactReasoningAgent(Agent):
         )
         if self.knowledge_bridge:
             tools = create_knowledge_tools(self.knowledge_bridge, include_hybrid=False)
-            self.llm = dspy.ReAct(signature, tools=tools)
+            self.predict = dspy.ReAct(signature, tools=tools)
         else:
-            self.llm = dspy.ChainOfThought(signature)
+            self.predict = dspy.ChainOfThought(signature)
+        self.compare = dspy.MultiChainComparison(signature, M=num_attempts)
 
     def run(
         self,
@@ -78,9 +81,21 @@ class CrossArtifactReasoningAgent(Agent):
 
         assert len(previous_analyses) > 0, "At least one analysis must be provided"
         with self._llm_context():
-            out = await self.llm.acall(
-                previous_analyses=previous_analyses, output_language=output_language
+            # Generate M diverse completions using the base predictor
+            completions = []
+            for _ in range(self.num_attempts):
+                completion = await self.predict.acall(
+                    previous_analyses=previous_analyses, output_language=output_language
+                )
+                completions.append(completion)
+
+            # Compare and consolidate the predictions
+            out = await self.compare.acall(
+                previous_analyses=previous_analyses,
+                output_language=output_language,
+                completions=completions,
             )
+
         analyzed_artifacts = []
         retrieved_knowledge = []
         for result in previous_analyses.values():
