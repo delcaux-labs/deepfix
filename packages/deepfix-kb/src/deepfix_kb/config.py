@@ -6,7 +6,8 @@ import os
 from enum import StrEnum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class KnowledgeDomain(StrEnum):
@@ -95,7 +96,7 @@ class PerplexityConfig(BaseModel):
     max_tokens: Optional[int] = Field(None, description="Max tokens")
 
 
-class KnowledgeBridgeConfig(BaseModel):
+class KnowledgeBridgeConfig(BaseSettings):
     """Configuration for KnowledgeBridge.
 
     This configuration model can be used to create a KnowledgeBridge
@@ -111,46 +112,83 @@ class KnowledgeBridgeConfig(BaseModel):
         enable_synthesis: Enable result synthesis by default.
     """
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    tavily_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("TAVILY_API_KEY"),
+        description="Tavily API key",
+    )
+    openrouter_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENROUTER_API_KEY"),
+        description="OpenRouter API key",
+    )
+    perplexity_model: Literal["sonar", "sonar-pro", "sonar-reasoning"] = Field(
+        "sonar",
+        validation_alias=AliasChoices("PERPLEXITY_MODEL"),
+        description="Perplexity model variant",
+    )
+
     tavily: TavilyConfig = Field(default_factory=TavilyConfig)
     perplexity: PerplexityConfig = Field(default_factory=PerplexityConfig)
 
     default_strategy: Literal[
         "parallel", "cascading", "web_first", "ai_first", "local_first"
-    ] = Field("parallel", description="Default retrieval strategy")
+    ] = Field(
+        "parallel",
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_STRATEGY"),
+        description="Default retrieval strategy",
+    )
 
     max_results_per_source: int = Field(
         3, ge=1, le=10, description="Max results per source"
     )
     max_total_results: int = Field(10, ge=1, le=50, description="Max total results")
 
-    enable_local_kb: bool = Field(False, description="Enable local KB")
+    enable_local_kb: bool = Field(
+        False,
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB"),
+        description="Enable local KB",
+    )
     enable_synthesis: bool = Field(True, description="Enable synthesis by default")
+
+    def __init__(self, **values: Any):
+        super().__init__(**values)
+        if "tavily" not in values:
+            self.tavily = TavilyConfig(
+                api_key=self.tavily_api_key or self.tavily.api_key,
+            )
+        else:
+            if self.tavily.api_key is None and self.tavily_api_key is not None:
+                self.tavily = self.tavily.model_copy(update={"api_key": self.tavily_api_key})
+
+        if "perplexity" not in values:
+            self.perplexity = PerplexityConfig(
+                api_key=self.openrouter_api_key or self.perplexity.api_key,
+                model=self.perplexity_model,
+            )
+        else:
+            update_dict = {}
+            if self.perplexity.api_key is None and self.openrouter_api_key is not None:
+                update_dict["api_key"] = self.openrouter_api_key
+            if self.perplexity.model == "sonar" and self.perplexity_model != "sonar":
+                update_dict["model"] = self.perplexity_model
+            if update_dict:
+                self.perplexity = self.perplexity.model_copy(update=update_dict)
 
     @classmethod
     def from_env(cls) -> "KnowledgeBridgeConfig":
         """Create configuration from environment variables.
 
-        Environment variables:
-            TAVILY_API_KEY: Tavily API key
-            OPENROUTER_API_KEY: OpenRouter API key
-            PERPLEXITY_MODEL: Perplexity model (sonar, sonar-pro, sonar-reasoning)
-            KNOWLEDGE_BRIDGE_STRATEGY: Default strategy
-            KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB: Enable local KB (true/false)
-
         Returns:
             KnowledgeBridgeConfig instance.
         """
-        perplexity_model = os.getenv("PERPLEXITY_MODEL", "sonar")
-        strategy = os.getenv("KNOWLEDGE_BRIDGE_STRATEGY", "parallel")
-        enable_local = (
-            os.getenv("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB", "false").lower() == "true"
-        )
-
-        return cls(
-            perplexity=PerplexityConfig(model=perplexity_model),
-            default_strategy=strategy,
-            enable_local_kb=enable_local,
-        )
+        return cls()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary.
@@ -159,3 +197,7 @@ class KnowledgeBridgeConfig(BaseModel):
             Dictionary representation of configuration.
         """
         return self.model_dump()
+
+
+# Global configuration instance
+config = KnowledgeBridgeConfig()

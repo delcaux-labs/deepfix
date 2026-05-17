@@ -91,6 +91,14 @@ class TavilySearchRetriever(BaseRetriever):
             self._client = AsyncTavilyClient(api_key=self._api_key)
         return self._client
 
+    @client.setter
+    def client(self, value):
+        self._client = value
+
+    @client.deleter
+    def client(self):
+        self._client = None
+
     @property
     def source_type(self) -> str:
         """Return the type identifier for this source."""

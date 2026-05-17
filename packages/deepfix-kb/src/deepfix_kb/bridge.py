@@ -14,6 +14,8 @@ from .retrieval import (
     TavilySearchRetriever,
 )
 
+from .config import KnowledgeBridgeConfig, config as default_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,46 +55,70 @@ class KnowledgeBridge:
 
     def __init__(
         self,
+        config: Optional[KnowledgeBridgeConfig] = None,
         tavily_api_key: Optional[str] = None,
         openrouter_api_key: Optional[str] = None,
-        perplexity_model: str = "sonar",
-        enable_local_kb: bool = False,
-        default_strategy: RetrievalStrategy = RetrievalStrategy.PARALLEL,
+        perplexity_model: Optional[str] = None,
+        enable_local_kb: Optional[bool] = None,
+        default_strategy: Optional[Union[str, RetrievalStrategy]] = None,
     ):
         """Initialize KnowledgeBridge with configured retrieval sources.
 
         Args:
-            tavily_api_key: Tavily API key (or set TAVILY_API_KEY env var).
-            openrouter_api_key: OpenRouter API key (or set OPENROUTER_API_KEY env var).
-            perplexity_model: Perplexity model variant ("sonar", "sonar-pro", "sonar-reasoning").
+            config: KnowledgeBridgeConfig instance. If not provided, loads from default settings.
+            tavily_api_key: Tavily API key override (or set TAVILY_API_KEY env var).
+            openrouter_api_key: OpenRouter API key override (or set OPENROUTER_API_KEY env var).
+            perplexity_model: Perplexity model variant override ("sonar", "sonar-pro", "sonar-reasoning").
             enable_local_kb: Whether to enable local knowledge base.
             default_strategy: Default retrieval strategy.
         """
         logger.info("Initializing KnowledgeBridge")
 
-        # Initialize retrievers
-        tavily = TavilySearchRetriever(api_key=tavily_api_key)
-        perplexity = PerplexitySonarRetriever(
-            api_key=openrouter_api_key,
-            model=perplexity_model,
+        # Fall back to default config if none provided
+        active_config = config or default_config
+
+        # Apply overrides to active_config parameters if explicitly provided
+        tavily_key = tavily_api_key or active_config.tavily.api_key
+        openrouter_key = openrouter_api_key or active_config.perplexity.api_key
+        p_model = perplexity_model or active_config.perplexity.model
+        local_kb_enabled = enable_local_kb if enable_local_kb is not None else active_config.enable_local_kb
+        strategy = default_strategy or active_config.default_strategy
+        if isinstance(strategy, str):
+            strategy = RetrievalStrategy(strategy)
+
+        # Initialize retrievers as private attributes for compatibility/property exposure
+        self._tavily = TavilySearchRetriever(api_key=tavily_key)
+        self._perplexity = PerplexitySonarRetriever(
+            api_key=openrouter_key,
+            model=p_model,
         )
 
         # Local KB is optional and requires additional setup
         local_kb = None
-        if enable_local_kb:
+        if local_kb_enabled:
             raise ValueError("Local KB not implemented yet")
 
         # Initialize hybrid retriever
-        self.retriever = HybridRetriever(
-            tavily=tavily,
-            perplexity=perplexity,
+        self._hybrid = HybridRetriever(
+            tavily=self._tavily,
+            perplexity=self._perplexity,
             local_kb=local_kb,
         )
-
-        self.default_strategy = default_strategy
+        self.retriever = self._hybrid
+        self.default_strategy = strategy
 
         # Log available sources
         logger.info(f"Available sources: {self.retriever.available_sources}")
+
+    @property
+    def perplexity(self) -> PerplexitySonarRetriever:
+        """Get Perplexity retriever."""
+        return self._perplexity
+
+    @property
+    def tavily(self) -> TavilySearchRetriever:
+        """Get Tavily retriever."""
+        return self._tavily
 
     async def query(
         self,
