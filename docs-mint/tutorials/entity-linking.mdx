@@ -1,0 +1,175 @@
+---
+title: "Entity Linking Tutorial"
+description: "End-to-end DeepFix workflow for Information Retrieval (IR) and Entity Linking."
+---
+
+Information Retrieval (IR) and Entity Linking models match **Queries** (e.g., search terms or text mentions) against a large corpus of **Documents** or **Entities** to retrieve the most relevant candidates.
+
+Evaluating and debugging these systems is uniquely challenging because they involve analyzing query-document pairs, relevance labels, and retrieval ranks or scores. DeepFix provides native support for this workflow via the `InformationRetrievalDataset` class and the `IRLookupModel` wrapper, providing automated, detailed diagnostics for data quality, feature leakage, and retrieval performance.
+
+## Prerequisites
+
+- DeepFix SDK installed.
+- DeepFix server running (local or remote).
+- An API key if using the hosted DeepFix service.
+- `pyterrier` installed (optional, used here to load candidate entities and queries).
+
+## Setup
+
+```python
+import os
+import random
+import pandas as pd
+import numpy as np
+import pyterrier as pt
+import hashlib
+
+from deepfix_sdk import DeepFixClient
+from deepfix_sdk.data.datasets import InformationRetrievalDataset
+from deepfix_sdk.models import IRLookupModel
+
+# Set up your DeepFix API key
+os.environ["DEEPFIX_API_KEY"] = "..."  # Insert your API key from DeepCoach
+
+# Initialize the DeepFix client
+client = DeepFixClient(
+    api_url="https://deepfix.delcaux.com",
+    timeout=300,
+)
+```
+
+## Load and Prepare Dataset
+
+For this tutorial, we load a subset of the **BEIR scidocs** dataset using `pyterrier`.
+
+To successfully evaluate the retrieval model, we will:
+1. Ingest queries (topics), ground-truth relevance labels (qrels), and document entities.
+2. Generate deterministic random embeddings for queries and documents.
+3. Simulate retrieval scores for a model to evaluate.
+
+```python
+# Helper to simulate retrieval scores/ranks from ground-truth relevance labels
+def simulate_retrievals(qrels_df: pd.DataFrame, retrieval_rate: float = 0.8, seed: int = 42) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    n = len(qrels_df)
+
+    # Only a fraction of items are "found" by the model
+    retrieved_mask = rng.random(n) < retrieval_rate
+    df = qrels_df[retrieved_mask].copy()
+    m = len(df)
+
+    prob = rng.random(m)
+    is_relevant = df["relevance"].values == 1
+    # 80% of relevant docs get a high class-1 score, 20% get a low one
+    high_class1 = rng.random(m) > 0.2
+
+    score_class0 = np.where(
+        is_relevant,
+        np.where(high_class1, prob * 0.5, 1 - prob * 0.5),
+        1 - prob * 0.2,
+    )
+    score_class1 = np.where(
+        is_relevant,
+        np.where(high_class1, 1 - prob * 0.5, prob * 0.5),
+        prob * 0.2,
+    )
+
+    return pd.DataFrame(
+        {
+            "query_id": df["query_id"].values,
+            "doc_id": df["doc_id"].values,
+            "score": [[s0, s1] for s0, s1 in zip(score_class0, score_class1)],
+            "relevance": (score_class1 > score_class0).astype(int),
+            "rank": rng.integers(1, 101, size=m),
+        }
+    )
+
+# Helper to compute a deterministic random embedding for a given text
+def random_embedder(text: str, dim: int = 10) -> np.ndarray:
+    seed = int(hashlib.md5(text.encode()).hexdigest(), 16) % (2**32)
+    rng = np.random.default_rng(seed)
+    return rng.random(dim)
+
+# Function to load BEIR SciDocs and prepare the InformationRetrievalDataset
+def load_ir_data(subset_queries: int = 10):
+    name = "irds:beir/scidocs"
+    dataset = pt.get_dataset(name)
+
+    # Get all topics and qrels, and subset to keep the run fast and light
+    all_topics = dataset.get_topics()
+    all_qrels = dataset.get_qrels()
+
+    qid_subset = all_topics["qid"].unique()[:subset_queries]
+    topics_df = all_topics[all_topics["qid"].isin(qid_subset)]
+    qrels_df = all_qrels[all_qrels["qid"].isin(qid_subset)]
+
+    # Wrap topics, qrels and corpus in InformationRetrievalDataset
+    ir_ds = InformationRetrievalDataset(
+        dataset_name=name,
+        topics=topics_df,
+        qrels=qrels_df,
+        corpus_iter=dataset.get_corpus_iter,
+    )
+
+    # Split into train and test splits
+    train_ir_ds, test_ir_ds = ir_ds.split(train_size=0.7, random_state=42)
+
+    # Simulate predictions/retrievals on the datasets
+    train_ir_ds.set_predictions(simulate_retrievals(train_ir_ds.qrels))
+    test_ir_ds.set_predictions(simulate_retrievals(test_ir_ds.qrels))
+
+    # Set query/doc embeddings for diagnostic checks (e.g. embedding drift)
+    train_ir_ds.set_embeddings(random_embedder)
+    test_ir_ds.set_embeddings(random_embedder)
+
+    return train_ir_ds, test_ir_ds
+
+# Load the train and test splits
+train_data, test_data = load_ir_data(subset_queries=10)
+```
+
+## Define Lookup Model
+
+In Information Retrieval and Entity Linking, model predictions (relevance scores, retrieval ranks) are usually computed offline or via external retrieval engines.
+
+DeepFix provides a special `IRLookupModel` that wraps these pre-computed predictions on the fly and satisfies scikit-learn's estimator interface:
+
+```python
+# Initialize lookup model
+model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
+model_name = "simulated_retrieval_model"
+```
+
+## Run Diagnostics
+
+Pass your datasets and lookup model to the client to run the automated diagnostic suites:
+
+```python
+result = client.get_diagnosis(
+    train_data=train_data,
+    test_data=test_data,
+    model=model,
+    model_name=model_name,
+    language="english"
+)
+
+# Print a text summary of all prioritized findings
+print(result.to_text())
+```
+
+## Interpreting Findings
+
+Typical findings surfaced for IR and Entity Linking systems include:
+
+- **Task Mismatch**: Detecting whether data is labeled/structured as a simple text classifier when it should be modeled as Information Retrieval/ranking.
+- **Label Leakage**: Identifying features derived from pre-computed scores or ranks that inadvertently leak the ground-truth relevance label (e.g., highly correlated similarity scores).
+- **Non-functional Model Checkpoint**: Spotting if the model wrapper lacks underlying parameters/weights or does not access the proper lookup tables.
+- **Dataset Scale**: Warning when the number of unique queries or overall sample size is critically low for training/evaluating robust retrieval models.
+- **Class Imbalance**: Analyzing severe distribution skews between relevant (positive) and non-relevant (negative) candidate pairs.
+- **Distribution Shift**: Detecting if candidate documents or query tokens shift significantly between the train and test splits.
+
+## Next Steps
+
+- [Tabular Data Guide](/guides/tabular-data)
+- [NLP Datasets Guide](/guides/nlp-datasets)
+- [SDK API Reference](/api-reference/sdk)
