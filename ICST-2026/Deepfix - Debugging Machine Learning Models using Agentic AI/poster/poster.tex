@@ -200,6 +200,24 @@
   DeepFix encapsulates raw artifact parsing on the client, maintaining compliance by keeping data private, while exporting structured metadata to the server. Open source --- Apache 2.0 license.}
 \end{posterblock}
 
+\vspace{\colsep}
+
+\begin{posterblock}[Key Features]
+  \fontsize{26}{32}\selectfont\color{BodyText}
+  \begin{itemize}[leftmargin=8mm, itemsep=6mm, label={}]
+    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{Q}}$}}{%
+      \textbf{80 Automated Checks} spanning tabular, NLP, and CV}
+    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{A}}$}}{%
+      \textbf{Multi-Agent Reasoning} for cross-artifact synthesis}
+    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{R}}$}}{%
+      \textbf{Plain-Language Reports} removing complex statistics}
+    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{F}}$}}{%
+      \textbf{Actionable Fix Suggestions} grounded in literature}
+    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{E}}$}}{%
+      \textbf{Extensible Framework} for new properties and LLM providers}
+  \end{itemize}
+\end{posterblock}
+
 \end{column}
 
 \hfill
@@ -312,19 +330,14 @@
 
 \vspace{\colsep}
 
-\begin{posterblock}[Key Features]
-  \fontsize{26}{32}\selectfont\color{BodyText}
-  \begin{itemize}[leftmargin=8mm, itemsep=6mm, label={}]
-    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{Q}}$}}{%
-      \textbf{80 Automated Checks} spanning tabular, NLP, and CV}
-    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{A}}$}}{%
-      \textbf{Multi-Agent Reasoning} for cross-artifact synthesis}
-    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{R}}$}}{%
-      \textbf{Plain-Language Reports} removing complex statistics}
-    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{F}}$}}{%
-      \textbf{Actionable Fix Suggestions} grounded in literature}
-    \item \iconbullet{\textbf{$\boldsymbol{\mathcal{E}}$}}{%
-      \textbf{Extensible Framework} for new properties and LLM providers}
+\begin{posterblock}[Limitations \& Next Steps]
+  \fontsize{22}{28}\selectfont\color{BodyText}\justifying
+  While DeepFix significantly accelerates ML workflow auditing:
+  \vspace{3mm}
+  \begin{itemize}[leftmargin=6mm, itemsep=2.5mm, label={\textcolor{TUMAccent}{\textbullet}}]
+    \item \textbf{Limitations:} Relies primarily on Deepchecks for stage 1 checks (additional failure modes are expressible by extending the artifact schemas); introduces higher latency and compute costs than traditional linters due to multi-agent LLM analysis.
+    \item \textbf{Grounding \& Compliance:} Data privacy is protected by supporting on-premise execution with self-hosted LLMs, ensuring sensitive artifacts never leave the organization.
+    \item \textbf{Future Work:} Conduct a 30-participant usability study to measure the adoption rate of recommendations; expand the stage 1 analyzers with complementary unit-level and artifact-level testing tools; curate additional best practices in \texttt{deepfix-kb}.
   \end{itemize}
 \end{posterblock}
 
