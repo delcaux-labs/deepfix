@@ -210,20 +210,20 @@
 \begin{posterblock}[System Architecture]
   \centering
   \vspace{4mm}
-  \includegraphics[height=440mm, keepaspectratio]{images/architecture-2.png}
+  \includegraphics[height=390mm, keepaspectratio]{images/architecture-2.png}
   \vspace{4mm}
 
   {\fontsize{24}{30}\selectfont\color{LightText}\justifying
   \textbf{Figure 1:} Client--server architecture. The Python SDK executes locally alongside practitioner code to run heavy computations, serializes/filters artifacts, and sends REST requests. The stateless analysis server dispatches parallel LLM agents and synthesizes findings using a cross-artifact reasoner.}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{12mm}
 
 \begin{posterblock}[Client-Side: Tabular Data Analysis]
   \fontsize{26}{34}\selectfont\color{BodyText}\justifying
   The DeepFix SDK executes an exhaustive suite of up to \textbf{80 distinct checks} tailored by modality (44 tabular, 19 NLP, 17 computer vision).
 
-  \vspace{6mm}
+  \vspace{3mm}
   \centering
   {\fontsize{19}{24}\selectfont
   \begin{tabular}{p{0.31\linewidth} p{0.31\linewidth} p{0.31\linewidth}}
@@ -253,12 +253,12 @@
   {\fontsize{20}{26}\selectfont\color{LightText}\textbf{Table 1:} Overview of Tabular Modality Diagnostic Checks from Deepchecks}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{12mm}
 
 \begin{posterblock}[Phase 2 --- Server-Side Multi-Agent Analysis]
   \centering
   \vspace{2mm}
-  \includegraphics[width=0.98\linewidth]{images/cross-artifact-reasoning.png}
+  \includegraphics[width=0.92\linewidth]{images/cross-artifact-reasoning.png}
   \vspace{2mm}
 
   {\fontsize{22}{28}\selectfont\color{LightText}\justifying
