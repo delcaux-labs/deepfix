@@ -147,8 +147,8 @@
 % ==================== MAIN CONTENT (3 columns) ==============================
 \begin{columns}[T]
 
-% ---------------------- COLUMN 1: Why & How (0.27) --------------------------
-\begin{column}{0.27\textwidth}
+% ---------------------- COLUMN 1: Why & How (0.24) --------------------------
+\begin{column}{0.24\textwidth}
 
 \begin{posterblock}[Motivation]
   \fontsize{28}{36}\selectfont\color{BodyText}\justifying
@@ -163,7 +163,7 @@
   \end{itemize}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{12mm}
 
 \begin{highlightblock}[Research Question]
   \fontsize{30}{38}\selectfont\color{TUMDarkBlue}
@@ -171,7 +171,7 @@
   Can we develop a unified approach that tests \textbf{all components of the ML workflow} (data, split, model) and provides a bug report with \textbf{actionable fix suggestions}?
 \end{highlightblock}
 
-\vspace{\colsep}
+\vspace{12mm}
 
 \begin{posterblock}[How It Works --- 3 Lines of Code]
   \fontsize{26}{32}\selectfont\color{BodyText}\justifying
@@ -200,11 +200,11 @@
   DeepFix encapsulates raw artifact parsing on the client, maintaining compliance by keeping data private, while exporting structured metadata to the server. Open source --- Apache 2.0 license.}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{12mm}
 
 \begin{posterblock}[Key Features]
-  \fontsize{26}{32}\selectfont\color{BodyText}
-  \begin{itemize}[leftmargin=8mm, itemsep=6mm, label={}]
+  \fontsize{22}{28}\selectfont\color{BodyText}
+  \begin{itemize}[leftmargin=8mm, itemsep=4mm, label={}]
     \item \iconbullet{\textbf{$\boldsymbol{\mathcal{Q}}$}}{%
       \textbf{80 Automated Checks} spanning tabular, NLP, and CV}
     \item \iconbullet{\textbf{$\boldsymbol{\mathcal{A}}$}}{%
@@ -222,13 +222,13 @@
 
 \hfill
 
-% ---------------------- COLUMN 2: Architecture & Flow (0.42) -----------------
-\begin{column}{0.42\textwidth}
+% ---------------------- COLUMN 2: Architecture & Flow (0.48) -----------------
+\begin{column}{0.48\textwidth}
 
 \begin{posterblock}[System Architecture]
   \centering
   \vspace{4mm}
-  \includegraphics[height=390mm, keepaspectratio]{images/architecture-2.png}
+  \includegraphics[height=460mm, keepaspectratio]{images/architecture-2.png}
   \vspace{4mm}
 
   {\fontsize{24}{30}\selectfont\color{LightText}\justifying
@@ -289,8 +289,8 @@
 
 \hfill
 
-% ---------------------- COLUMN 3: Results & Contact (0.27) ------------------
-\begin{column}{0.27\textwidth}
+% ---------------------- COLUMN 3: Results & Contact (0.24) ------------------
+\begin{column}{0.24\textwidth}
 
 \begin{posterblock}[Example Findings (Industrial Case)]
   \fontsize{26}{32}\selectfont\color{BodyText}\justifying
@@ -328,10 +328,10 @@
   \end{tcolorbox}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{8mm}
 
 \begin{posterblock}[Limitations \& Next Steps]
-  \fontsize{22}{28}\selectfont\color{BodyText}\justifying
+  \fontsize{20}{25}\selectfont\color{BodyText}\justifying
   While DeepFix significantly accelerates ML workflow auditing:
   \vspace{3mm}
   \begin{itemize}[leftmargin=6mm, itemsep=2.5mm, label={\textcolor{TUMAccent}{\textbullet}}]
@@ -341,11 +341,11 @@
   \end{itemize}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{8mm}
 
 \begin{posterblock}[References]
-  \fontsize{18}{22}\selectfont\color{BodyText}
-  \begin{enumerate}[leftmargin=8mm, itemsep=2mm, label={[\arabic*]}]
+  \fontsize{16}{20}\selectfont\color{BodyText}
+  \begin{enumerate}[leftmargin=8mm, itemsep=1.2mm, label={[\arabic*]}]
     \item T.-D. Nguyen et al. ``A systematic survey on debugging techniques for machine learning systems.'' \textit{arXiv:2503.03158}, 2025.
     \item S. Grafberger et al. ``Data distribution debugging in machine learning pipelines.'' \textit{The VLDB Journal}, 31(5):1103--1126, 2022.
     \item A. Sharma et al. ``MLCHECK --- Property-driven testing of machine learning classifiers.'' \textit{IEEE ICMLA}, pp. 738--745, 2021.
@@ -357,39 +357,39 @@
   \end{enumerate}
 \end{posterblock}
 
-\vspace{\colsep}
+\vspace{8mm}
 
 % ---------- QR codes and contact ----------
 \begin{plainblock}
   \centering
-  \fontsize{24}{28}\selectfont\color{TUMDarkBlue}
+  \fontsize{22}{26}\selectfont\color{TUMDarkBlue}
   \textbf{Try DeepFix \& Watch the Demo}
 
-  \vspace{6mm}
+  \vspace{3mm}
   \begin{columns}[c]
     \begin{column}{0.48\textwidth}
       \centering
-      \qrcode[height=45mm]{https://github.com/delcaux-labs/deepfix}\\[4mm]
-      {\fontsize{20}{24}\selectfont\color{LightText} GitHub Repository}
+      \qrcode[height=38mm]{https://github.com/delcaux-labs/deepfix}\\[3mm]
+      {\fontsize{18}{22}\selectfont\color{LightText} GitHub Repository}
     \end{column}
     \begin{column}{0.48\textwidth}
       \centering
-      \qrcode[height=45mm]{https://youtu.be/WfwZmFcQgBQ}\\[4mm]
-      {\fontsize{20}{24}\selectfont\color{LightText} 5-min Screencast}
+      \qrcode[height=38mm]{https://youtu.be/WfwZmFcQgBQ}\\[3mm]
+      {\fontsize{18}{22}\selectfont\color{LightText} 5-min Screencast}
     \end{column}
   \end{columns}
 
-  \vspace{6mm}
-  {\fontsize{22}{26}\selectfont\color{BodyText}
+  \vspace{4mm}
+  {\fontsize{20}{24}\selectfont\color{BodyText}
   \textbf{fadel.seydou@tum.de} \quad$\vert$\quad
   \textbf{arnab.sharma@uni-paderborn.de}}
 \end{plainblock}
 
-\vspace{\colsep}
+\vspace{8mm}
 
 \begin{plainblock}
   \centering
-  \includegraphics[width=\linewidth]{images/deepfix-authors.png}
+  \includegraphics[width=0.85\linewidth]{images/deepfix-authors.png}
 \end{plainblock}
 
 \end{column}
