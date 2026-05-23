@@ -158,7 +158,7 @@
     \item \textbf{ML models fail silently.} They do not crash or output explicit stack traces, instead exhibiting gradual degradation or silent bias.
     \item \textbf{Debugging is highly fragmented.} Developers must manually correlate symptoms across disjointed data quality checks, training logs, and model performance metrics, increasing cognitive load.
     \item \textbf{Rigid testing is model-restricted.} Conventional property testing, metamorphic testing, and formal verification are bound to specific algorithm classes and struggle with opaque neural networks.
-    \item \textbf{Statistical jargon is uninterpretable.} Existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
+    \item \textbf{Statistical jargon is complexe.} Existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
     \item \textbf{Lack of actionable remedies.} Tools focus solely on bug detection, providing no guidance on how to fix the identified bugs.
   \end{itemize}
 \end{posterblock}
@@ -295,37 +295,37 @@
 
   DeepFix surfaced critical bugs that would have required extensive manual visual review to find:
 
-  \vspace{3mm}
+  \vspace{4mm}
   \begin{tcolorbox}[
     enhanced, colback=white, colframe=SeverityCritical,
-    boxrule=1.5pt, arc=4pt, left=6mm, right=6mm, top=3.5mm, bottom=3.5mm,
-    title={\color{white}\fontsize{22}{26}\selectfont\bfseries CRITICAL --- Data Partitioning Failure},
+    boxrule=2pt, arc=4pt, left=8mm, right=8mm, top=5mm, bottom=5mm,
+    title={\color{white}\fontsize{24}{28}\selectfont\bfseries CRITICAL --- Data Partitioning Failure},
     colbacktitle=SeverityCritical,
   ]
-    \fontsize{20}{24}\selectfont
-    \textbf{Evidence:} Combined checks surfaced that label drift Cram\'{e}r's V\,=\,0.92 (exceeding the 0.15 threshold) and 75\% of test set labels were entirely absent from training.
+    \fontsize{22}{26}\selectfont
+    \textbf{Evidence:} Combined evidence from Deepchecks surfaced that the label drift Cram\'{e}r's V\,=\,0.92 (far exceeding the 0.15 threshold) and 75\% of test set labels were entirely absent from training.
 
-    \vspace{2.5mm}
+    \vspace{3mm}
     \textcolor{TUMBlue}{\textbf{Fix:}} Halt model development immediately and recreate the train--test split using stratified sampling.
   \end{tcolorbox}
 
-  \vspace{3mm}
+  \vspace{4mm}
 
   \begin{tcolorbox}[
     enhanced, colback=white, colframe=SeverityHigh,
-    boxrule=1.5pt, arc=4pt, left=6mm, right=6mm, top=3.5mm, bottom=3.5mm,
-    title={\color{white}\fontsize{22}{26}\selectfont\bfseries HIGH --- Image Acquisition Drift},
+    boxrule=2pt, arc=4pt, left=8mm, right=8mm, top=5mm, bottom=5mm,
+    title={\color{white}\fontsize{24}{28}\selectfont\bfseries HIGH --- Image Acquisition Drift},
     colbacktitle=SeverityHigh,
   ]
-    \fontsize{20}{24}\selectfont
-    \textbf{Evidence:} Multiple image properties failed Kolmogorov-Smirnov drift tests: Brightness (KS=0.42), RMS Contrast (KS=0.50), and Color channels (Red=0.83, Green=0.82, Blue=0.96).
+    \fontsize{22}{26}\selectfont
+    \textbf{Evidence:} Multiple image properties failed Kolmogorov-Smirnov (KS) drift tests: Brightness (KS=0.42), RMS Contrast (KS=0.50), and Color channels (Red=0.83, Green=0.82, Blue=0.96).
 
-    \vspace{2.5mm}
-    \textcolor{TUMBlue}{\textbf{Fix:}} Standardize image collection protocols and apply color/intensity normalization to align characteristics.
+    \vspace{3mm}
+    \textcolor{TUMBlue}{\textbf{Fix:}} Standardize image collection protocols and apply color/intensity normalization to align visual characteristics.
   \end{tcolorbox}
 \end{posterblock}
 
-\vspace{5mm}
+\vspace{10mm}
 
 \begin{posterblock}[Limitations \& Next Steps]
   \fontsize{20}{25}\selectfont\color{BodyText}\justifying
@@ -338,11 +338,11 @@
   \end{itemize}
 \end{posterblock}
 
-\vspace{5mm}
+\vspace{10mm}
 
 \begin{posterblock}[References]
-  \fontsize{14.5}{16.5}\selectfont\color{BodyText}
-  \begin{enumerate}[leftmargin=8mm, itemsep=0.2mm, label={[\arabic*]}]
+  \fontsize{15}{17.5}\selectfont\color{BodyText}
+  \begin{enumerate}[leftmargin=8mm, itemsep=0.5mm, label={[\arabic*]}]
     \item T.-D. Nguyen et al. ``A systematic survey on debugging techniques for machine learning systems.'' \textit{arXiv:2503.03158}, 2025.
     \item J. Zhang et al. ``Diffsmooth: Certifiably robust learning via diffusion models and local smoothing.'' \textit{USENIX Security}, pp. 4787--4804, 2023.
     \item C. Murphy et al. ``Using JML runtime assertion checking to automate metamorphic testing.'' \textit{IEEE ICST}, pp. 436--445, 2009.
@@ -359,7 +359,7 @@
   \end{enumerate}
 \end{posterblock}
 
-\vspace{5mm}
+\vspace{10mm}
 
 % ---------- QR codes and contact ----------
 \begin{plainblock}
@@ -367,31 +367,31 @@
   \fontsize{22}{26}\selectfont\color{TUMDarkBlue}
   \textbf{Try DeepFix \& Watch the Demo}
 
-  \vspace{2mm}
+  \vspace{3mm}
   \begin{columns}[c]
     \begin{column}{0.48\textwidth}
       \centering
-      \qrcode[height=34mm]{https://github.com/delcaux-labs/deepfix}\\[2mm]
+      \qrcode[height=38mm]{https://github.com/delcaux-labs/deepfix}\\[3mm]
       {\fontsize{18}{22}\selectfont\color{LightText} GitHub Repository}
     \end{column}
     \begin{column}{0.48\textwidth}
       \centering
-      \qrcode[height=34mm]{https://youtu.be/WfwZmFcQgBQ}\\[2mm]
+      \qrcode[height=38mm]{https://youtu.be/WfwZmFcQgBQ}\\[3mm]
       {\fontsize{18}{22}\selectfont\color{LightText} 5-min Screencast}
     \end{column}
   \end{columns}
 
-  \vspace{3mm}
+  \vspace{4mm}
   {\fontsize{20}{24}\selectfont\color{BodyText}
   \textbf{fadel.seydou@tum.de} \quad$\vert$\quad
   \textbf{arnab.sharma@uni-paderborn.de}}
 \end{plainblock}
 
-\vspace{5mm}
+\vspace{10mm}
 
 \begin{plainblock}
   \centering
-  \includegraphics[width=0.78\linewidth]{images/deepfix-authors.png}
+  \includegraphics[width=0.85\linewidth]{images/deepfix-authors.png}
 \end{plainblock}
 
 \end{column}
