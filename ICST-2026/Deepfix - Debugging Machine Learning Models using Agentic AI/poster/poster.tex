@@ -110,18 +110,16 @@
 
 \vspace*{-8mm}
 
-\begin{columns}[T]
+\begin{columns}[c]
 \begin{column}{0.18\textwidth}
   \centering
-  \vspace{6mm}
   \includegraphics[width=0.95\linewidth, height=65mm, keepaspectratio]{images/tum-logo.jpg}
 \end{column}
 \begin{column}{0.64\textwidth}
   \centering
-  \vspace{2mm}
   {\fontsize{72}{80}\selectfont\color{TUMDarkBlue}\textbf{DeepFix}\par}
   \vspace{4mm}
-  {\fontsize{72}{80}\selectfont\color{TUMDarkBlue}%
+  {\fontsize{40}{48}\selectfont\color{TUMAccent}%
     Debugging and Fixing ML Workflows using Agentic AI\par}
   \vspace{6mm}
   {\fontsize{26}{32}\selectfont\color{TUMDarkBlue}%
@@ -133,11 +131,10 @@
     \textsuperscript{2}Delcaux Labs \quad
     \textsuperscript{3}Heinz Nixdorf Institute, Paderborn University
     \hspace{10mm}
-    \textcolor{TUMAccent}{\textbf{ICST 2026 Testing Tools and Data Showcase}}\par}
+    \textcolor{TUMAccent}{\textbf{ICST 2026 --- Tool Demo Track}}\par}
 \end{column}
 \begin{column}{0.18\textwidth}
   \centering
-  \vspace{6mm}
   \includegraphics[width=0.95\linewidth, height=65mm, keepaspectratio]{images/paderborn-uni-logo.jpg}
 \end{column}
 \end{columns}
@@ -152,14 +149,14 @@
 
 \begin{posterblock}[Motivation]
   \fontsize{28}{36}\selectfont\color{BodyText}\justifying
-  Unlike traditional software with deterministic code execution paths:
+  Unlike traditional software, where failures are crashes or property violations, ML behavior is \emph{trained} via complex non-deterministic training:
   \vspace{4mm}
   \begin{itemize}[leftmargin=10mm, itemsep=8mm, label={\textcolor{TUMAccent}{\textbullet}}]
-    \item \textbf{ML models fail silently.} They do not crash or output explicit stack traces, instead exhibiting gradual degradation or silent bias.
-    \item \textbf{Debugging is highly fragmented.} Developers must manually correlate symptoms across disjointed data quality checks, training logs, and model performance metrics, increasing cognitive load.
-    \item \textbf{Rigid testing is model-restricted.} Conventional property testing, metamorphic testing, and formal verification are bound to specific algorithm classes and struggle with opaque neural networks.
-    \item \textbf{Statistical jargon is complexe.} Existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
-    \item \textbf{Lack of actionable remedies.} Tools focus solely on bug detection, providing no guidance on how to fix the identified bugs.
+    \item \textbf{Failures lack explicit signals.} Models degrade gradually or show silent bias without stack traces or clear test oracles.
+    \item \textbf{Testing is workflow-fragmented.} Quality assurance is split across disjoint data, training, and architecture checks; practitioners manually correlate clues, increasing cognitive load and trial-and-error debugging.
+    \item \textbf{Checks are property- and model-bound.} Metamorphic tests, formal verification, and model-agnostic suites each cover only narrow property classes; often tied to specific algorithms or costly neural-network analyses.
+    \item \textbf{Reports assume ML expertise.} Tools such as Deepchecks flag statistical violations in jargon that obscures root causes for practitioners.
+    \item \textbf{Detection without remediation.} Bug reports state that issues exist but rarely suggest how to fix them.
   \end{itemize}
 \end{posterblock}
 
@@ -351,7 +348,6 @@
     \item S. Grafberger et al. ``Data distribution debugging in machine learning pipelines.'' \textit{The VLDB Journal}, 31(5):1103--1126, 2022.
     \item A. Sharma \& H. Wehrheim. ``Testing machine learning algorithms for balanced data usage.'' \textit{IEEE ICST}, pp. 125--135, 2019.
     \item S. Cho et al. ``Metamorphic testing of large language models for natural language processing.'' \textit{IEEE ICSME}, pp. 174--186, 2025.
-    \item L. C. Cordeiro et al. ``Neural network verification is a programming language challenge.'' \textit{ESOP}, LNCS 15694:206--235, 2025.
     \item A. Sharma \& H. Wehrheim. ``Monotonicity testing of machine learning models.'' \textit{ACM ISSTA}, pp. 200--210, 2020.
     \item E. Schoop et al. ``UMLAUT: Debugging deep learning programs using program structure and model behavior.'' \textit{ACM CHI}, pp. 1--16, 2021.
     \item S. Chorev et al. ``Deepchecks: A library for testing and validating machine learning models and data.'' \textit{arXiv:2203.08491}, 2022.
