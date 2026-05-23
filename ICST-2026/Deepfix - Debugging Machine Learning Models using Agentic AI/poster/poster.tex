@@ -155,11 +155,11 @@
   Unlike traditional software with deterministic code execution paths:
   \vspace{4mm}
   \begin{itemize}[leftmargin=10mm, itemsep=8mm, label={\textcolor{TUMAccent}{\textbullet}}]
-    \item \textbf{ML models fail silently} --- they do not crash or output explicit stack traces, instead exhibiting gradual degradation or silent bias.
-    \item \textbf{Debugging is highly fragmented} --- developers must manually correlate symptoms across disjointed data quality checks, training logs, and model performance metrics, increasing cognitive load.
-    \item \textbf{Rigid testing is model-restricted} --- conventional property testing, metamorphic testing, and formal verification are bound to specific algorithm classes and struggle with opaque neural networks.
-    \item \textbf{Statistical jargon is uninterpretable} --- existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
-    \item \textbf{Lack of actionable remedies} --- tools focus solely on bug detection, providing no guidance on how to fix the identified bugs.
+    \item \textbf{ML models fail silently.} They do not crash or output explicit stack traces, instead exhibiting gradual degradation or silent bias.
+    \item \textbf{Debugging is highly fragmented.} Developers must manually correlate symptoms across disjointed data quality checks, training logs, and model performance metrics, increasing cognitive load.
+    \item \textbf{Rigid testing is model-restricted.} Conventional property testing, metamorphic testing, and formal verification are bound to specific algorithm classes and struggle with opaque neural networks.
+    \item \textbf{Statistical jargon is uninterpretable.} Existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
+    \item \textbf{Lack of actionable remedies.} Tools focus solely on bug detection, providing no guidance on how to fix the identified bugs.
   \end{itemize}
 \end{posterblock}
 
@@ -173,7 +173,7 @@
 
 \vspace{12mm}
 
-\begin{posterblock}[How It Works --- 3 Lines of Code]
+\begin{posterblock}[How It Works: DeepFix SDK]
   \fontsize{26}{32}\selectfont\color{BodyText}\justifying
   The DeepFix SDK integrates seamlessly into existing MLOps environments.
 
@@ -195,9 +195,6 @@
     }
   \end{tcolorbox}
 
-  \vspace{6mm}
-  {\fontsize{24}{30}\selectfont\color{LightText}
-  DeepFix encapsulates raw artifact parsing on the client, maintaining compliance by keeping data private, while exporting structured metadata to the server. Open source --- Apache 2.0 license.}
 \end{posterblock}
 
 \vspace{12mm}
@@ -232,7 +229,7 @@
   \vspace{4mm}
 
   {\fontsize{24}{30}\selectfont\color{LightText}\justifying
-  \textbf{Figure 1:} Client--server architecture. The Python SDK executes locally alongside practitioner code to run heavy computations, serializes/filters artifacts, and sends REST requests. The stateless analysis server dispatches parallel LLM agents and synthesizes findings using a cross-artifact reasoner.}
+  \textbf{Figure 1:} Client--server architecture. The Python SDK executes locally alongside practitioner code to run heavy computations, serializes reports, and sends REST requests. The stateless analysis server dispatches LLM agents and synthesizes findings.}
 \end{posterblock}
 
 \vspace{12mm}
@@ -328,7 +325,7 @@
   \end{tcolorbox}
 \end{posterblock}
 
-\vspace{8mm}
+\vspace{6mm}
 
 \begin{posterblock}[Limitations \& Next Steps]
   \fontsize{20}{25}\selectfont\color{BodyText}\justifying
@@ -341,11 +338,11 @@
   \end{itemize}
 \end{posterblock}
 
-\vspace{8mm}
+\vspace{6mm}
 
 \begin{posterblock}[References]
-  \fontsize{15}{18}\selectfont\color{BodyText}
-  \begin{enumerate}[leftmargin=8mm, itemsep=0.8mm, label={[\arabic*]}]
+  \fontsize{15}{17.5}\selectfont\color{BodyText}
+  \begin{enumerate}[leftmargin=8mm, itemsep=0.5mm, label={[\arabic*]}]
     \item T.-D. Nguyen et al. ``A systematic survey on debugging techniques for machine learning systems.'' \textit{arXiv:2503.03158}, 2025.
     \item J. Zhang et al. ``Diffsmooth: Certifiably robust learning via diffusion models and local smoothing.'' \textit{USENIX Security}, pp. 4787--4804, 2023.
     \item C. Murphy et al. ``Using JML runtime assertion checking to automate metamorphic testing.'' \textit{IEEE ICST}, pp. 436--445, 2009.
@@ -357,10 +354,12 @@
     \item L. C. Cordeiro et al. ``Neural network verification is a programming language challenge.'' \textit{ESOP}, LNCS 15694:206--235, 2025.
     \item A. Sharma \& H. Wehrheim. ``Monotonicity testing of machine learning models.'' \textit{ACM ISSTA}, pp. 200--210, 2020.
     \item E. Schoop et al. ``UMLAUT: Debugging deep learning programs using program structure and model behavior.'' \textit{ACM CHI}, pp. 1--16, 2021.
+    \item S. Chorev et al. ``Deepchecks: A library for testing and validating machine learning models and data.'' \textit{arXiv:2203.08491}, 2022.
+    \item A. e. a. Chen. ``Developments in mlflow: A system to accelerate the machine learning lifecycle.'' \textit{ACM DEEM}, 2020.
   \end{enumerate}
 \end{posterblock}
 
-\vspace{8mm}
+\vspace{6mm}
 
 % ---------- QR codes and contact ----------
 \begin{plainblock}
@@ -388,7 +387,7 @@
   \textbf{arnab.sharma@uni-paderborn.de}}
 \end{plainblock}
 
-\vspace{8mm}
+\vspace{6mm}
 
 \begin{plainblock}
   \centering
