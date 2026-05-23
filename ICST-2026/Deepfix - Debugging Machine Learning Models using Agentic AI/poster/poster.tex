@@ -210,7 +210,7 @@
 \begin{posterblock}[System Architecture]
   \centering
   \vspace{4mm}
-  \includegraphics[width=\linewidth]{images/architecture-2.png}
+  \includegraphics[height=440mm, keepaspectratio]{images/architecture-2.png}
   \vspace{4mm}
 
   {\fontsize{24}{30}\selectfont\color{LightText}\justifying
@@ -251,6 +251,18 @@
   \end{tabular}\par}
   \vspace{4mm}
   {\fontsize{20}{26}\selectfont\color{LightText}\textbf{Table 1:} Overview of Tabular Modality Diagnostic Checks from Deepchecks}
+\end{posterblock}
+
+\vspace{\colsep}
+
+\begin{posterblock}[Phase 2 --- Server-Side Multi-Agent Analysis]
+  \centering
+  \vspace{2mm}
+  \includegraphics[width=0.98\linewidth]{images/cross-artifact-reasoning.png}
+  \vspace{2mm}
+
+  {\fontsize{22}{28}\selectfont\color{LightText}\justifying
+  \textbf{Figure 2:} Server-side analysis flow. The stateless server dispatches parallel analyzers (Step 1), then routes structured insights to the cross-artifact reasoning agent (Step 2 \& 3) which queries the best-practice knowledge base (\texttt{deepfix-kb}) to synthesize prioritized, actionable recommendations.}
 \end{posterblock}
 
 
