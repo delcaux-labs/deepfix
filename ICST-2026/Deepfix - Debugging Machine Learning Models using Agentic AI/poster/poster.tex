@@ -183,9 +183,15 @@
     boxrule=1.5pt, arc=4pt, left=8mm, right=8mm, top=6mm, bottom=6mm,
   ]
     {\fontsize{24}{30}\selectfont\ttfamily\color{TUMDarkBlue}
-    client = DeepFixClient()\\
-    client.ingest(train, test, model)\\
-    report = client.analyze()
+    from deepfix\_sdk import DeepFixClient \\
+    client = DeepFixClient(timeout=360) \\
+    train\_data = ...
+    val\_data = ...
+    result = client.get\_diagnosis( \\
+       train\_data=train\_data, \\
+       test\_data=val\_data, \\
+       language="english",\\
+    )
     }
   \end{tcolorbox}
 
@@ -213,9 +219,9 @@
 
 \vspace{\colsep}
 
-\begin{posterblock}[Phase 1 --- Client-Side Testing]
+\begin{posterblock}[Client-Side: Tabular Data Analysis]
   \fontsize{26}{34}\selectfont\color{BodyText}\justifying
-  The DeepFix SDK executes an exhaustive suite of up to \textbf{80 distinct checks} tailored by modality (44 tabular, 19 NLP, 17 computer vision):
+  The DeepFix SDK executes an exhaustive suite of up to \textbf{80 distinct checks} tailored by modality (44 tabular, 19 NLP, 17 computer vision).
 
   \vspace{6mm}
   \centering
@@ -311,12 +317,16 @@
 \vspace{\colsep}
 
 \begin{posterblock}[References]
-  \fontsize{20}{24}\selectfont\color{BodyText}
-  \begin{enumerate}[leftmargin=8mm, itemsep=3mm, label={[\arabic*]}]
-    \item T. Nguyen et al. ``A Systematic Survey on Debugging Techniques for Machine Learning Systems.'' \textit{arXiv preprint arXiv:2503.03158}, 2025.
-    \item S. Chorev et al. ``Deepchecks: A Library for Testing and Validating Machine Learning Models and Data.'' \textit{arXiv preprint arXiv:2203.08491}, 2022.
-    \item A. Sharma et al. ``MLCHECK -- Property-Driven Testing of Machine Learning Classifiers.'' \textit{IEEE ICMLA}, 2021.
-    \item E. Schoop et al. ``UMLAUT: Debugging Deep Learning Programs using Program Structure and Model Behavior.'' \textit{ACM CHI}, 2021.
+  \fontsize{18}{22}\selectfont\color{BodyText}
+  \begin{enumerate}[leftmargin=8mm, itemsep=2mm, label={[\arabic*]}]
+    \item T.-D. Nguyen et al. ``A systematic survey on debugging techniques for machine learning systems.'' \textit{arXiv:2503.03158}, 2025.
+    \item S. Grafberger et al. ``Data distribution debugging in machine learning pipelines.'' \textit{The VLDB Journal}, 31(5):1103--1126, 2022.
+    \item A. Sharma et al. ``MLCHECK --- Property-driven testing of machine learning classifiers.'' \textit{IEEE ICMLA}, pp. 738--745, 2021.
+    \item A. Sharma \& H. Wehrheim. ``Testing machine learning algorithms for balanced data usage.'' \textit{IEEE ICST}, pp. 125--135, 2019.
+    \item A. Sharma \& H. Wehrheim. ``Monotonicity testing of machine learning models.'' \textit{ACM ISSTA}, pp. 200--210, 2020.
+    \item E. Schoop et al. ``UMLAUT: Debugging deep learning programs using program structure and model behavior.'' \textit{ACM CHI}, pp. 1--16, 2021.
+    \item S. Chorev et al. ``Deepchecks: A library for testing and validating machine learning models and data.'' \textit{arXiv:2203.08491}, 2022.
+    \item L. Biewald. ``Experiment tracking with weights and biases.'' \textit{wandb.com}, 2020.
   \end{enumerate}
 \end{posterblock}
 
