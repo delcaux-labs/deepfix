@@ -154,12 +154,11 @@
   \fontsize{28}{36}\selectfont\color{BodyText}\justifying
   Unlike traditional software with deterministic code execution paths:
   \vspace{4mm}
-  \begin{itemize}[leftmargin=10mm, itemsep=8mm, label={\textcolor{TUMAccent}{\textbullet}}]
-    \item \textbf{ML models fail silently.} They do not crash or output explicit stack traces, instead exhibiting gradual degradation or silent bias.
-    \item \textbf{Debugging is highly fragmented.} Developers must manually correlate symptoms across disjointed data quality checks, training logs, and model performance metrics, increasing cognitive load.
-    \item \textbf{Rigid testing is model-restricted.} Conventional property testing, metamorphic testing, and formal verification are bound to specific algorithm classes and struggle with opaque neural networks.
-    \item \textbf{Statistical jargon is uninterpretable.} Existing test outputs report statistical violations in complex terminology without explaining the root causes to practitioners.
-    \item \textbf{Lack of actionable remedies.} Tools focus solely on bug detection, providing no guidance on how to fix the identified bugs.
+  \begin{itemize}[leftmargin=10mm, itemsep=6mm, label={\textcolor{TUMAccent}{\textbullet}}]
+    \item \textbf{Fail Silently} --- ML models exhibit gradual degradation or silent bias rather than throwing explicit crashes or stack traces.
+    \item \textbf{Fragmented Debugging} --- Developers must manually correlate symptoms across disjointed data quality checks, training logs, and metrics.
+    \item \textbf{Model-Restricted} --- Conventional property and metamorphic testing are bound to specific algorithms and fail on opaque neural networks.
+    \item \textbf{No Actionable Remedies} --- Existing diagnostic tools focus purely on bug detection, offering no automated fix suggestions.
   \end{itemize}
 \end{posterblock}
 
@@ -211,7 +210,7 @@
     \item \iconbullet{\textbf{$\boldsymbol{\mathcal{F}}$}}{%
       \textbf{Actionable Fix Suggestions} grounded in literature}
     \item \iconbullet{\textbf{$\boldsymbol{\mathcal{E}}$}}{%
-      \textbf{Extensible Framework} for new properties and LLM providers}
+      \textbf{Extensible Framework} for custom checks and LLMs}
   \end{itemize}
 \end{posterblock}
 
@@ -222,65 +221,57 @@
 % ---------------------- COLUMN 2: Architecture & Flow (0.48) -----------------
 \begin{column}{0.48\textwidth}
 
-\begin{posterblock}[System Architecture]
+\begin{posterblock}[System Architecture \& Multi-Agent Flow]
   \centering
+  \includegraphics[height=330mm, keepaspectratio]{images/architecture-2.png}
   \vspace{4mm}
-  \includegraphics[height=460mm, keepaspectratio]{images/architecture-2.png}
+
+  \includegraphics[width=0.96\linewidth]{images/cross-artifact-reasoning.png}
   \vspace{4mm}
-
-  {\fontsize{24}{30}\selectfont\color{LightText}\justifying
-  \textbf{Figure 1:} Client--server architecture. The Python SDK executes locally alongside practitioner code to run heavy computations, serializes reports, and sends REST requests. The stateless analysis server dispatches LLM agents and synthesizes findings.}
-\end{posterblock}
-
-\vspace{12mm}
-
-\begin{posterblock}[Client-Side: Tabular Data Analysis]
-  \fontsize{26}{34}\selectfont\color{BodyText}\justifying
-  The DeepFix SDK executes an exhaustive suite of up to \textbf{80 distinct checks} tailored by modality (44 tabular, 19 NLP, 17 computer vision).
-
-  \vspace{3mm}
-  \centering
-  {\fontsize{19}{24}\selectfont
-  \begin{tabular}{p{0.31\linewidth} p{0.31\linewidth} p{0.31\linewidth}}
-    \toprule
-    \textbf{Data Integrity} & \textbf{Train/Test Validation} & \textbf{Model Evaluation} \\
-    \midrule
-    Mixed Nulls & String Mismatch Comparison & Model Info \\
-    Percent Of Nulls & Train Test Samples Mix & Segment Performance \\
-    String Mismatch & New Label & Unused Features \\
-    String Length Out Of Bounds & Datasets Size Comparison & Performance Bias \\
-    Feature Label Correlation & New Category & Simple Model Comparison \\
-    Feature Feature Correlation & Index Leakage & Weak Segments Performance \\
-    Is Single Value & Feature Label Correlation Change & Model Inference Time \\
-    Columns Info & Multivariate Drift & Regression Systematic Error \\
-    Class Imbalance & Label Drift & Single Dataset Performance \\
-    Outlier Sample Detection & Date Train Test Leakage Overlap & Train Test Performance \\
-    Identifier Label Correlation & Date Train Test Leakage Duplicates & ROC Report \\
-    Conflicting Labels & Feature Drift & Regression Error Distribution \\
-    Data Duplicates & & Confusion Matrix Report \\
-    Special Characters & & Boosting Overfit \\
-    Mixed Data Types & & Prediction Drift \\
-    & & Calibration Score \\
-    & & Multi Model Performance Report \\
-    \bottomrule
-  \end{tabular}\par}
-  \vspace{4mm}
-  {\fontsize{20}{26}\selectfont\color{LightText}\textbf{Table 1:} Overview of Tabular Modality Diagnostic Checks from Deepchecks}
-\end{posterblock}
-
-\vspace{12mm}
-
-\begin{posterblock}[Phase 2 --- Server-Side Multi-Agent Analysis]
-  \centering
-  \vspace{2mm}
-  \includegraphics[width=0.92\linewidth]{images/cross-artifact-reasoning.png}
-  \vspace{2mm}
 
   {\fontsize{22}{28}\selectfont\color{LightText}\justifying
-  \textbf{Figure 2:} Server-side analysis flow. The stateless server dispatches parallel analyzers (Step 1), then routes structured insights to the cross-artifact reasoning agent (Step 2 \& 3) which queries the best-practice knowledge base (\texttt{deepfix-kb}) to synthesize prioritized, actionable recommendations.}
+  \textbf{Figure 1:} Client-server architecture and server-side analysis flow. The client SDK runs light computations and sends REST requests. The server dispatches parallel LLM analyzers (Step 1) and routes insights to the cross-artifact reasoning agent (Step 2 \& 3) which queries the \texttt{deepfix-kb} best-practice knowledge base to synthesize prioritized, actionable recommendations.}
 \end{posterblock}
 
+\vspace{12mm}
 
+\begin{posterblock}[Example Findings (Industrial Case Study)]
+  \fontsize{24}{30}\selectfont\color{BodyText}\justifying
+  Validated in an industrial food waste image classification project at Delcaux Labs in partnership with \textbf{L. Stroetmann Großverbraucher GmbH \& Co. KG}. The underlying dataset is openly available on Hugging Face: \href{https://huggingface.co/datasets/AI-ServicesBB/food-waste-dataset}{\color{TUMBlue}\texttt{AI-ServicesBB/food-waste-dataset}}. DeepFix successfully surfaced critical silent production bugs:
+
+  \vspace{4mm}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[
+        enhanced, colback=white, colframe=SeverityCritical,
+        boxrule=2pt, arc=4pt, left=6mm, right=6mm, top=4mm, bottom=4mm,
+        title={\color{white}\fontsize{22}{26}\selectfont\bfseries CRITICAL --- Data Partitioning Failure},
+        colbacktitle=SeverityCritical,
+      ]
+        \fontsize{20}{24}\selectfont
+        \textbf{Evidence:} Combined checks surfaced that label drift Cram\'{e}r's V\,=\,0.92 (exceeding the 0.15 limit) and 75\% of test set labels were entirely absent from training.
+
+        \vspace{3mm}
+        \textcolor{TUMBlue}{\textbf{Fix:}} Halt model development immediately and recreate the train--test split using stratified sampling.
+      \end{tcolorbox}
+    \end{column}
+    \hfill
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[
+        enhanced, colback=white, colframe=SeverityHigh,
+        boxrule=2pt, arc=4pt, left=6mm, right=6mm, top=4mm, bottom=4mm,
+        title={\color{white}\fontsize{22}{26}\selectfont\bfseries HIGH --- Image Acquisition Drift},
+        colbacktitle=SeverityHigh,
+      ]
+        \fontsize{20}{24}\selectfont
+        \textbf{Evidence:} Multiple image properties failed Kolmogorov-Smirnov drift tests: Brightness (KS=0.42), RMS Contrast (KS=0.50), and Color channels (Red=0.83, Green=0.82, Blue=0.96).
+
+        \vspace{3mm}
+        \textcolor{TUMBlue}{\textbf{Fix:}} Standardize image collection protocols and apply color/intensity normalization to align characteristics.
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+\end{posterblock}
 
 \end{column}
 
@@ -289,40 +280,54 @@
 % ---------------------- COLUMN 3: Results & Contact (0.24) ------------------
 \begin{column}{0.24\textwidth}
 
-\begin{posterblock}[Example Findings (Industrial Case)]
-  \fontsize{26}{32}\selectfont\color{BodyText}\justifying
-  Validated in an industrial food waste image classification project at Delcaux Labs in partnership with \textbf{L. Stroetmann Großverbraucher GmbH \& Co. KG}. The underlying dataset is openly available on Hugging Face: \href{https://huggingface.co/datasets/AI-ServicesBB/food-waste-dataset}{\color{TUMBlue}\texttt{AI-ServicesBB/food-waste-dataset}}.
-
-  DeepFix surfaced critical bugs that would have required extensive manual visual review to find:
+\begin{posterblock}[Client-Side Modalities --- 80 Checks]
+  \fontsize{22}{27}\selectfont\color{BodyText}\justifying
+  DeepFix integrates with Deepchecks to run automated, exhaustive client-side quality checks across data modalities:
 
   \vspace{4mm}
-  \begin{tcolorbox}[
-    enhanced, colback=white, colframe=SeverityCritical,
-    boxrule=2pt, arc=4pt, left=8mm, right=8mm, top=5mm, bottom=5mm,
-    title={\color{white}\fontsize{24}{28}\selectfont\bfseries CRITICAL --- Data Partitioning Failure},
-    colbacktitle=SeverityCritical,
-  ]
-    \fontsize{22}{26}\selectfont
-    \textbf{Evidence:} Combined evidence from Deepchecks surfaced that the label drift Cram\'{e}r's V\,=\,0.92 (far exceeding the 0.15 threshold) and 75\% of test set labels were entirely absent from training.
-
-    \vspace{3mm}
-    \textcolor{TUMBlue}{\textbf{Fix:}} Halt model development immediately and recreate the train--test split using stratified sampling.
-  \end{tcolorbox}
-
-  \vspace{4mm}
-
-  \begin{tcolorbox}[
-    enhanced, colback=white, colframe=SeverityHigh,
-    boxrule=2pt, arc=4pt, left=8mm, right=8mm, top=5mm, bottom=5mm,
-    title={\color{white}\fontsize{24}{28}\selectfont\bfseries HIGH --- Image Acquisition Drift},
-    colbacktitle=SeverityHigh,
-  ]
-    \fontsize{22}{26}\selectfont
-    \textbf{Evidence:} Multiple image properties failed Kolmogorov-Smirnov (KS) drift tests: Brightness (KS=0.42), RMS Contrast (KS=0.50), and Color channels (Red=0.83, Green=0.82, Blue=0.96).
-
-    \vspace{3mm}
-    \textcolor{TUMBlue}{\textbf{Fix:}} Standardize image collection protocols and apply color/intensity normalization to align visual characteristics.
-  \end{tcolorbox}
+  \begin{columns}[T]
+    \begin{column}{0.31\linewidth}
+      \begin{tcolorbox}[
+        enhanced, colback=TUMBlue!5, colframe=TUMBlue!30,
+        boxrule=1pt, arc=4pt, left=3mm, right=3mm, top=3mm, bottom=3mm,
+        halign=center
+      ]
+        {\fontsize{32}{38}\selectfont\color{TUMBlue}\textbf{44}\par}
+        \vspace{1.5mm}
+        {\fontsize{18}{22}\selectfont\color{BodyText}\textbf{Tabular}\par}
+        \vspace{1.5mm}
+        {\fontsize{14}{17}\selectfont\color{LightText}Nulls, Drift, Imbalance\par}
+      \end{tcolorbox}
+    \end{column}
+    \hfill
+    \begin{column}{0.31\linewidth}
+      \begin{tcolorbox}[
+        enhanced, colback=TUMBlue!5, colframe=TUMBlue!30,
+        boxrule=1pt, arc=4pt, left=3mm, right=3mm, top=3mm, bottom=3mm,
+        halign=center
+      ]
+        {\fontsize{32}{38}\selectfont\color{TUMBlue}\textbf{19}\par}
+        \vspace{1.5mm}
+        {\fontsize{18}{22}\selectfont\color{BodyText}\textbf{NLP}\par}
+        \vspace{1.5mm}
+        {\fontsize{14}{17}\selectfont\color{LightText}Text Quality, Embeds\par}
+      \end{tcolorbox}
+    \end{column}
+    \hfill
+    \begin{column}{0.31\linewidth}
+      \begin{tcolorbox}[
+        enhanced, colback=TUMBlue!5, colframe=TUMBlue!30,
+        boxrule=1pt, arc=4pt, left=3mm, right=3mm, top=3mm, bottom=3mm,
+        halign=center
+      ]
+        {\fontsize{32}{38}\selectfont\color{TUMBlue}\textbf{17}\par}
+        \vspace{1.5mm}
+        {\fontsize{18}{22}\selectfont\color{BodyText}\textbf{CV}\par}
+        \vspace{1.5mm}
+        {\fontsize{14}{17}\selectfont\color{LightText}Brightness, Contrast Drift\par}
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
 \end{posterblock}
 
 \vspace{6mm}
@@ -372,12 +377,12 @@
     \begin{column}{0.48\textwidth}
       \centering
       \qrcode[height=38mm]{https://github.com/delcaux-labs/deepfix}\\[3mm]
-      {\fontsize{18}{22}\selectfont\color{LightText} GitHub Repository}
+      {\fontsize{18}{22}\selectfont\color{LightText} GitHub Repo}
     \end{column}
     \begin{column}{0.48\textwidth}
       \centering
       \qrcode[height=38mm]{https://youtu.be/WfwZmFcQgBQ}\\[3mm]
-      {\fontsize{18}{22}\selectfont\color{LightText} 5-min Screencast}
+      {\fontsize{18}{22}\selectfont\color{LightText} 5-min Demo}
     \end{column}
   \end{columns}
 
