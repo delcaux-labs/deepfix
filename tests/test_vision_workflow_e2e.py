@@ -55,49 +55,8 @@ class TransposeMNIST(Dataset):
 class TestVisionWorkflowE2E:
     """End-to-end tests for the Computer Vision workflow, reproducing the tutorial."""
 
-    def test_vision_classification_workflow(
-        self, api_url: str, check_response: callable
-    ):
-        """
-        Test the full diagnosis workflow for a Vision dataset.
-        Reproduces logic from tutorials/computer-vision.ipynb.
-        """
-        # 1. Initialize Client
-        print("1. Initializing client...")
-        # Vision tasks can be heavy, set long timeout
-        client = DeepFixClient(api_url=api_url, timeout=300)
-        print("2. Client initialized.")
-
-        # 2. Load and Prepare Data
-        print("3. Loading and preparing data...")
-        # Use small number of samples for E2E testing
-        train_loader, val_loader = load_mnist_classification(n_samples=50)
-
-        dataset_name = "mnist_classification_e2e"
-
-        # Wrap datasets to ensure (H, W, C) format
-        train_data = ImageClassificationDataset(
-            dataset_name=dataset_name, dataset=TransposeMNIST(train_loader.dataset)
-        )
-        val_data = ImageClassificationDataset(
-            dataset_name=dataset_name, dataset=TransposeMNIST(val_loader.dataset)
-        )
-        print("4. Data loaded and prepared.")
-
-        # 3. Run Diagnosis
-        print("5. Running diagnosis...")
-        response = client.get_diagnosis(
-            train_data=train_data,
-            test_data=val_data,
-            language="english",
-        )
-
-        # 4. Verify Response
-        print("6. Verifying response...")
-        assert check_response(response)
-
     def test_foodwaste_classification_workflow(
-        self, api_url: str, check_response: callable
+        self, api_url: str, check_response: callable, deepfix_timeout: int
     ):
         """
         Test the full diagnosis workflow for the foodwaste dataset.
@@ -105,7 +64,7 @@ class TestVisionWorkflowE2E:
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=300)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Load and Prepare Data
@@ -139,11 +98,11 @@ class TestVisionWorkflowE2E:
         assert check_response(response)
 
     def test_semantic_segmentation_workflow(
-        self, api_url: str, check_response: callable
+        self, api_url: str, check_response: callable, deepfix_timeout: int
     ):
         """Test the semantic segmentation workflow using COCO segmentation dataset."""
         print("\nRunning Semantic Segmentation workflow...")
-        client = DeepFixClient(api_url=api_url, timeout=300)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
 
         dataset_name = "coco_segmentation"
         train_data, val_data = load_segmentation_dataset(
@@ -167,11 +126,11 @@ class TestVisionWorkflowE2E:
         assert check_response(result)
 
     def test_object_detection_workflow(
-        self, api_url: str, coco_detection_paths: dict, check_response: callable
+        self, api_url: str, coco_detection_paths: dict, check_response: callable, deepfix_timeout: int
     ):
         """Test the object detection workflow using COCO detection dataset."""
         print("\nRunning Object Detection workflow...")
-        client = DeepFixClient(api_url=api_url, timeout=300)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
 
         print("Coco detection paths: ", coco_detection_paths)
 

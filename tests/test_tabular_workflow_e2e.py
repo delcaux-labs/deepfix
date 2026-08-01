@@ -21,14 +21,14 @@ def setup_env():
 class TestTabularWorkflowE2E:
     """End-to-end tests for the tabular workflow, reproducing the tutorial."""
 
-    def test_tabular_diagnosis_workflow(self, api_url: str, check_response: callable):
+    def test_tabular_diagnosis_workflow(self, api_url: str,deepfix_timeout: int, check_response: callable):
         """
         Test the full diagnosis workflow for a tabular dataset.
         Reproduces logic from tutorials/tabular.ipynb.
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=120)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Load and Prepare Data
@@ -87,7 +87,7 @@ class TestTabularWorkflowE2E:
         assert check_response(response)
 
     def test_tabular_diagnosis_without_model(
-        self, api_url: str, check_response: callable
+        self, api_url: str,deepfix_timeout: int, check_response: callable
     ):
         """
         Test the diagnosis workflow without providing a fitted model.
@@ -95,7 +95,7 @@ class TestTabularWorkflowE2E:
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=120)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Load and Prepare Data

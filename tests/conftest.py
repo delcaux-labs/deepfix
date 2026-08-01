@@ -51,6 +51,10 @@ def api_url():
         raise ValueError("DEEPFIX_TEST_API_URL is not set")
     return url
 
+@pytest.fixture
+def deepfix_timeout():
+    return 300
+
 
 @pytest.fixture
 def coco_detection_paths() -> dict[str, str]:

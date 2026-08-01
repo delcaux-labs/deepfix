@@ -40,18 +40,12 @@ def load_mnist_classification(
                 use_iterable_dataset=True. Default is False.
         pin_memory: If True, the data loader will copy Tensors into CUDA pinned memory
                    before returning them. Default is True.
-        object_type: Object type to return. If 'VisionData' then
-                    deepchecks.vision.VisionData will be returned, if 'DataLoader' then
-                    torch.utils.data.DataLoader. Default is 'VisionData'.
         use_iterable_dataset: If True, will use IterableTorchMnistDataset instead of
                              TorchMnistDataset. Default is False.
         device: Device to use in tensor calculations. Default is 'cpu'.
 
     Returns:
-        Depending on the object_type parameter:
-        - 'VisionData': deepchecks.vision.VisionData object
-        - 'DataLoader': torch.utils.data.DataLoader object
-        - 'both': Tuple of (train_vision_data, test_vision_data) if train=True
+        Tuple of (train_vision_data, test_vision_data)
     """
 
     object_type = "DataLoader"

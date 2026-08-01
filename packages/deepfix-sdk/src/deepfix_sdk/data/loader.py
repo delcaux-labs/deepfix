@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Dataset
 
 
 def classification_collate(data) -> BatchOutputFormat:
-    images = torch.stack([x[0] for x in data])
+    images = torch.stack([torch.Tensor(x[0]) for x in data])
     images = images.cpu().numpy()
     labels = [x[1] for x in data]
     return BatchOutputFormat(images=images, labels=labels)
@@ -17,7 +17,7 @@ def classification_collate(data) -> BatchOutputFormat:
 def classification_collate_with_model(
     data, model: Callable[[torch.Tensor], torch.Tensor]
 ) -> BatchOutputFormat:
-    images = torch.stack([x[0] for x in data])
+    images = torch.stack([torch.Tensor(x[0]) for x in data])
     with torch.inference_mode():
         predictions = model(images)
         if isinstance(predictions, torch.Tensor):

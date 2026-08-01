@@ -8,10 +8,10 @@ expected object types without errors.
 from deepchecks.nlp import TextData
 from deepchecks.tabular import Dataset as TabularDataset
 from deepchecks.vision import VisionData
-from deepfix.client.zoo.datasets.deepchecks_nlp import load_tweet_emotion_classification
-from deepfix.client.zoo.datasets.deepchecks_tabular import load_adult_classification
-from deepfix.client.zoo.datasets.deepchecks_vision import load_mnist_classification
-
+from deepfix_sdk.zoo.datasets.deepchecks_nlp import load_tweet_emotion_classification
+from deepfix_sdk.zoo.datasets.deepchecks_tabular import load_adult_classification
+from deepfix_sdk.zoo.datasets.deepchecks_vision import load_mnist_classification
+from torch.utils.data import DataLoader
 
 class TestVisionDataloaders:
     """Tests for vision dataset loaders."""
@@ -19,35 +19,19 @@ class TestVisionDataloaders:
     def test_load_mnist_classification_train_and_test(self):
         """Test loading MNIST classification dataset (train=True returns both train and test)."""
         result = load_mnist_classification(
-            train=True,
             n_samples=10,
             batch_size=4,
-            object_type="VisionData",
             device="cpu",
         )
 
-        # When train=True and object_type='VisionData', returns tuple
         assert isinstance(result, tuple), "Expected tuple of (train_data, test_data)"
         assert len(result) == 2, "Expected exactly 2 elements in tuple"
 
         train_data, test_data = result
-        assert isinstance(train_data, VisionData), "First element should be VisionData"
-        assert isinstance(test_data, VisionData), "Second element should be VisionData"
+        assert isinstance(train_data, DataLoader), "First element should be DataLoader"
+        assert isinstance(test_data, DataLoader), "Second element should be DataLoader"
         assert len(train_data) > 0, "Training data should not be empty"
         assert len(test_data) > 0, "Test data should not be empty"
-
-    def test_load_mnist_classification_test_only(self):
-        """Test loading MNIST classification test set only."""
-        result = load_mnist_classification(
-            train=False,
-            n_samples=10,
-            batch_size=4,
-            object_type="VisionData",
-            device="cpu",
-        )
-
-        assert isinstance(result, VisionData), "Expected VisionData object"
-        assert len(result) > 0, "Test data should not be empty"
 
 
 class TestTabularDataloaders:

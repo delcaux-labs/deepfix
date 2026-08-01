@@ -135,13 +135,13 @@ class TestIRWorkflowE2E:
         with pytest.raises(KeyError, match="not found in lookup table"):
             model.predict(missing_X)
 
-    def test_ir_diagnosis_workflow(self, api_url: str, check_response: callable):
+    def test_ir_diagnosis_workflow(self, api_url: str, deepfix_timeout: int, check_response: callable):
         """
         Test the full diagnosis workflow for an IR dataset using real CISI data.
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=300)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Prepare Data
