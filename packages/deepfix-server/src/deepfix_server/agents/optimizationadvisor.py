@@ -1,16 +1,22 @@
+"""Optimization advisor agent providing evidence-based ML recommendations.
+
+Refactored to use Pydantic AI Agent instead of dspy.ChainOfThought.
+"""
+
+from __future__ import annotations
+
 import asyncio
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
-import dspy
 from deepfix_core.models import AgentResult, Analysis
 from deepfix_kb import KnowledgeBridge, KnowledgeResponse
 
 from ..config import LLMConfig
+from ..llm import create_agent_for_analysis
 from ..logging import get_logger
 from .base import Agent
-from .signatures import OptimizationRecommendationSignature
 
 LOGGER = get_logger(__name__)
 
@@ -29,13 +35,21 @@ class OptimizationAdvisorAgent(Agent):
         knowledge_bridge: KnowledgeBridge,
         llm_config: Optional[LLMConfig] = None,
     ):
+        """Initialize the optimization advisor.
+
+        Args:
+            knowledge_bridge: KnowledgeBridge for external knowledge retrieval.
+            llm_config: Optional LLM configuration.
+        """
         super().__init__(config=llm_config)
-        signature = type(
-            f"{self.agent_name}Signature",
-            (OptimizationRecommendationSignature,),
-            {"__doc__": self.system_prompt},
+
+        from ..agent_models import ArtifactAnalysisResult
+
+        self.agent = create_agent_for_analysis(
+            config=llm_config,
+            system_prompt=self.system_prompt,
+            result_type=ArtifactAnalysisResult,
         )
-        self.llm = dspy.ChainOfThought(signature)
         self.knowledge_bridge = knowledge_bridge
 
     async def aforward(
@@ -56,42 +70,59 @@ class OptimizationAdvisorAgent(Agent):
         # Retrieve knowledge from KnowledgeBridge
         knowledge_context = await self._retrieve_knowledge(artifacts_analysis)
 
-        # Call LLM with retrieved knowledge
-        with self._llm_context():
-            response = await self.llm.acall(
-                artifacts_analysis=artifacts_analysis,
-                constraints=constraints,
-                retrieved_knowledge=knowledge_context,
-            )
+        # Build the user prompt
+        analyses_text = "\n".join(
+            f"- {a.model_dump_json()}"
+            for a in (artifacts_analysis or [])
+        )
+        constraint_text = f"\nConstraints: {constraints}" if constraints else ""
+
+        user_message = (
+            "Generate optimization recommendations based on the following analyses.\n\n"
+            f"## Artifact Analyses\n{analyses_text}\n\n"
+            f"## Retrieved Knowledge\n{knowledge_context}{constraint_text}"
+        )
+
+        result = await self.agent.run(user_message)
 
         return AgentResult(
             agent_name=self.agent_name,
-            analysis=response.analysis,
+            analysis=result.data.analysis,
         )
+
+    def forward(self, **kwargs):
+        """Synchronous forward."""
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, self.aforward(**kwargs))
+            return future.result()
+
+    async def acall(
+        self,
+        artifacts_analysis: List[Analysis],
+        constraints: Optional[str] = None,
+    ) -> AgentResult:
+        """Alias for aforward."""
+        return await self.aforward(artifacts_analysis, constraints)
 
     async def arun(
         self,
         artifacts_analysis: List[Analysis],
         constraints: Optional[str] = None,
     ) -> AgentResult:
+        """Run with error handling."""
         try:
             return await self.acall(artifacts_analysis, constraints)
         except Exception as e:
             LOGGER.error(
-                f"Error with agent {self.agent_name}:\n {traceback.format_exc()}"
+                "Error with agent %s:\n%s", self.agent_name, traceback.format_exc()
             )
             return AgentResult(agent_name=self.agent_name, error_message=str(e))
-
-    def forward(self, **kwargs):
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(**kwargs))
-            return future.result()
 
     async def _retrieve_knowledge(self, analyses: List[Analysis]) -> str:
         """Retrieve and format knowledge from KnowledgeBridge.
 
         Args:
-            analyses: List of analyses to execute.
+            analyses: List of analyses to base queries on.
 
         Returns:
             Formatted knowledge context string with citations.
@@ -120,32 +151,12 @@ class OptimizationAdvisorAgent(Agent):
                         knowledge_parts.append(f"Sources:\n{citations}")
 
             except Exception:
-                # Log but continue with other queries
-                # knowledge_parts.append(f"Retrieval failed: {str(e)}")
                 print(f"Retrieval failed: {traceback.format_exc()}")
 
         if not knowledge_parts:
             return "No external knowledge could be retrieved."
 
         return "\n\n".join(knowledge_parts)
-
-    def _format_citations(self, response: KnowledgeResponse) -> str:
-        """Format citations from knowledge response.
-
-        Args:
-            response: KnowledgeResponse with citations.
-
-        Returns:
-            Markdown-formatted citation list.
-        """
-        if not response.total_citations:
-            return ""
-
-        citations = []
-        for i, url in enumerate(response.total_citations[:5], 1):
-            citations.append(f"[{i}] {url}")
-
-        return "\n".join(citations)
 
     @property
     def system_prompt(self) -> str:
