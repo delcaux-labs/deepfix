@@ -1,18 +1,19 @@
 """
-Database-backed cache implementation for DSPy.
+Database-backed cache implementation for LLM calls.
 
-This module provides a custom cache that stores LLM request/response pairs
-in the database with hit count tracking, following DSPy's cache customization patterns.
+This module provides a standalone cache (no longer dependent on dspy.clients.Cache)
+that stores LLM request/response pairs in the database with hit count tracking.
 """
 
 import copy
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-import dspy.clients
+from sqlalchemy import Column, DateTime, Integer, String, Text, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -20,12 +21,27 @@ from sqlalchemy.orm import sessionmaker
 
 LOGGER = logging.getLogger(__name__)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# Lazily initialized when a database engine is available
+_SessionLocal = None
+_Base = None
 
 
-class DSPyCache(Base):
-    """DSPy LLM cache model for database-backed caching"""
+def _get_base():
+    global _Base
+    if _Base is None:
+        _Base = declarative_base()
+    return _Base
+
+
+def _get_session_local():
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False)
+    return _SessionLocal
+
+
+class DSPyCache(_get_base()):
+    """LLM cache model for database-backed caching"""
 
     __tablename__ = "dspy_cache"
 
@@ -41,35 +57,38 @@ class DSPyCache(Base):
     )
 
 
-class DSPyDatabaseCache(dspy.clients.Cache):
-    """Database-backed cache for DSPy LLM calls.
+class DSPyDatabaseCache:
+    """Database-backed cache for LLM calls (formerly DSPy cache).
 
     This cache stores LLM request/response pairs in a PostgreSQL database,
     keyed by a hash of the messages and model name. It tracks cache hit counts
     for analytics and uses database transactions for thread safety.
 
-    Example:
-        >>> cache = DSPyDatabaseCache()
-        >>> dspy.cache = cache
-        >>> # Now all DSPy LLM calls will use this cache
+    No longer subclasses dspy.clients.Cache — now standalone.
     """
 
     def __init__(self, **kwargs):  # pylint: disable=unused-argument
         """Initialize the database cache.
 
         Args:
-            **kwargs: Additional arguments (for compatibility with base class).
-                     Note: enable_disk_cache and enable_memory_cache are ignored
-                     as this cache replaces those mechanisms.
+            **kwargs: Additional arguments (for backward compatibility).
         """
-        super().__init__(
-            enable_disk_cache=True,
-            enable_memory_cache=False,
-            disk_cache_dir=os.getenv("DSPY_CACHEDIR", ".dspy_cache"),
-            disk_size_limit_bytes=1024 * 1024 * 10,
-            memory_max_entries=1000000,
-        )
-        LOGGER.info("Initialized DSPy database cache")
+        self.enable_disk_cache = True
+        self.disk_cache = {}
+        self.disk_cache_dir = os.getenv("DSPY_CACHEDIR", ".dspy_cache")
+        LOGGER.info("Initialized LLM database cache")
+
+    @staticmethod
+    def cache_key(request: Dict[str, Any], ignored_args: Optional[list[str]] = None) -> str:
+        """Generate a cache key from a request dictionary.
+
+        Uses SHA256 hash of messages + model name, ignoring specified args.
+        """
+        import hashlib
+
+        key_dict = {k: v for k, v in request.items() if k not in (ignored_args or [])}
+        key_str = json.dumps(key_dict, sort_keys=True, default=str)
+        return hashlib.sha256(key_str.encode()).hexdigest()
 
     def get(
         self,
@@ -105,7 +124,7 @@ class DSPyDatabaseCache(dspy.clients.Cache):
                 response.cache_hit = True
             return response
 
-        db = SessionLocal()
+        db = _get_session_local()()
 
         try:
             # Query for cache entry
@@ -174,7 +193,7 @@ class DSPyDatabaseCache(dspy.clients.Cache):
                 # Disk cache writing can fail for different reasons, e.g. disk full or the `value` is not picklable.
                 LOGGER.debug(f"Failed to put value in disk cache: {value}, {e}")
 
-        db = SessionLocal()
+        db = _get_session_local()()
         try:
             # Check if entry already exists (race condition protection)
             existing = db.query(DSPyCache).filter(DSPyCache.cache_key == key).first()

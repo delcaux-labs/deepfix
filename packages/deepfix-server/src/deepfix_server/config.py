@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import dspy
 
 class PromptConfig(BaseModel):
     """Configuration for prompt generation.
@@ -96,8 +95,6 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-
-dspy.configure_cache(enable_disk_cache=settings.llm_cache)
 
 class TrainingDynamicsConfig(BaseModel):
     """Configuration for training dynamics analysis.

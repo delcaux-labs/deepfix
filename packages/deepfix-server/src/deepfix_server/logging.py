@@ -21,7 +21,12 @@ def setup_dspy_logging(
     tracking_uri: Optional[str] = None,
     logger: Optional[logging.Logger] = None,
 ):
-    assert isinstance(experiment_name, str), "experiment_name must be a string"
+    """Set up MLflow tracing for LLM calls (formerly DSPy logging).
+
+    Note: mlflow.dspy.autolog() has been removed as part of the DSPy →
+    Pydantic AI migration. This function now only configures MLflow experiment
+    tracking for future LLM trace integration.
+    """
 
     if tracking_uri is None:
         if logger is not None:
@@ -53,7 +58,6 @@ def setup_dspy_logging(
                     print("Tracing will not be enabled.")
             return
 
-    mlflow.dspy.autolog()
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
     if logger is not None:
