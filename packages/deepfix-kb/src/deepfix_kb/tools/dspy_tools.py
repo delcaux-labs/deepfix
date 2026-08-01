@@ -1,21 +1,17 @@
-"""DSPy tool definitions for knowledge retrieval.
+"""Knowledge retrieval tools for agent consumption.
 
-This module provides DSPy-compatible tools that can be used by agents
-via dspy.ReAct or manual tool handling.
+This module provides callable tool classes that can be used by agents
+via Pydantic AI's tool registration or manual tool handling.
 
 Example:
-    >>> import dspy
     >>> from deepfix_kb import KnowledgeBridge
     >>> from deepfix_kb.tools import create_knowledge_tools
     >>>
     >>> bridge = KnowledgeBridge()
     >>> tools = create_knowledge_tools(bridge)
     >>>
-    >>> # Use with ReAct agent
-    >>> agent = dspy.ReAct(
-    ...     signature="question -> answer",
-    ...     tools=tools
-    ... )
+    >>> # Use with a Pydantic AI Agent
+    >>> agent = Agent('openai:gpt-4o', tools=tools)
 """
 
 from __future__ import annotations
@@ -24,7 +20,6 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, List
-import dspy
 
 if TYPE_CHECKING:
     from ..bridge import KnowledgeBridge
@@ -123,21 +118,6 @@ class WebSearchTool:
             logger.error(f"WebSearchTool failed: {e}")
             return f"Web search failed: {str(e)}"
 
-    def to_dspy_tool(self):
-        """Convert to DSPy Tool format if dspy is available."""
-        try:
-            import dspy
-
-            return dspy.Tool(
-                func=self._search,
-                name=self.name,
-                desc=self.desc,
-                args={"query": "The search query string"},
-            )
-        except ImportError:
-            logger.warning("dspy not available, returning callable instead")
-            return self
-
 
 class ResearchTool:
     """AI-powered research tool for deep analysis and synthesis.
@@ -211,21 +191,6 @@ class ResearchTool:
         except Exception as e:
             logger.error(f"ResearchTool failed: {e}")
             return f"Research failed: {str(e)}"
-
-    def to_dspy_tool(self):
-        """Convert to DSPy Tool format if dspy is available."""
-        try:
-            import dspy
-
-            return dspy.Tool(
-                func=self._research,
-                name=self.name,
-                desc=self.desc,
-                args={"query": "The research question"},
-            )
-        except ImportError:
-            logger.warning("dspy not available, returning callable instead")
-            return self
 
 
 class KnowledgeLookupTool:
@@ -302,21 +267,6 @@ class KnowledgeLookupTool:
         except Exception as e:
             logger.error(f"KnowledgeLookupTool failed: {e}")
             return f"Knowledge lookup failed: {str(e)}"
-
-    def to_dspy_tool(self):
-        """Convert to DSPy Tool format if dspy is available."""
-        try:
-            import dspy
-
-            return dspy.Tool(
-                func=self._lookup,
-                name=self.name,
-                desc=self.desc,
-                args={"query": "The knowledge query"},
-            )
-        except ImportError:
-            logger.warning("dspy not available, returning callable instead")
-            return self
 
 
 class HybridSearchTool:
@@ -401,21 +351,6 @@ class HybridSearchTool:
             logger.error(f"HybridSearchTool failed: {e}")
             return f"Hybrid search failed: {str(e)}"
 
-    def to_dspy_tool(self):
-        """Convert to DSPy Tool format if dspy is available."""
-        try:
-            
-
-            return dspy.Tool(
-                func=self._search,
-                name=self.name,
-                desc=self.desc,
-                args={"query": "The search query"},
-            )
-        except ImportError:
-            logger.warning("dspy not available, returning callable instead")
-            return self
-
 
 def create_knowledge_tools(
     bridge: "KnowledgeBridge",
@@ -423,21 +358,24 @@ def create_knowledge_tools(
 ) -> List:
     """Create all knowledge tools for agent consumption.
 
+    Returns plain callable tool instances compatible with Pydantic AI's
+    ``tools`` parameter.
+
     Args:
         bridge: Configured KnowledgeBridge instance.
         include_hybrid: Whether to include the hybrid search tool.
 
     Returns:
-        List of tool instances (DSPy Tools if dspy available, else callables).
+        List of callable tool instances.
     """
     tools = [
-        WebSearchTool(bridge).to_dspy_tool(),
-        ResearchTool(bridge).to_dspy_tool(),
-        KnowledgeLookupTool(bridge).to_dspy_tool(),
+        WebSearchTool(bridge),
+        ResearchTool(bridge),
+        KnowledgeLookupTool(bridge),
     ]
 
     if include_hybrid:
-        tools.append(HybridSearchTool(bridge).to_dspy_tool())
+        tools.append(HybridSearchTool(bridge))
 
     return tools
 
