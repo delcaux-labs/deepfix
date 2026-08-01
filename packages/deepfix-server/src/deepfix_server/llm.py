@@ -19,14 +19,14 @@ from .config import LLMConfig
 def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
     """Create a Pydantic AI OpenAIChatModel from an LLMConfig.
 
-    The OpenAIChatModel is compatible with any OpenAI-compatible API
-    (OpenRouter, LiteLLM, vLLM, etc.) by setting base_url on the provider.
+    If config is None and no env API key is set, returns None so callers
+    can fall back to the Pydantic AI test model.
 
     Args:
         config: LLM configuration. If None, reads from environment.
 
     Returns:
-        Configured OpenAIChatModel instance.
+        Configured OpenAIChatModel instance, or None if no credentials.
     """
     if config is None:
         config = LLMConfig(
@@ -36,6 +36,9 @@ def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
             temperature=float(os.getenv("DEEPFIX_LLM_TEMPERATURE", "0.7")),
             max_tokens=int(os.getenv("DEEPFIX_LLM_MAX_TOKENS", "8000")),
         )
+
+    if not config.api_key:
+        return None
 
     provider_kwargs: dict = {}
     if config.api_key:
@@ -54,14 +57,14 @@ def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
 def create_agent_for_analysis(
     config: Optional[LLMConfig] = None,
     system_prompt: str = "",
-    result_type: Optional[type] = None,
+    output_type: Optional[type] = None,
 ) -> PydanticAgent:
     """Create a Pydantic AI Agent configured for artifact analysis.
 
     Args:
         config: LLM configuration. If None, reads from environment.
         system_prompt: System prompt for the agent.
-        result_type: Optional Pydantic model for structured output (e.g.
+        output_type: Optional Pydantic model for structured output (e.g.
             ArtifactAnalysisResult or CrossArtifactReasoningResult).
 
     Returns:
@@ -77,6 +80,9 @@ def create_agent_for_analysis(
         )
 
     model = create_model(config)
+    if model is None:
+        # No API key — use Pydantic AI test model (no real LLM calls)
+        return PydanticAgent("test", output_type=output_type, system_prompt=system_prompt)
 
     model_settings: dict = {}
     if config.temperature is not None:
@@ -85,7 +91,7 @@ def create_agent_for_analysis(
 
     return PydanticAgent(
         model=model,
-        output_type=result_type,
+        output_type=output_type,
         system_prompt=system_prompt,
         model_settings=model_settings,
     )
