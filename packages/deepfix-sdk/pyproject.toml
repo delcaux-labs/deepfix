@@ -45,7 +45,7 @@ dependencies = [
     "pyterrier-dr>=0.7.0",
     "ir-datasets>=0.5.11",
     "tiktoken>=0.12.0",
-    "fasttext-wheel",
+    "fasttext",
 ]
 
 [tool.ruff]
