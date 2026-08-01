@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional
 
-import dspy
 import pandas as pd
 from deepfix_core.models import (
     DatasetArtifacts,
@@ -26,9 +25,8 @@ class DeepchecksArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
-        llm: Optional[dspy.Module] = None,
     ):
-        super().__init__(llm=llm, config=config)
+        super().__init__(config=config)
 
     @property
     def system_prompt(self) -> str:
@@ -100,9 +98,8 @@ class DatasetArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
-        llm: Optional[dspy.Module] = None,
     ):
-        super().__init__(llm=llm, config=config)
+        super().__init__(config=config)
 
     @property
     def system_prompt(self) -> str:
@@ -174,9 +171,8 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
-        llm: Optional[dspy.Module] = None,
     ):
-        super().__init__(llm=llm, config=config)
+        super().__init__(config=config)
 
     @property
     def system_prompt(self) -> str:
@@ -237,9 +233,9 @@ class ModelCheckpointArtifactsAnalyzer(ArtifactAnalyzer):
 
 class TrainingArtifactsAnalyzer(ArtifactAnalyzer):
     def __init__(
-        self, llm_config: Optional[LLMConfig] = None, llm: Optional[dspy.Module] = None
+        self, llm_config: Optional[LLMConfig] = None
     ):
-        super().__init__(llm=llm, config=llm_config)
+        super().__init__(config=llm_config)
 
         self.logger = LOGGER
         self._analysis_cache = {}
