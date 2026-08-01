@@ -110,6 +110,14 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml ps
 ```
 
+## 🧪 Testing
+
+The tests are written using `pytest`. It is preferable to run them using `uv` with the test environment configuration:
+
+```bash
+uv run --env-file test.env pytest tests/ -v -s
+```
+
 ## 📝 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
