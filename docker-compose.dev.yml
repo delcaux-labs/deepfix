@@ -26,8 +26,18 @@ services:
       context: .
       dockerfile: ./packages/deepfix-server/Dockerfile
     image: deepfix-server:latest
-    env_file:
-      - .env
+    environment:
+      - DEEPFIX_LLM_API_KEY=
+      - DEEPFIX_LLM_BASE_URL=https://openrouter.ai/api/v1
+      - DEEPFIX_LLM_MODEL_NAME=openai/x-ai/grok-4-fast
+      - DEEPFIX_LLM_TEMPERATURE=0.7
+      - DEEPFIX_LLM_MAX_TOKENS=8000
+      - DEEPFIX_LLM_CACHE=1
+      - DEEPFIX_LLM_TRACK_USAGE=1
+      - LIT_SERVER_API_KEY=
+      - DEEPFIX_SERVER_DATABASE_URL=sqlite:///./deepfix_server.db
+      - MLFLOW_TRACKING_URI=
+      - MLFLOW_EXP_NAME=Deepfix-server
     restart: unless-stopped
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
     ports:
