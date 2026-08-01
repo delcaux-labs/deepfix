@@ -35,10 +35,12 @@ services:
       - DEEPFIX_LLM_CACHE=1
       - DEEPFIX_LLM_TRACK_USAGE=1
       - LIT_SERVER_API_KEY=
-      - DEEPFIX_SERVER_DATABASE_URL=sqlite:///./deepfix_server.db
-      - MLFLOW_TRACKING_URI=
+      - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXP_NAME=Deepfix-server
     restart: unless-stopped
+    depends_on:
+      - mlflow
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
     ports:
       - "8844:8844"
@@ -76,3 +78,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.15.0-full
+    ports:
+      - "5000:5000"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+    restart: unless-stopped
