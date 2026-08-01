@@ -65,7 +65,7 @@ class CrossArtifactReasoningAgent(Agent):
 
         self.agent = PydanticAgent(
             model=model,
-            result_type=CrossArtifactReasoningResult,
+            output_type=CrossArtifactReasoningResult,
             system_prompt=self.system_prompt,
             tools=tools_list,
         )
@@ -162,10 +162,10 @@ class CrossArtifactReasoningAgent(Agent):
 
         return AgentResult(
             agent_name=self.agent_name,
-            analysis=final_result.data.analysis,
+            analysis=final_result.output.analysis,
             analyzed_artifacts=analyzed_artifacts,
             retrieved_knowledge=retrieved_knowledge,
-            additional_outputs={"summary": final_result.data.summary},
+            additional_outputs={"summary": final_result.output.summary},
         )
 
     # ------------------------------------------------------------------

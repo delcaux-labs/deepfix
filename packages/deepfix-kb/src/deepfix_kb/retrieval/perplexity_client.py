@@ -180,7 +180,7 @@ class PerplexitySonarRetriever(BaseRetriever):
 
         return PydanticAgent(
             model=model,
-            result_type=str,
+            output_type=str,
             system_prompt=system_prompt,
             model_settings=model_settings,
         )
@@ -245,7 +245,7 @@ class PerplexitySonarRetriever(BaseRetriever):
                 user_message = f"{system_prompt}\n\n{user_message}"
 
             result = await self.detailed_agent.run(user_message)
-            content = result.data
+            content = result.output
 
             citations = self._extract_citations(content)
 
@@ -304,7 +304,7 @@ class PerplexitySonarRetriever(BaseRetriever):
                 agent = self.detailed_agent
 
             result = await agent.run(topic)
-            content = result.data
+            content = result.output
             citations = self._extract_citations(content)
 
             return RetrievalResult(

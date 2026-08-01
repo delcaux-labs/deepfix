@@ -48,7 +48,7 @@ class OptimizationAdvisorAgent(Agent):
         self.agent = create_agent_for_analysis(
             config=llm_config,
             system_prompt=self.system_prompt,
-            result_type=ArtifactAnalysisResult,
+            output_type=ArtifactAnalysisResult,
         )
         self.knowledge_bridge = knowledge_bridge
 
@@ -87,7 +87,7 @@ class OptimizationAdvisorAgent(Agent):
 
         return AgentResult(
             agent_name=self.agent_name,
-            analysis=result.data.analysis,
+            analysis=result.output.analysis,
         )
 
     def forward(self, **kwargs):

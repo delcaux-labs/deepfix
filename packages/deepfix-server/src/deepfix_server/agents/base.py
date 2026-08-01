@@ -112,7 +112,7 @@ class ArtifactAnalyzer(Agent):
         self.agent = create_agent_for_analysis(
             config=config,
             system_prompt=self.system_prompt,
-            result_type=ArtifactAnalysisResult,
+            output_type=ArtifactAnalysisResult,
         )
 
     def _check_artifacts(self, artifacts: List[Artifacts]) -> bool:
@@ -210,7 +210,7 @@ class ArtifactAnalyzer(Agent):
 
         return AgentResult(
             agent_name=self.agent_name,
-            analysis=result.data.analysis,
+            analysis=result.output.analysis,
             analyzed_artifacts=[type(a).__name__ for a in context.artifacts],
         )
 

@@ -358,24 +358,54 @@ def create_knowledge_tools(
 ) -> List:
     """Create all knowledge tools for agent consumption.
 
-    Returns plain callable tool instances compatible with Pydantic AI's
-    ``tools`` parameter.
+    Returns plain functions compatible with Pydantic AI's ``tools`` parameter.
+    Each is a standalone function with proper __name__ and __doc__.
 
     Args:
         bridge: Configured KnowledgeBridge instance.
         include_hybrid: Whether to include the hybrid search tool.
 
     Returns:
-        List of callable tool instances.
+        List of callable functions.
     """
-    tools = [
-        WebSearchTool(bridge),
-        ResearchTool(bridge),
-        KnowledgeLookupTool(bridge),
-    ]
+    tools = []
+
+    ws = WebSearchTool(bridge)
+
+    def web_search(query: str) -> str:
+        """Search the web for current information about ML/DL topics."""
+        return ws._search(query)
+
+    web_search.__name__ = "web_search"
+    tools.append(web_search)
+
+    rt = ResearchTool(bridge)
+
+    def research(query: str) -> str:
+        """Research and synthesize information about complex ML/DL topics."""
+        return rt._research(query)
+
+    research.__name__ = "research"
+    tools.append(research)
+
+    kt = KnowledgeLookupTool(bridge)
+
+    def knowledge_lookup(query: str) -> str:
+        """Search the local KB for established ML/DL best practices."""
+        return kt._lookup(query)
+
+    knowledge_lookup.__name__ = "knowledge_lookup"
+    tools.append(knowledge_lookup)
 
     if include_hybrid:
-        tools.append(HybridSearchTool(bridge))
+        ht = HybridSearchTool(bridge)
+
+        def hybrid_search(query: str) -> str:
+            """Search across all knowledge sources for comprehensive info."""
+            return ht._search(query)
+
+        hybrid_search.__name__ = "hybrid_search"
+        tools.append(hybrid_search)
 
     return tools
 

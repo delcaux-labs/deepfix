@@ -85,7 +85,7 @@ def create_agent_for_analysis(
 
     return PydanticAgent(
         model=model,
-        result_type=result_type,
+        output_type=result_type,
         system_prompt=system_prompt,
         model_settings=model_settings,
     )
