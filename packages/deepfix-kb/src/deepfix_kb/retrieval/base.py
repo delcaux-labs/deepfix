@@ -64,7 +64,7 @@ class BaseRetriever(ABC):
         """
         try:
             # Simple health check - try a minimal query
-            results = await self.retrieve("test", max_results=1)
+            await self.retrieve("test", max_results=1)
             return True
         except Exception as e:
             logger.warning(f"Health check failed for {self.source_type}: {e}")

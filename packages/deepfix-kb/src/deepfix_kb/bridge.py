@@ -7,14 +7,14 @@ from typing import Any, List, Optional, Union
 
 from deepfix_core.models import Analysis
 
-from .models import KnowledgeResponse, RetrievalResult, RetrievalStrategy
+from .config import KnowledgeBridgeConfig, RetrievalStrategy
+from .config import config as default_config
+from .models import KnowledgeResponse, RetrievalResult
 from .retrieval import (
     HybridRetriever,
     PerplexitySonarRetriever,
     TavilySearchRetriever,
 )
-
-from .config import KnowledgeBridgeConfig, config as default_config
 
 logger = logging.getLogger(__name__)
 
@@ -61,18 +61,12 @@ class KnowledgeBridge:
 
         Args:
             config: KnowledgeBridgeConfig instance. If not provided, loads from default settings.
-            tavily_api_key: Tavily API key override (or set TAVILY_API_KEY env var).
-            openrouter_api_key: OpenRouter API key override (or set OPENROUTER_API_KEY env var).
-            perplexity_model: Perplexity model variant override ("sonar", "sonar-pro", "sonar-reasoning").
-            enable_local_kb: Whether to enable local knowledge base.
-            default_strategy: Default retrieval strategy.
         """
         logger.info("Initializing KnowledgeBridge")
 
         # Fall back to default config if none provided
         active_config = config or default_config
 
-        # Initialize retrievers as private attributes for compatibility/property exposure
         self._tavily = TavilySearchRetriever(config=active_config.tavily)
         self._perplexity = PerplexitySonarRetriever(config=active_config.perplexity)
 

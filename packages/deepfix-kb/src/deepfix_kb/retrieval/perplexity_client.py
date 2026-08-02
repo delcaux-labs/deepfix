@@ -6,16 +6,15 @@ Replaces DSPy Signatures and Modules with Pydantic AI Agents.
 from __future__ import annotations
 
 import logging
-import os
 import re
 from typing import Any, List, Literal, Optional
 
+from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai import Agent as PydanticAgent
 
+from ..config import PerplexityConfig
 from .base import BaseRetriever, RetrievalResult
-from ..config import PerplexityConfig, PerplexityModels
 
 logger = logging.getLogger(__name__)
 

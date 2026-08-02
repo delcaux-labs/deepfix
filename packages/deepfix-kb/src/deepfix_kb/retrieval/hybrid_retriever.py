@@ -6,11 +6,9 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
-
+from ..config import HybridRetrieverConfig, RetrievalStrategy
 from ..models import RetrievalResult
 from .base import BaseRetriever
-from ..config import HybridRetrieverConfig, RetrievalStrategy
 
 logger = logging.getLogger(__name__)
 

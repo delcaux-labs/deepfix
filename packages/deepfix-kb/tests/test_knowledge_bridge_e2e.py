@@ -34,6 +34,7 @@ from deepfix_kb.retrieval import (
 )
 from deepfix_kb.tools import create_knowledge_tools
 
+
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -248,7 +249,7 @@ class TestHybridRetriever:
         tavily, perplexity = mock_retrievers
         hybrid = HybridRetriever(tavily=tavily, perplexity=perplexity)
 
-        results = await hybrid.retrieve(
+        await hybrid.retrieve(
             "test query",
             sources=["web"],
         )

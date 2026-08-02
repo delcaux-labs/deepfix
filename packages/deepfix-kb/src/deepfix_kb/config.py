@@ -243,7 +243,7 @@ class KnowledgeBridgeConfig(BaseSettings):
                 max_tokens=self.perplexity_max_tokens,
             )
         return self._perplexity
-    
+
     @property
     def hybrid_retriever(self):
         if self._hybrid_retriever is None:

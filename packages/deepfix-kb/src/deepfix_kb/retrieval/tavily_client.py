@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, List, Literal, Optional
 
 from tavily import AsyncTavilyClient
+
 from ..config import TavilyConfig
 from .base import BaseRetriever, RetrievalResult
 

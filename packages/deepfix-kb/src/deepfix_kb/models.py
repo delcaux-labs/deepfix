@@ -1,6 +1,5 @@
 """Models for the KnowledgeBridge knowledge retrieval system."""
 
-from enum import StrEnum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
