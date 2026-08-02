@@ -6,19 +6,6 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-class RetrievalStrategy(StrEnum):
-    """Retrieval strategies for hybrid retrieval.
-
-    Defines how multiple retrieval sources are combined.
-    """
-
-    PARALLEL = "parallel"  # Query all sources simultaneously
-    CASCADING = "cascading"  # Try sources in order until enough results
-    WEB_FIRST = "web_first"  # Prioritize web search results
-    AI_FIRST = "ai_first"  # Prioritize Perplexity AI results
-    LOCAL_FIRST = "local_first"  # Prioritize local knowledge base
-
-
 class RetrievalResult(BaseModel):
     """Standardized result from any retrieval source.
 

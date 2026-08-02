@@ -8,34 +8,11 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ..models import RetrievalResult, RetrievalStrategy
+from ..models import RetrievalResult
 from .base import BaseRetriever
+from ..config import HybridRetrieverConfig, RetrievalStrategy
 
 logger = logging.getLogger(__name__)
-
-
-class HybridRetrieverConfig(BaseModel):
-    """Configuration for hybrid retriever.
-
-    Attributes:
-        default_strategy: Default strategy for combining sources.
-        max_results_per_source: Maximum results from each individual source.
-        max_total_results: Maximum total results after merging.
-        enable_deduplication: Whether to deduplicate similar results.
-        similarity_threshold: Threshold for considering results as duplicates.
-    """
-
-    default_strategy: RetrievalStrategy = Field(
-        RetrievalStrategy.PARALLEL, description="Default retrieval strategy"
-    )
-    max_results_per_source: int = Field(
-        3, ge=1, le=10, description="Max results per source"
-    )
-    max_total_results: int = Field(10, ge=1, le=50, description="Max total results")
-    enable_deduplication: bool = Field(True, description="Enable result deduplication")
-    similarity_threshold: float = Field(
-        0.85, ge=0.0, le=1.0, description="Similarity threshold for deduplication"
-    )
 
 
 class HybridRetriever:
@@ -78,10 +55,10 @@ class HybridRetriever:
 
     def __init__(
         self,
+        config: HybridRetrieverConfig,
         tavily: Optional[BaseRetriever] = None,
         perplexity: Optional[BaseRetriever] = None,
         local_kb: Optional[BaseRetriever] = None,
-        config: Optional[HybridRetrieverConfig] = None,
     ):
         """Initialize hybrid retriever with multiple sources.
 
@@ -91,7 +68,7 @@ class HybridRetriever:
             local_kb: Local knowledge base retriever instance.
             config: Configuration for the hybrid retriever.
         """
-        self.config = config or HybridRetrieverConfig()
+        self.config = config
         self.sources: Dict[str, BaseRetriever] = {}
 
         if tavily and tavily.is_available:

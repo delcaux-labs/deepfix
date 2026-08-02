@@ -55,12 +55,7 @@ class KnowledgeBridge:
 
     def __init__(
         self,
-        config: Optional[KnowledgeBridgeConfig] = None,
-        tavily_api_key: Optional[str] = None,
-        openrouter_api_key: Optional[str] = None,
-        perplexity_model: Optional[str] = None,
-        enable_local_kb: Optional[bool] = None,
-        default_strategy: Optional[Union[str, RetrievalStrategy]] = None,
+        config: Optional[KnowledgeBridgeConfig] = None
     ):
         """Initialize KnowledgeBridge with configured retrieval sources.
 
@@ -77,25 +72,13 @@ class KnowledgeBridge:
         # Fall back to default config if none provided
         active_config = config or default_config
 
-        # Apply overrides to active_config parameters if explicitly provided
-        tavily_key = tavily_api_key or active_config.tavily.api_key
-        openrouter_key = openrouter_api_key or active_config.perplexity.api_key
-        p_model = perplexity_model or active_config.perplexity.model
-        local_kb_enabled = enable_local_kb if enable_local_kb is not None else active_config.enable_local_kb
-        strategy = default_strategy or active_config.default_strategy
-        if isinstance(strategy, str):
-            strategy = RetrievalStrategy(strategy)
-
         # Initialize retrievers as private attributes for compatibility/property exposure
-        self._tavily = TavilySearchRetriever(api_key=tavily_key)
-        self._perplexity = PerplexitySonarRetriever(
-            api_key=openrouter_key,
-            model=p_model,
-        )
+        self._tavily = TavilySearchRetriever(config=active_config.tavily)
+        self._perplexity = PerplexitySonarRetriever(config=active_config.perplexity)
 
         # Local KB is optional and requires additional setup
         local_kb = None
-        if local_kb_enabled:
+        if active_config.enable_local_kb:
             raise ValueError("Local KB not implemented yet")
 
         # Initialize hybrid retriever
@@ -103,9 +86,10 @@ class KnowledgeBridge:
             tavily=self._tavily,
             perplexity=self._perplexity,
             local_kb=local_kb,
+            config=active_config.hybrid_retriever
         )
         self.retriever = self._hybrid
-        self.default_strategy = strategy
+        self.default_strategy = active_config.default_strategy
 
         # Log available sources
         logger.info(f"Available sources: {self.retriever.available_sources}")

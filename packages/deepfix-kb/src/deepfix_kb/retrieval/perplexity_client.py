@@ -10,9 +10,12 @@ import os
 import re
 from typing import Any, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai import Agent as PydanticAgent
 
 from .base import BaseRetriever, RetrievalResult
+from ..config import PerplexityConfig, PerplexityModels
 
 logger = logging.getLogger(__name__)
 
@@ -49,25 +52,6 @@ class PerplexityAPIError(PerplexityError):
 class PerplexityResponseError(PerplexityError):
     """Raised when response parsing or validation fails."""
     pass
-
-
-# Perplexity Sonar models available through OpenRouter
-PERPLEXITY_MODELS = {
-    "sonar": "perplexity/sonar",
-    "sonar-pro": "perplexity/sonar-pro",
-    "sonar-reasoning": "perplexity/sonar-reasoning",
-}
-
-
-class PerplexityConfig(BaseModel):
-    """Configuration for Perplexity Sonar client."""
-
-    api_key: Optional[str] = Field(None, description="OpenRouter API key")
-    model: Literal["sonar", "sonar-pro", "sonar-reasoning"] = Field(
-        "sonar", description="Perplexity model variant"
-    )
-    temperature: float = Field(0.7, ge=0.0, le=2.0, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, description="Maximum response tokens")
 
 
 # ============================================================================
@@ -123,10 +107,7 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: Literal["sonar", "sonar-pro", "sonar-reasoning"] = "sonar",
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        config: PerplexityConfig
     ):
         """Initialize Perplexity Sonar client via OpenRouter with Pydantic AI.
 
@@ -137,12 +118,7 @@ class PerplexitySonarRetriever(BaseRetriever):
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens in response (None for model default).
         """
-        self._api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.model_name = model
-        self.model = PERPLEXITY_MODELS[model]
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-        self._api_base = "https://openrouter.ai/api/v1"
+        self.config = config
 
         # Pydantic AI agents are created lazily
         self._researcher_agent = None
@@ -152,31 +128,27 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     def _get_model(self):
         """Lazy-create the Pydantic AI OpenAIChatModel."""
-        from pydantic_ai.models.openai import OpenAIChatModel
-        from pydantic_ai.providers.openai import OpenAIProvider
-
-        if not self._api_key:
+        if not self.config.api_key:
             raise ValueError(
                 "OpenRouter API key not provided. Set OPENROUTER_API_KEY "
                 "environment variable or pass api_key parameter."
             )
 
         return OpenAIChatModel(
-            model_name=f"openai/{self.model}",
+            model_name=f"openai/{str(self.config.model)}",
             provider=OpenAIProvider(
-                api_key=self._api_key,
-                base_url=self._api_base,
+                api_key=self.config.api_key,
+                base_url=self.config.api_base,
             ),
         )
 
     def _get_agent(self, system_prompt: str):
         """Create a Pydantic AI Agent with the given system prompt."""
-        from pydantic_ai import Agent as PydanticAgent
 
         model = self._get_model()
-        model_settings = {"temperature": self.temperature}
-        if self.max_tokens:
-            model_settings["max_tokens"] = self.max_tokens
+        model_settings = {"temperature": self.config.temperature}
+        if self.config.max_tokens:
+            model_settings["max_tokens"] = self.config.max_tokens
 
         return PydanticAgent(
             model=model,
@@ -252,14 +224,12 @@ class PerplexitySonarRetriever(BaseRetriever):
             return [
                 RetrievalResult(
                     content=content,
-                    source="Perplexity Sonar",
+                    source="Perplexity AI",
                     source_type=self.source_type,
                     citations=citations if citations else None,
                     metadata={
-                        "model": self.model,
-                        "model_name": self.model_name,
-                        "temperature": self.temperature,
-                        "framework": "pydantic-ai",
+                        "model": self.config.model,
+                        "temperature": self.config.temperature,
                     },
                 )
             ]
@@ -292,7 +262,7 @@ class PerplexitySonarRetriever(BaseRetriever):
             Single RetrievalResult with the research findings.
         """
         logger.info(
-            f"Perplexity research ({self.model_name}, {depth}): '{topic[:80]}...'"
+            f"Perplexity research ({self.config.model}, {depth}): '{topic[:80]}...'"
         )
 
         try:
@@ -309,15 +279,13 @@ class PerplexitySonarRetriever(BaseRetriever):
 
             return RetrievalResult(
                 content=content,
-                source="Perplexity Sonar",
+                source="Perplexity AI",
                 source_type=self.source_type,
                 citations=citations if citations else None,
                 metadata={
-                    "model": self.model,
-                    "model_name": self.model_name,
-                    "temperature": self.temperature,
+                    "model": self.config.model,
+                    "temperature": self.config.temperature,
                     "depth": depth,
-                    "framework": "pydantic-ai",
                 },
             )
 

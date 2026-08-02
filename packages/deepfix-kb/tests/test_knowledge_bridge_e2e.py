@@ -123,7 +123,7 @@ class TestKnowledgeBridgeConfig:
         monkeypatch.setenv("KNOWLEDGE_BRIDGE_STRATEGY", "cascading")
         monkeypatch.setenv("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB", "true")
 
-        config = KnowledgeBridgeConfig.from_env()
+        config = KnowledgeBridgeConfig()
 
         assert config.perplexity.model == "sonar-pro"
         assert config.default_strategy == "cascading"
