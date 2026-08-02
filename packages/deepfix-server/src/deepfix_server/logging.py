@@ -53,9 +53,9 @@ def setup_mlflow_tracing(
                     print("Tracing will not be enabled.")
             return
 
-    mlflow.pydantic_ai.autolog()
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
+    mlflow.pydantic_ai.autolog()
     if logger is not None:
         logger.info("DSPy logging setup complete.")
     else:

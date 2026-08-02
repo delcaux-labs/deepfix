@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from deepfix_core.models import Artifacts
 from deepfix_kb import KnowledgeBridge
+import mlflow
 
 from .agents.artifact_analyzers import (
     DatasetArtifactsAnalyzer,
@@ -52,6 +53,7 @@ class ArtifactAnalysisCoordinator(Agent):
             LOGGER.error(f"Error with agent {agent_name}:\n {traceback.format_exc()}")
             raise e
 
+    @mlflow.trace(name="ArtifactAnalysisCoordinator.arun")
     async def _acall(self, context: AgentContext) -> ArtifactAnalysisResult:
         """Analyze artifacts asynchronously and return results.
 
