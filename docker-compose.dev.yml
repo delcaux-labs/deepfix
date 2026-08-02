@@ -94,6 +94,8 @@ services:
       - MLFLOW_SERVER_DISABLE_SECURITY_MIDDLEWARE=true
     volumes:
       - ./server_data/mlflow:/app
+    depends_on:
+      - deepfix-db
     command: >
       mlflow server
       --host 0.0.0.0
