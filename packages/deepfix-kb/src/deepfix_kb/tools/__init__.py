@@ -1,6 +1,6 @@
 """DSPy tool definitions for agent consumption."""
 
-from .dspy_tools import (
+from .tools import (
     KnowledgeLookupTool,
     ResearchTool,
     WebSearchTool,

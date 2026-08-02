@@ -87,6 +87,15 @@ class KnowledgeBridge:
 
         # Log available sources
         logger.info(f"Available sources: {self.retriever.available_sources}")
+    
+    @property
+    def available_sources(self,) -> list[str]:
+        return self.retriever.available_sources
+    
+    @property
+    def has_available_sources(self,) -> bool:
+        """Check if there are any available sources."""
+        return bool(self.available_sources)
 
     @property
     def perplexity(self) -> PerplexitySonarRetriever:

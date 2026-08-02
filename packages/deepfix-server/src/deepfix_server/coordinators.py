@@ -35,7 +35,7 @@ class ArtifactAnalysisCoordinator(Agent):
         # initialize agents and loaders
         self.analyzer_agents = self._initialize_analyzer_agents()
         self.cross_artifact_reasoning_agent = CrossArtifactReasoningAgent(
-            llm_config=self._llm_config,
+            llm_config=self.llm_config,
             knowledge_bridge=self.knowledge_bridge,
         )
 
@@ -52,7 +52,7 @@ class ArtifactAnalysisCoordinator(Agent):
             LOGGER.error(f"Error with agent {agent_name}:\n {traceback.format_exc()}")
             raise e
 
-    async def aforward(self, context: AgentContext) -> ArtifactAnalysisResult:
+    async def _acall(self, context: AgentContext) -> ArtifactAnalysisResult:
         """Analyze artifacts asynchronously and return results.
 
         Args:
@@ -85,12 +85,6 @@ class ArtifactAnalysisCoordinator(Agent):
         )
         return output
 
-    def forward(self, context: AgentContext) -> ArtifactAnalysisResult:
-        """Run aforward synchronously in a separate thread to avoid event loop conflicts."""
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(context))
-            return future.result()
-
     async def arun(self, context: AgentContext) -> ArtifactAnalysisResult:
         """Run the coordinator asynchronously with error handling.
 
@@ -101,7 +95,7 @@ class ArtifactAnalysisCoordinator(Agent):
             ArtifactAnalysisResult with analysis results or error message if execution fails.
         """
         try:
-            return await self.acall(context)
+            return await self._acall(context)
         except Exception as e:
             LOGGER.error(
                 f"Error with coordinator {self.agent_name}:\n {traceback.format_exc()}"
@@ -142,8 +136,8 @@ class ArtifactAnalysisCoordinator(Agent):
     def _initialize_analyzer_agents(self) -> List[ArtifactAnalyzer]:
         """Initialize specialized analyzer agents"""
         agents = [
-            DeepchecksArtifactsAnalyzer(config=self._llm_config),
-            DatasetArtifactsAnalyzer(config=self._llm_config),
-            ModelCheckpointArtifactsAnalyzer(config=self._llm_config),
+            DeepchecksArtifactsAnalyzer(config=self.llm_config),
+            DatasetArtifactsAnalyzer(config=self.llm_config),
+            ModelCheckpointArtifactsAnalyzer(config=self.llm_config),
         ]
         return agents

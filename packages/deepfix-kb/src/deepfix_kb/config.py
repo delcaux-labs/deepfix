@@ -151,7 +151,6 @@ class KnowledgeBridgeConfig(BaseSettings):
         max_results_per_source: Max results from each source.
         max_total_results: Max total results.
         enable_local_kb: Enable local knowledge base.
-        enable_synthesis: Enable result synthesis by default.
     """
 
     model_config = SettingsConfigDict(
@@ -213,7 +212,17 @@ class KnowledgeBridgeConfig(BaseSettings):
         validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB"),
         description="Enable local KB",
     )
-    enable_synthesis: bool = Field(True, description="Enable synthesis by default")
+    enable_deduplication: bool = Field(
+        True, 
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_DEDUPLICATION"), 
+        description="Enable result deduplication"
+    )
+    similarity_threshold: float = Field(
+        0.85, 
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_SIMILARITY_THRESHOLD"), 
+        ge=0.0, le=1.0, 
+        description="Similarity threshold for deduplication"
+    )
 
     # Private caches for lazily-built sub-configs
     _tavily: Optional[TavilyConfig] = None

@@ -38,7 +38,7 @@ def display_settings():
     # Mask API key if present
     api_key_display = "[red]Missing[/red]"
     if settings.llm_api_key:
-        api_key_display = f"{settings.llm_api_key[:8]}...{settings.llm_api_key[-4:]}"
+        api_key_display = f"{settings.llm_api_key[:4]}..."
     llm_table.add_row("API Key", api_key_display)
     
     # Database Settings Table

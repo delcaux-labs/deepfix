@@ -14,7 +14,10 @@ from copy import deepcopy
 from typing import Dict, Optional
 
 from deepfix_kb import KnowledgeBridge
+from deepfix_kb.tools import create_knowledge_tools
 
+from pydantic_ai import Agent as PydanticAgent
+from ..agent_models import CrossArtifactReasoningResult
 from ..config import LLMConfig
 from ..llm import create_model
 from ..logging import get_logger
@@ -48,19 +51,12 @@ class CrossArtifactReasoningAgent(Agent):
         """
         super().__init__(config=llm_config)
         self.knowledge_bridge = knowledge_bridge
-        self.num_attempts = num_attempts
-
-        # Build the Pydantic AI Agent for cross-artifact reasoning
-        from ..agent_models import CrossArtifactReasoningResult
-
-        from pydantic_ai import Agent as PydanticAgent
+        self.num_attempts = num_attempts      
 
         model = create_model(llm_config) if llm_config else None
 
         tools_list = []
-        if self.knowledge_bridge:
-            from deepfix_kb.tools import create_knowledge_tools
-
+        if self.knowledge_bridge and self.knowledge_bridge.has_available_sources:
             tools_list = create_knowledge_tools(self.knowledge_bridge, include_hybrid=False)
 
         self.agent = PydanticAgent(
@@ -70,18 +66,6 @@ class CrossArtifactReasoningAgent(Agent):
             tools=tools_list,
         )
 
-    def run(
-        self,
-        previous_analyses: Dict[str, AgentResult],
-        output_language: str = "english",
-    ) -> AgentResult:
-        """Run synchronously."""
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                asyncio.run, self.arun(previous_analyses, output_language)
-            )
-            return future.result()
-
     async def arun(
         self,
         previous_analyses: Dict[str, AgentResult],
@@ -89,34 +73,14 @@ class CrossArtifactReasoningAgent(Agent):
     ) -> AgentResult:
         """Run with error handling."""
         try:
-            return await self.acall(previous_analyses, output_language)
+            return await self._acall(previous_analyses, output_language)
         except Exception as e:
             LOGGER.error(
                 "Error with agent %s:\n%s", self.agent_name, traceback.format_exc()
             )
             return AgentResult(agent_name=self.agent_name, error_message=str(e))
 
-    async def acall(
-        self,
-        previous_analyses: Dict[str, AgentResult],
-        output_language: str = "english",
-    ) -> AgentResult:
-        """Alias for aforward."""
-        return await self.aforward(previous_analyses, output_language)
-
-    def forward(
-        self,
-        previous_analyses: Dict[str, AgentResult],
-        output_language: str = "english",
-    ) -> AgentResult:
-        """Synchronous forward."""
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                asyncio.run, self.aforward(previous_analyses, output_language)
-            )
-            return future.result()
-
-    async def aforward(
+    async def _acall(
         self,
         previous_analyses: Dict[str, AgentResult],
         output_language: str = "english",
@@ -143,13 +107,14 @@ class CrossArtifactReasoningAgent(Agent):
         for i in range(self.num_attempts):
             LOGGER.debug("Self-consistency pass %d/%d", i + 1, self.num_attempts)
             result = await self.agent.run(reasoning_prompt)
-            completions.append(result.data)
+            completions.append(result.output)
 
         # Consolidate: have the agent compare all completions and produce a final result
         consolidation_prompt = self._build_consolidation_prompt(
             completions, previous_analyses, output_language
         )
         final_result = await self.agent.run(consolidation_prompt)
+        output_data = final_result.output
 
         # Collect analyzed artifacts and retrieved knowledge from inputs
         analyzed_artifacts: list = []
@@ -191,7 +156,7 @@ class CrossArtifactReasoningAgent(Agent):
         analyses_json = json.dumps(analyses_dict, indent=2, default=str)
 
         return (
-            "You are analyzing findings from multiple ML system analysis agents. "
+            "You are analyzing findings from multiple Machine Learning system analysis agents. "
             "Synthesize their individual findings into holistic insights.\n\n"
             f"## Previous Analyses\n\n{analyses_json}\n\n"
             f"Output language: {output_language}\n\n"
@@ -226,39 +191,39 @@ class CrossArtifactReasoningAgent(Agent):
     def system_prompt(self) -> str:
         return """You are an expert ML debugging consultant analyzing findings from multiple ML system analysis agents. Your role is to synthesize their individual findings into holistic insights that help users understand the overall health and validity of their ML experiment.
 
-## Your Expertise Areas:
-- Data quality and integrity assessment
-- Training dynamics and performance analysis
-- Experimental validity and reproducibility
-- Causal relationship identification
-- Production readiness evaluation
+        ## Your Expertise Areas:
+        - Data quality and integrity assessment
+        - Training dynamics and performance analysis
+        - Experimental validity and reproducibility
+        - Causal relationship identification
+        - Production readiness evaluation
 
-## Analysis Framework:
-When reviewing agent findings, consider these key relationships:
+        ## Analysis Framework:
+        When reviewing agent findings, consider these key relationships:
 
-1. **Data-Performance Correlations**:
-- Excellent performance + poor data quality = potential data leakage
-- Poor performance + good data quality = model/training issues
-- Inconsistent performance + data drift = deployment risk
+        1. **Data-Performance Correlations**:
+        - Excellent performance + poor data quality = potential data leakage
+        - Poor performance + good data quality = model/training issues
+        - Inconsistent performance + data drift = deployment risk
 
-2. **Training-Configuration Consistency**:
-- Aggressive hyperparameters + stable training = configuration mismatch
-- Conservative settings + unstable training = underlying data issues
-- Parameter changes + performance shifts = causal relationships
+        2. **Training-Configuration Consistency**:
+        - Aggressive hyperparameters + stable training = configuration mismatch
+        - Conservative settings + unstable training = underlying data issues
+        - Parameter changes + performance shifts = causal relationships
 
-3. **Experimental Integrity**:
-- Version mismatches across artifacts = invalid experiment
-- Temporal inconsistencies = mixed experimental runs
-- Missing artifacts = incomplete analysis
+        3. **Experimental Integrity**:
+        - Version mismatches across artifacts = invalid experiment
+        - Temporal inconsistencies = mixed experimental runs
+        - Missing artifacts = incomplete analysis
 
-4. **Causal Chain Analysis**:
-- Identify root causes vs. symptoms
-- Trace problems to their origins
-- Suggest intervention points
+        4. **Causal Chain Analysis**:
+        - Identify root causes vs. symptoms
+        - Trace problems to their origins
+        - Suggest intervention points
 
-## Output Requirements:
-- Prioritize findings by severity and confidence
-- Provide clear causal explanations when possible
-- Suggest specific, actionable remediation steps
-- Indicate confidence levels for all insights
-- Highlight critical risks for production deployment"""
+        ## Output Requirements:
+        - Prioritize findings by severity and confidence
+        - Provide clear causal explanations when possible
+        - Suggest specific, actionable remediation steps
+        - Indicate confidence levels for all insights
+        - Highlight critical risks for production deployment"""

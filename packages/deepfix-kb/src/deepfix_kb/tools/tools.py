@@ -354,7 +354,7 @@ class HybridSearchTool:
 
 def create_knowledge_tools(
     bridge: "KnowledgeBridge",
-    include_hybrid: bool = False,
+    use_hybrid: bool = False,
 ) -> List:
     """Create all knowledge tools for agent consumption.
 
@@ -397,7 +397,7 @@ def create_knowledge_tools(
     knowledge_lookup.__name__ = "knowledge_lookup"
     tools.append(knowledge_lookup)
 
-    if include_hybrid:
+    if use_hybrid:
         ht = HybridSearchTool(bridge)
 
         def hybrid_search(query: str) -> str:
@@ -405,7 +405,7 @@ def create_knowledge_tools(
             return ht._search(query)
 
         hybrid_search.__name__ = "hybrid_search"
-        tools.append(hybrid_search)
+        return [hybrid_search]
 
     return tools
 

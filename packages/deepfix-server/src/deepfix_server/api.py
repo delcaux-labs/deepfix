@@ -21,18 +21,18 @@ from .config import settings, LLMConfig
 from .coordinators import ArtifactAnalysisCoordinator
 from .database import get_db, get_engine, init_database, Base
 from .db_models import AnalysisJob
-from .logging import get_logger, setup_dspy_logging
+from .logging import get_logger, setup_mlflow_tracing
 from .models import AgentContext
 
 LOGGER = get_logger(__name__)
 
 
-def setup_llm_logging():
+def setup_llm_tracing():
     """Setup logging for LLM traces."""
-    if os.getenv("MLFLOW_EXP_NAME") and os.getenv("MLFLOW_TRACKING_URI"):
-        setup_dspy_logging(
-            experiment_name=os.getenv("MLFLOW_EXP_NAME"),
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
+    if settings.mlflow_exp_name and settings.mlflow_tracking_uri:
+        setup_mlflow_tracing(
+            experiment_name=settings.mlflow_exp_name,
+            tracking_uri=settings.mlflow_tracking_uri,
         )
     else:
         LOGGER.warning(
@@ -44,7 +44,7 @@ def setup_llm_logging():
 async def lifespan(app: FastAPI):
     """Lifecycle management for the FastAPI application."""
     # Startup logic
-    setup_llm_logging()
+    setup_llm_tracing()
 
     # Initialize database
     init_database(settings.database_url, settings.database_echo)

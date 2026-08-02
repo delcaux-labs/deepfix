@@ -17,7 +17,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
-
+import hashlib
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,10 +40,10 @@ def _get_session_local():
     return _SessionLocal
 
 
-class DSPyCache(_get_base()):
+class Cache(_get_base()):
     """LLM cache model for database-backed caching"""
 
-    __tablename__ = "dspy_cache"
+    __tablename__ = "llm_request_cache"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     cache_key = Column(String, unique=True, nullable=False, index=True)  # SHA256 hash
@@ -57,7 +57,7 @@ class DSPyCache(_get_base()):
     )
 
 
-class DSPyDatabaseCache:
+class DatabaseCache:
     """Database-backed cache for LLM calls (formerly DSPy cache).
 
     This cache stores LLM request/response pairs in a PostgreSQL database,
@@ -73,9 +73,6 @@ class DSPyDatabaseCache:
         Args:
             **kwargs: Additional arguments (for backward compatibility).
         """
-        self.enable_disk_cache = True
-        self.disk_cache = {}
-        self.disk_cache_dir = os.getenv("DSPY_CACHEDIR", ".dspy_cache")
         LOGGER.info("Initialized LLM database cache")
 
     @staticmethod
@@ -84,8 +81,6 @@ class DSPyDatabaseCache:
 
         Uses SHA256 hash of messages + model name, ignoring specified args.
         """
-        import hashlib
-
         key_dict = {k: v for k, v in request.items() if k not in (ignored_args or [])}
         key_str = json.dumps(key_dict, sort_keys=True, default=str)
         return hashlib.sha256(key_str.encode()).hexdigest()
@@ -115,20 +110,11 @@ class DSPyDatabaseCache:
             LOGGER.debug(f"Failed to generate cache key for request: {request}")
             return None
 
-        if self.enable_disk_cache and key in self.disk_cache:
-            response = self.disk_cache[key]
-            response = copy.deepcopy(response)
-            if hasattr(response, "usage"):
-                # Clear the usage data when cache is hit, because no LM call is made
-                response.usage = {}
-                response.cache_hit = True
-            return response
-
         db = _get_session_local()()
 
         try:
             # Query for cache entry
-            cache_entry = db.query(DSPyCache).filter(DSPyCache.cache_key == key).first()
+            cache_entry = db.query(Cache).filter(Cache.cache_key == key).first()
 
             if cache_entry:
                 # Cache hit - increment counter and update timestamp
@@ -143,8 +129,6 @@ class DSPyDatabaseCache:
                     cache_entry.model_name,
                     cache_entry.hit_count,
                 )
-                if self.enable_disk_cache:
-                    self.disk_cache[key] = response
                 if hasattr(response, "usage"):
                     response.usage = {}
                     response.cache_hit = True
@@ -186,17 +170,10 @@ class DSPyDatabaseCache:
         key = self.cache_key(request, ignored_args_for_cache_key)
         model_name = request.get("model", "unknown")
 
-        if self.enable_disk_cache:
-            try:
-                self.disk_cache[key] = value
-            except Exception as e:
-                # Disk cache writing can fail for different reasons, e.g. disk full or the `value` is not picklable.
-                LOGGER.debug(f"Failed to put value in disk cache: {value}, {e}")
-
         db = _get_session_local()()
         try:
             # Check if entry already exists (race condition protection)
-            existing = db.query(DSPyCache).filter(DSPyCache.cache_key == key).first()
+            existing = db.query(Cache).filter(Cache.cache_key == key).first()
             if existing:
                 # Entry already exists, no need to insert again
                 LOGGER.debug("Cache entry already exists for key=%s...", key[:16])
@@ -207,7 +184,7 @@ class DSPyDatabaseCache:
             response_json = json.dumps(value, default=str)
 
             # Create new cache entry
-            cache_entry = DSPyCache(
+            cache_entry = Cache(
                 cache_key=key,
                 model_name=model_name,
                 request_json=request_json,

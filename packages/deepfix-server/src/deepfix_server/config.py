@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     database_echo: bool = Field(default=False, alias="DEEPFIX_SERVER_DATABASE_ECHO")
     job_ttl_hours: int = Field(default=3, alias="DEEPFIX_JOB_TTL_HOURS")
 
+    #Mlflow
+    mlflow_exp_name: str = Field(default="deepfix-server", alias="MLFLOW_EXP_NAME")
+    mlflow_tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
+    
+
     def get_llm_config(self) -> LLMConfig:
         """Create an LLMConfig instance from current settings."""
         return LLMConfig(

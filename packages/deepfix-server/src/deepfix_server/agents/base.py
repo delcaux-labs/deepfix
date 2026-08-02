@@ -10,17 +10,19 @@ import asyncio
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, List, Optional
-
+from abc import ABC, abstractmethod
 from ..config import LLMConfig, PromptConfig
 from ..llm import create_agent_for_analysis
 from ..logging import get_logger
 from ..models import AgentContext, AgentResult, Artifacts
 from ..prompt_builders import PromptBuilder
+from ..agent_models import ArtifactAnalysisResult
+
 
 LOGGER = get_logger(__name__)
 
 
-class Agent:
+class Agent(ABC):
     """Base class for all analysis agents.
 
     Provides common functionality for LLM configuration and context management.
@@ -43,7 +45,7 @@ class Agent:
         assert (config is None) or isinstance(config, LLMConfig), (
             "config must be an instance of LLMConfig"
         )
-        self._llm_config = config
+        self.llm_config = config
         self.agent_name = self.__class__.__name__
         if config is None:
             LOGGER.warning(
@@ -62,20 +64,30 @@ class Agent:
         """
         return ""
 
-    def forward(self, *args: Any, **kwargs: Any) -> Any:
-        """Forward method to be implemented by subclasses.
+    def run(self, context: AgentContext) -> AgentResult:
+        """Run the analyzer synchronously.
 
         Args:
-            *args: Variable positional arguments.
-            **kwargs: Variable keyword arguments.
+            context: Agent context containing artifacts and configuration.
 
         Returns:
-            Result of the agent's analysis.
-
-        Raises:
-            NotImplementedError: Always raised, must be implemented by subclasses.
+            AgentResult with analysis or error message if execution fails.
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, self.arun(context))
+            return future.result()
+    
+    @abstractmethod
+    async def arun(self, context: AgentContext) -> AgentResult:
+        """Run the analyzer asynchronously.
+
+        Args:
+            context: Agent context containing artifacts and configuration.
+
+        Returns:
+            AgentResult with analysis or error message if execution fails.
+        """
+        raise NotImplementedError
 
 
 class ArtifactAnalyzer(Agent):
@@ -104,10 +116,7 @@ class ArtifactAnalyzer(Agent):
             config_prompt_builder: Optional prompt builder configuration.
         """
         super().__init__(config=config)
-        self.prompt_builder = PromptBuilder(config=config_prompt_builder)
-
-        # Build the Pydantic AI Agent — replaces dspy.ChainOfThought(signature)
-        from ..agent_models import ArtifactAnalysisResult
+        self.prompt_builder = PromptBuilder(config=config_prompt_builder)       
 
         self.agent = create_agent_for_analysis(
             config=config,
@@ -134,19 +143,6 @@ class ArtifactAnalyzer(Agent):
             )
         return True
 
-    def run(self, context: AgentContext) -> AgentResult:
-        """Run the analyzer synchronously.
-
-        Args:
-            context: Agent context containing artifacts and configuration.
-
-        Returns:
-            AgentResult with analysis or error message if execution fails.
-        """
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.arun(context))
-            return future.result()
-
     async def arun(self, context: AgentContext) -> AgentResult:
         """Run the analyzer asynchronously with error handling.
 
@@ -157,7 +153,25 @@ class ArtifactAnalyzer(Agent):
             AgentResult with analysis or error message if execution fails.
         """
         try:
-            return await self.acall(context)
+            LOGGER.info("Running %s agent...", self.agent_name)
+
+            self._check_artifacts(context.artifacts)
+            prompt = self.prompt_builder.build_prompt(
+                artifacts=context.artifacts, context=None
+            )
+
+            # Construct the user message with language instruction
+            user_message = f"Output language: {context.language}\n\n{prompt}"
+
+            # Pydantic AI Agent returns a RunResult with .data as the structured model
+            result = await self.agent.run(user_message)
+
+            return AgentResult(
+                agent_name=self.agent_name,
+                analysis=result.output.analysis,
+                analyzed_artifacts=[type(a).__name__ for a in context.artifacts],
+            )
+
         except Exception as e:
             LOGGER.error(
                 "Error running %s agent: %s",
@@ -165,54 +179,6 @@ class ArtifactAnalyzer(Agent):
                 traceback.format_exc(),
             )
             return AgentResult(agent_name=self.agent_name, error_message=str(e))
-
-    def forward(self, context: AgentContext) -> AgentResult:
-        """Analyze artifacts and return results (synchronous).
-
-        Args:
-            context: Agent context containing artifacts and language preference.
-
-        Returns:
-            AgentResult containing analysis results and analyzed artifact types.
-        """
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, self.aforward(context))
-            return future.result()
-
-    async def acall(self, context: AgentContext) -> AgentResult:
-        """Alias for aforward to maintain the DSPy Module convention."""
-        return await self.aforward(context)
-
-    async def aforward(self, context: AgentContext) -> AgentResult:
-        """Analyze artifacts asynchronously using Pydantic AI Agent.
-
-        Builds a prompt from artifacts, sends it to the configured LLM via
-        the Pydantic AI Agent, and returns the structured result as an AgentResult.
-
-        Args:
-            context: Agent context containing artifacts and language preference.
-
-        Returns:
-            AgentResult containing analysis results and analyzed artifact types.
-        """
-        LOGGER.info("Running %s agent...", self.agent_name)
-
-        self._check_artifacts(context.artifacts)
-        prompt = self.prompt_builder.build_prompt(
-            artifacts=context.artifacts, context=None
-        )
-
-        # Construct the user message with language instruction
-        user_message = f"Output language: {context.language}\n\n{prompt}"
-
-        # Pydantic AI Agent returns a RunResult with .data as the structured model
-        result = await self.agent.run(user_message)
-
-        return AgentResult(
-            agent_name=self.agent_name,
-            analysis=result.output.analysis,
-            analyzed_artifacts=[type(a).__name__ for a in context.artifacts],
-        )
 
     @property
     def supported_artifact_types(self):

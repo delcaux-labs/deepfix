@@ -111,11 +111,7 @@ class PerplexitySonarRetriever(BaseRetriever):
         """Initialize Perplexity Sonar client via OpenRouter with Pydantic AI.
 
         Args:
-            api_key: OpenRouter API key. If not provided, loads from
-                     OPENROUTER_API_KEY environment variable.
-            model: Perplexity model variant to use.
-            temperature: Sampling temperature (0.0 to 2.0).
-            max_tokens: Maximum tokens in response (None for model default).
+            config: Perplexity config
         """
         self.config = config
 
@@ -186,7 +182,7 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     @property
     def is_available(self) -> bool:
-        return self._api_key is not None
+        return self.config.api_key is not None
 
     async def retrieve(
         self,
