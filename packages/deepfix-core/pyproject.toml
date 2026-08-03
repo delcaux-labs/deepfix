@@ -3,7 +3,7 @@ name = "deepfix_core"
 version = "0.1.0"
 readme = "README.md"
 description = "DeepFix core modules shared between SDK and Server."
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
     "omegaconf>=2.3.0",
     "pandas",

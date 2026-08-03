@@ -26,10 +26,13 @@ from .retrieval import (
     TavilySearchRetriever,
 )
 
+from .templates import TemplateRenderer
+
 __all__ = [
     # Main interface
     "KnowledgeBridge",
     "KnowledgeResponse",
+    "TemplateRenderer",
     # Models
     "RetrievalResult",
     "RetrievalStrategy",
@@ -41,3 +44,4 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
+

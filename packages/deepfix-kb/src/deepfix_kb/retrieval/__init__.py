@@ -11,6 +11,9 @@ from .perplexity_client import (
 )
 from .tavily_client import TavilySearchRetriever
 
+from deepfix_kb.config import RetrievalStrategy
+from deepfix_kb.models import RetrievalResult
+
 __all__ = [
     "BaseRetriever",
     "TavilySearchRetriever",
@@ -20,4 +23,7 @@ __all__ = [
     "PerplexityAPIError",
     "PerplexityResponseError",
     "HybridRetriever",
+    "RetrievalResult",
+    "RetrievalStrategy",
 ]
+

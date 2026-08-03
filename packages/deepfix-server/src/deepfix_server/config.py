@@ -1,9 +1,10 @@
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class PromptConfig(BaseModel):
     """Configuration for prompt generation.
@@ -57,6 +58,81 @@ class LLMConfig(BaseModel):
     track_usage: bool = Field(default=True, description="Track usage")
 
 
+class AutonomousFixConfig(BaseModel):
+    """Configuration for OpenHands autonomous fix execution and OTEL observability.
+
+    Attributes:
+        openhands_llm_api_key: Optional API key for OpenHands LLM provider.
+        openhands_llm_model: LLM model for OpenHands.
+        openhands_llm_base_url: Optional base URL for OpenHands LLM.
+        openhands_docker_image: Docker image for OpenHands agent server workspace.
+        openhands_sandbox_port: Base host port for sandbox.
+        openhands_server_url: URL of the local OpenHands agent server.
+        otel_exporter_otlp_endpoint: OTEL OTLP exporter endpoint.
+        otel_exporter_otlp_headers: OTEL OTLP exporter headers.
+        otel_exporter_otlp_traces_protocol: OTEL OTLP traces protocol.
+    """
+
+    openhands_llm_api_key: Optional[str] = Field(
+        default=None, description="API key for OpenHands LLM provider"
+    )
+    openhands_llm_model: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929",
+        description="Model name for OpenHands LLM",
+    )
+    openhands_llm_base_url: Optional[str] = Field(
+        default=None, description="Base URL for OpenHands LLM provider"
+    )
+    openhands_docker_image: str = Field(
+        default="ghcr.io/openhands/agent-server:latest-python",
+        description="Docker image for OpenHands sandbox",
+    )
+    openhands_sandbox_port: int = Field(
+        default=8010, description="Base host port for sandbox container"
+    )
+    openhands_use_local_server: bool = Field(
+        default=True,
+        description="Whether to use a local OpenHands agent server instead of DockerWorkspace",
+    )
+    openhands_server_url: str = Field(
+        default="http://localhost:60000",
+        description="URL of the local OpenHands agent server",
+    )
+
+
+    # OTEL Settings
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://localhost:5000",
+        description="OTEL OTLP exporter endpoint",
+    )
+    otel_exporter_otlp_headers: str = Field(
+        default="x-mlflow-experiment-id=0",
+        description="OTEL OTLP exporter headers",
+    )
+    otel_exporter_otlp_traces_protocol: str = Field(
+        default="http/protobuf",
+        description="OTEL OTLP traces protocol",
+    )
+
+    def setup_otel_environment(self, experiment_id: Union[str, int]) -> Dict[str, str]:
+        """Configure OpenTelemetry environment variables for MLflow tracing.
+
+        Args:
+            experiment_id: MLflow experiment ID or name.
+
+        Returns:
+            Dict[str, str]: Dictionary of set environment variables.
+        """
+        env_vars = {
+            "OTEL_EXPORTER_OTLP_ENDPOINT": self.otel_exporter_otlp_endpoint,
+            "OTEL_EXPORTER_OTLP_HEADERS": f"x-mlflow-experiment-id={experiment_id}",
+            "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": self.otel_exporter_otlp_traces_protocol,
+        }
+        for key, value in env_vars.items():
+            os.environ[key] = str(value)
+        return env_vars
+
+
 class Settings(BaseSettings):
     """Global application settings loaded from environment variables."""
 
@@ -66,8 +142,8 @@ class Settings(BaseSettings):
 
     # LLM Settings
     llm_api_key: Optional[str] = Field(default=None, alias="DEEPFIX_LLM_API_KEY")
-    llm_base_url: Optional[str] = Field(default=None, alias="DEEPFIX_LLM_BASE_URL")
-    llm_model_name: str = Field(default="gpt-4o", alias="DEEPFIX_LLM_MODEL_NAME")
+    llm_base_url: Optional[str] = Field(default="https://api.tensorix.ai/v1", alias="DEEPFIX_LLM_BASE_URL")
+    llm_model_name: str = Field(default="openai/deepseek/deepseek-v4-flash-0731", alias="DEEPFIX_LLM_MODEL_NAME")
     llm_temperature: float = Field(default=0.7, alias="DEEPFIX_LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=8000, alias="DEEPFIX_LLM_MAX_TOKENS")
     llm_cache: bool = Field(default=True, alias="DEEPFIX_LLM_CACHE")
@@ -80,10 +156,50 @@ class Settings(BaseSettings):
     database_echo: bool = Field(default=False, alias="DEEPFIX_SERVER_DATABASE_ECHO")
     job_ttl_hours: int = Field(default=3, alias="DEEPFIX_JOB_TTL_HOURS")
 
-    #Mlflow
+    # Mlflow
     mlflow_exp_name: str = Field(default="deepfix-server", alias="MLFLOW_EXP_NAME")
     mlflow_tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
-    
+
+    # Autonomous Fix System Settings
+    openhands_llm_api_key: Optional[str] = Field(default=None, alias="OPENHANDS_LLM_API_KEY")
+    openhands_llm_model: str = Field(default="openai/deepseek/deepseek-v4-flash-0731", alias="OPENHANDS_LLM_MODEL")
+    openhands_llm_base_url: Optional[str] = Field(default="https://api.tensorix.ai/v1", alias="OPENHANDS_LLM_BASE_URL")
+    openhands_docker_image: str = Field(default="ghcr.io/openhands/agent-server:latest-python", alias="OPENHANDS_DOCKER_IMAGE")
+    openhands_sandbox_port: int = Field(default=8010, alias="OPENHANDS_SANDBOX_PORT")
+    openhands_use_local_server: bool = Field(default=True, alias="OPENHANDS_USE_LOCAL_SERVER")
+    openhands_server_url: str = Field(default="http://localhost:60000", alias="OPENHANDS_SERVER_URL")
+    max_fix_iterations: int = Field(default=5, alias="MAX_FIX_ITERATIONS")
+    fix_execution_timeout: int = Field(default=300, alias="FIX_EXECUTION_TIMEOUT")
+    target_metric_name: str = Field(default="accuracy", alias="TARGET_METRIC_NAME")
+    target_metric_value: float = Field(default=0.90, alias="TARGET_METRIC_VALUE")
+    plateau_threshold: float = Field(default=0.01, alias="PLATEAU_THRESHOLD")
+    plateau_window: int = Field(default=2, alias="PLATEAU_WINDOW")
+
+    # OTEL Settings
+    otel_exporter_otlp_endpoint: str = Field(default="http://localhost:5000", alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+    otel_exporter_otlp_headers: str = Field(default="x-mlflow-experiment-id=0", alias="OTEL_EXPORTER_OTLP_HEADERS")
+    otel_exporter_otlp_traces_protocol: str = Field(default="http/protobuf", alias="OTEL_EXPORTER_OTLP_TRACES_PROTOCOL")
+
+    def get_autonomous_fix_config(self) -> AutonomousFixConfig:
+        """Create an AutonomousFixConfig instance from current settings."""
+        return AutonomousFixConfig(
+            openhands_llm_api_key=self.openhands_llm_api_key,
+            openhands_llm_model=self.openhands_llm_model,
+            openhands_llm_base_url=self.openhands_llm_base_url,
+            openhands_docker_image=self.openhands_docker_image,
+            openhands_sandbox_port=self.openhands_sandbox_port,
+            openhands_use_local_server=self.openhands_use_local_server,
+            openhands_server_url=self.openhands_server_url,
+            max_fix_iterations=self.max_fix_iterations,
+            fix_execution_timeout=self.fix_execution_timeout,
+            target_metric_name=self.target_metric_name,
+            target_metric_value=self.target_metric_value,
+            plateau_threshold=self.plateau_threshold,
+            plateau_window=self.plateau_window,
+            otel_exporter_otlp_endpoint=self.otel_exporter_otlp_endpoint,
+            otel_exporter_otlp_headers=self.otel_exporter_otlp_headers,
+            otel_exporter_otlp_traces_protocol=self.otel_exporter_otlp_traces_protocol,
+        )
 
     def get_llm_config(self) -> LLMConfig:
         """Create an LLMConfig instance from current settings."""
@@ -100,6 +216,7 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
 
 class TrainingDynamicsConfig(BaseModel):
     """Configuration for training dynamics analysis.

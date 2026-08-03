@@ -3,7 +3,7 @@ name = "deepfix_server"
 version = "0.1.0"
 description = "DeepFix server."
 readme = "README.md"
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
     "pydantic-ai>=0.0.50",
     "httpx>=0.28.1",
@@ -20,6 +20,10 @@ dependencies = [
     "deepfix-kb",
     "seaborn",
     "pydantic-settings>=2.11.0",
+    "openhands-sdk",
+    "openhands-tools",
+    "openhands-workspace",
+    "openhands-agent-server"
 ]
 
 [tool.pytest.ini_options]

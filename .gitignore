@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 /server_mlflow_data
+.deepfix_datasets
 
 nohup.out
 ICST-2026/

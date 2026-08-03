@@ -44,7 +44,7 @@ COPY packages/deepfix-server ./packages/deepfix-server
 COPY packages/deepfix-kb ./packages/deepfix-kb
 
 # Install Python deps into a project-local venv
-RUN uv venv .venv
+RUN uv venv --python 3.11 .venv
 RUN uv pip install /app/packages/deepfix-core
 RUN uv pip install /app/packages/deepfix-server
 RUN uv pip install /app/packages/deepfix-portal

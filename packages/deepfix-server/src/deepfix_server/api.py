@@ -7,13 +7,17 @@ from typing import Optional
 import uvicorn
 import json
 import asyncio
+import pandas as pd
 from deepfix_core.models import (
     APIRequest,
     APIResponse,
     DatasetArtifacts,
     AnalysisJobStatus,
     APIJobResponse,
+    AutonomousFixRequest,
 )
+from deepfix_core.models.fixes import FinalFixReport
+from deepfix_server.openhands_executor import OpenHandsExecutor
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
@@ -91,7 +95,6 @@ def get_coordinator() -> ArtifactAnalysisCoordinator:
     llm_config = settings.get_llm_config()
     return ArtifactAnalysisCoordinator(config=llm_config)
 
-
 async def decode_agent_context(request: APIRequest) -> AgentContext:
     """Helper to convert APIRequest to AgentContext."""
     try:
@@ -118,6 +121,19 @@ async def decode_agent_context(request: APIRequest) -> AgentContext:
             detail=f"Error decoding request: {str(exc)}",
         ) from exc
 
+async def run_diagnosis(request: APIRequest) -> APIResponse:
+    coordinator = get_coordinator()
+    request_ctx = await decode_agent_context(request)
+    results = await coordinator.arun(request_ctx)
+
+    response = APIResponse(
+        agent_results=results.get_agent_results(),
+        summary=results.summary,
+        additional_outputs=results.additional_outputs,
+        error_messages=results.get_error_messages(),
+        dataset_name=request_ctx.dataset_name,
+    )
+    return response
 
 def cleanup_old_jobs(db: Session):
     """Delete jobs older than the configured TTL."""
@@ -137,7 +153,6 @@ def cleanup_old_jobs(db: Session):
         db.rollback()
         LOGGER.error(f"Error during job cleanup: {exc}")
 
-
 async def run_periodic_cleanup():
     """Run job cleanup periodically every hour."""
     from .database import get_session
@@ -152,10 +167,8 @@ async def run_periodic_cleanup():
         # Wait for 1 hour before next cleanup
         await asyncio.sleep(3600)
 
-
 async def process_analysis_job(job_id: str, request: APIRequest, db: Session):
     """Background task to process an analysis job."""
-    coordinator = get_coordinator()
 
     # Update job status to PROCESSING
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
@@ -167,16 +180,7 @@ async def process_analysis_job(job_id: str, request: APIRequest, db: Session):
     db.commit()
 
     try:
-        request_ctx = await decode_agent_context(request)
-        results = await coordinator.arun(request_ctx)
-
-        response = APIResponse(
-            agent_results=results.get_agent_results(),
-            summary=results.summary,
-            additional_outputs=results.additional_outputs,
-            error_messages=results.get_error_messages(),
-            dataset_name=request_ctx.dataset_name,
-        )
+        response = await run_diagnosis(request)
 
         job.result_data = response.model_dump_json()
         job.status = AnalysisJobStatus.COMPLETED
@@ -191,25 +195,16 @@ async def process_analysis_job(job_id: str, request: APIRequest, db: Session):
 @app.post("/v1/analyse", response_model=APIJobResponse)
 async def analyse_artifacts(
     request: APIRequest,
-    coordinator: ArtifactAnalysisCoordinator = Depends(get_coordinator),
 ):
     """Run artifact analysis synchronously and return results."""
 
-    request_ctx = await decode_agent_context(request)
-
     job_id = (
-        f"sync_{request_ctx.dataset_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        f"sync_{request.dataset_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     )
 
     try:
-        results = await coordinator.arun(request_ctx)
-        response = APIResponse(
-            agent_results=results.get_agent_results(),
-            summary=results.summary,
-            additional_outputs=results.additional_outputs,
-            error_messages=results.get_error_messages(),
-            dataset_name=request_ctx.dataset_name,
-        )
+        response = await run_diagnosis(request)
+        response.job_id = job_id
         now = datetime.now().isoformat()
         return APIJobResponse(
             job_id=job_id,
@@ -259,6 +254,67 @@ async def analyse_artifacts_async(
     )
 
 
+async def process_fix_job(job_id: str, request: AutonomousFixRequest, db: Session):
+    """Background task to process an autonomous diagnostic analysis and fix job."""
+
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        LOGGER.error(f"Job {job_id} not found in background task.")
+        return
+
+    job.status = AnalysisJobStatus.PROCESSING
+    db.commit()
+
+    try:
+        # a. Performs diagnostic analysis (existing coordinator flow)
+        response = await run_diagnosis(request)
+        response.job_id = job_id
+        job.result_data = response.model_dump_json()
+        db.commit()
+
+        # b. Instantiate OpenHandsExecutor and prepare response
+        fix_config = settings.get_autonomous_fix_config()
+        executor = OpenHandsExecutor(config=fix_config)
+
+        # Launch agent (asynchronously)
+        await executor.launch_autonomous_fix(job_id=job_id, diagnosis_response=response)
+
+    except Exception as exc:
+        LOGGER.error(f"Fix job failed to start for job {job_id}: {traceback.format_exc()}")
+        job.error = str(exc)
+        job.status = AnalysisJobStatus.FAILED
+        db.commit()
+
+
+@app.post("/v2/fix", status_code=202, response_model=APIJobResponse)
+async def fix(
+    request: AutonomousFixRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Submit autonomous diagnostic analysis and fix job and return job_id immediately."""
+    # Create new job entry
+    job = AnalysisJob(
+        request_data=request.model_dump_json(),
+        status=AnalysisJobStatus.PENDING,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    # Schedule background task
+    background_tasks.add_task(process_fix_job, job.id, request, db)
+
+    return APIJobResponse(
+        job_id=job.id,
+        status=job.status,
+        created_at=job.created_at.isoformat() if job.created_at else None,
+        updated_at=job.updated_at.isoformat() if job.updated_at else None,
+        result=None,
+        error=None,
+    )
+
+
 @app.get("/v2/jobs/{job_id}", response_model=APIJobResponse)
 async def get_job_status(job_id: str, db: Session = Depends(get_db)):
     """Retrieve the status and results of a background analysis job."""
@@ -289,6 +345,52 @@ async def get_job_status(job_id: str, db: Session = Depends(get_db)):
         response.error = job.error
 
     return response
+
+
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+class WebhookPayload(BaseModel):
+    job_id: str
+    success: bool
+    final_metrics: Dict[str, Any] = {}
+    applied_fixes: List[str] = []
+    run_id: str
+
+
+@app.post("/webhook/completion", status_code=200)
+async def webhook_completion(
+    payload: WebhookPayload,
+    db: Session = Depends(get_db),
+):
+    """Webhook for OpenHands agent to report completion."""
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == payload.job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    try:
+        if job.result_data:
+            response = APIResponse.model_validate(json.loads(job.result_data))
+        else:
+            response = APIResponse()
+
+        response.fix_report = FinalFixReport(
+            success=payload.success,
+            final_metrics=payload.final_metrics,
+            applied_fixes=payload.applied_fixes,
+            run_id=payload.run_id,
+        )
+        
+        job.result_data = response.model_dump_json()
+        job.status = AnalysisJobStatus.COMPLETED
+        db.commit()
+        return {"status": "ok"}
+    except Exception as exc:
+        LOGGER.error(f"Error processing webhook: {exc}")
+        job.status = AnalysisJobStatus.FAILED
+        job.error = str(exc)
+        db.commit()
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 def run_analyse_artifacts_api(

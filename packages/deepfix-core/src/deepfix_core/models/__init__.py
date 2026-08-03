@@ -5,7 +5,13 @@ from .analysis import (
     Recommendation,
     Severity,
 )
-from .api import APIRequest, APIResponse, APIJobResponse, AnalysisJobStatus
+from .api import (
+    APIJobResponse,
+    APIRequest,
+    APIResponse,
+    AnalysisJobStatus,
+    AutonomousFixRequest,
+)
 from .artifacts import (
     ArtifactPath,
     Artifacts,
@@ -17,15 +23,23 @@ from .artifacts import (
     DeepchecksConfig,
     DeepchecksParsedResult,
     DeepchecksResultHeaders,
+    IRStatistics,
     ModelCheckpointArtifacts,
     NLPStatistics,
     ObjectDetectionStatistics,
     TabularStatistics,
     TrainingArtifacts,
     VisionStatistics,
-    IRStatistics,
 )
 from .defaults import DataType, TaskType
+from .fixes import (
+    ExecutionResult,
+    Fix,
+    FixIteration,
+    FixSessionResult,
+    FixType,
+    StopCriteria,
+)
 
 __all__ = [
     "Artifacts",
@@ -44,6 +58,7 @@ __all__ = [
     "APIRequest",
     "APIResponse",
     "APIJobResponse",
+    "AutonomousFixRequest",
     "DataType",
     "DeepchecksParsedResult",
     "DeepchecksCheckResult",
@@ -57,4 +72,10 @@ __all__ = [
     "NLPStatistics",
     "IRStatistics",
     "BaseDatasetStatistics",
+    "FixType",
+    "Fix",
+    "FixIteration",
+    "StopCriteria",
+    "FixSessionResult",
+    "ExecutionResult",
 ]

@@ -41,6 +41,7 @@ services:
       - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXP_NAME=Deepfix-server
+      - OPENHANDS_SUPPRESS_BANNER=1
     restart: unless-stopped
     depends_on:
       - mlflow
@@ -64,7 +65,7 @@ services:
           path: ./packages/deepfix-core/pyproject.toml
         - action: rebuild
           path: ./packages/deepfix-kb/pyproject.toml
-
+  
   deepfix-db:
     image: postgres:16-alpine
     restart: unless-stopped

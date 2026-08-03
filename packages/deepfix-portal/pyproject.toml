@@ -3,7 +3,7 @@ name = "deepfix_portal"
 version = "0.1.0"
 readme = "README.md"
 description = "DeepFix Portal"
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
     "aiosmtplib>=3.0.0",
     "bcrypt==4.0.1",

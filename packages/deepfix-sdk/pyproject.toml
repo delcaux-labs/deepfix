@@ -3,7 +3,7 @@ name = "deepfix_sdk"
 version = "0.1.0"
 readme = "README.md"
 description = "DeepFix SDK to facilitate the communication with the server."
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
     "anywidget>=0.9.18",
     "datasets>=4.0.0",

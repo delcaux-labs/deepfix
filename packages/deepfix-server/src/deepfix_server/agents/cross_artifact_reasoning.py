@@ -57,7 +57,7 @@ class CrossArtifactReasoningAgent(Agent):
 
         tools_list = []
         if self.knowledge_bridge and self.knowledge_bridge.has_available_sources:
-            tools_list = create_knowledge_tools(self.knowledge_bridge, include_hybrid=False)
+            tools_list = create_knowledge_tools(self.knowledge_bridge, use_hybrid=False)
 
         self.agent = PydanticAgent(
             model=model,

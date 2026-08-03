@@ -11,7 +11,7 @@ from typing import Optional
 
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.litellm import LiteLLMProvider
 
 from .config import LLMConfig
 
@@ -30,7 +30,7 @@ def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
     """
     if config is None:
         config = LLMConfig(
-            model_name=os.getenv("DEEPFIX_LLM_MODEL_NAME", "gpt-4o"),
+            model_name=os.getenv("DEEPFIX_LLM_MODEL_NAME", "openai/gpt-4o"),
             api_key=os.getenv("DEEPFIX_LLM_API_KEY"),
             base_url=os.getenv("DEEPFIX_LLM_BASE_URL"),
             temperature=float(os.getenv("DEEPFIX_LLM_TEMPERATURE", "0.7")),
@@ -44,9 +44,9 @@ def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
     if config.api_key:
         provider_kwargs["api_key"] = config.api_key
     if config.base_url:
-        provider_kwargs["base_url"] = config.base_url
+        provider_kwargs["api_base"] = config.base_url
 
-    provider = OpenAIProvider(**provider_kwargs) if provider_kwargs else "openai"
+    provider = LiteLLMProvider(**provider_kwargs) if provider_kwargs else "openai"
 
     return OpenAIChatModel(
         model_name=config.model_name,

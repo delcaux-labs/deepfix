@@ -1,4 +1,4 @@
-FROM astral/uv:python3.11-bookworm-slim AS runtime
+FROM astral/uv:python3.12-bookworm-slim AS runtime
 WORKDIR /app
 
 LABEL maintainer="fadel.seydou@delcaux.com"
@@ -24,7 +24,7 @@ COPY packages/deepfix-server ./packages/deepfix-server
 COPY packages/deepfix-kb ./packages/deepfix-kb
 
 # Install Python deps into a project-local venv
-RUN uv venv .venv
+RUN uv venv --python 3.12
 RUN uv pip install opentelemetry-distro opentelemetry-exporter-otlp
 RUN . .venv/bin/activate && opentelemetry-bootstrap -a requirements > /tmp/otel-reqs.txt && uv pip install -r /tmp/otel-reqs.txt
 RUN uv pip install -e /app/packages/deepfix-core
@@ -47,8 +47,6 @@ EXPOSE 8844
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8844/health || exit 1
 
-# Use tini as init system for proper signal handling
-ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Launch the server
 CMD ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1"]

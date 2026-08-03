@@ -497,14 +497,14 @@ git commit -m "refactor: replace DSPy ChainOfThought with Pydantic AI in Optimiz
 Change `create_knowledge_tools` to return plain callables instead of DSPy Tool objects:
 
 ```python
-def create_knowledge_tools(bridge, include_hybrid=False):
+def create_knowledge_tools(bridge, use_hybrid=False):
     tools = [
         WebSearchTool(bridge),
         ResearchTool(bridge),
         KnowledgeLookupTool(bridge),
     ]
-    if include_hybrid:
-        tools.append(HybridSearchTool(bridge))
+    if use_hybrid:
+        return [HybridSearchTool(bridge)]
     return tools
 ```
 
@@ -601,11 +601,11 @@ git commit -m "refactor: replace DSPy with Pydantic AI in PerplexitySonarRetriev
 
 ### Task 8.3: Remove DSPy from logging.py
 
-**Objective:** Remove `setup_dspy_logging` references. Replace `mlflow.dspy.autolog()` with — nothing. MLflow tracing for Pydantic AI would be a future enhancement.
+**Objective:** Remove `setup_logging` references. Replace `mlflow.dspy.autolog()` with — nothing. MLflow tracing for Pydantic AI would be a future enhancement.
 
 **Files:**
 - Modify: `packages/deepfix-server/src/deepfix_server/logging.py`
-- Rename: `setup_dspy_logging` → `setup_llm_logging` (keep the MLflow parts, just drop `.dspy.autolog()`)
+- Rename: `setup_logging` → `setup_llm_logging` (keep the MLflow parts, just drop `.dspy.autolog()`)
 
 ---
 
