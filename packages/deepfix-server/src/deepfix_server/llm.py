@@ -14,31 +14,24 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.litellm import LiteLLMProvider
 
 from .config import LLMConfig
+from .models import ArtifactAnalysisResult, CrossArtifactReasoningResult
 
 
-def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
+def create_model(config: LLMConfig) -> OpenAIChatModel:
     """Create a Pydantic AI OpenAIChatModel from an LLMConfig.
 
     If config is None and no env API key is set, returns None so callers
     can fall back to the Pydantic AI test model.
 
     Args:
-        config: LLM configuration. If None, reads from environment.
+        config: LLM configuration.
 
     Returns:
-        Configured OpenAIChatModel instance, or None if no credentials.
+        Configured OpenAIChatModel instance.
     """
-    if config is None:
-        config = LLMConfig(
-            model_name=os.getenv("DEEPFIX_LLM_MODEL_NAME", "openai/gpt-4o"),
-            api_key=os.getenv("DEEPFIX_LLM_API_KEY"),
-            base_url=os.getenv("DEEPFIX_LLM_BASE_URL"),
-            temperature=float(os.getenv("DEEPFIX_LLM_TEMPERATURE", "0.7")),
-            max_tokens=int(os.getenv("DEEPFIX_LLM_MAX_TOKENS", "8000")),
-        )
-
+    
     if not config.api_key:
-        return None
+        raise ValueError("No LLM API key configured. Please provide LLM configuration.")
 
     provider_kwargs: dict = {}
     if config.api_key:
@@ -55,9 +48,9 @@ def create_model(config: Optional[LLMConfig] = None) -> OpenAIChatModel:
 
 
 def create_agent_for_analysis(
-    config: Optional[LLMConfig] = None,
+    config: LLMConfig,
     system_prompt: str = "",
-    output_type: Optional[type] = None,
+    output_type: Optional[ArtifactAnalysisResult | CrossArtifactReasoningResult] = None,
 ) -> PydanticAgent:
     """Create a Pydantic AI Agent configured for artifact analysis.
 
@@ -70,19 +63,8 @@ def create_agent_for_analysis(
     Returns:
         A PydanticAgent ready for ``.run()`` calls.
     """
-    if config is None:
-        config = LLMConfig(
-            model_name=os.getenv("DEEPFIX_LLM_MODEL_NAME", "gpt-4o"),
-            api_key=os.getenv("DEEPFIX_LLM_API_KEY"),
-            base_url=os.getenv("DEEPFIX_LLM_BASE_URL"),
-            temperature=float(os.getenv("DEEPFIX_LLM_TEMPERATURE", "0.7")),
-            max_tokens=int(os.getenv("DEEPFIX_LLM_MAX_TOKENS", "8000")),
-        )
-
+    
     model = create_model(config)
-    if model is None:
-        # No API key — use Pydantic AI test model (no real LLM calls)
-        return PydanticAgent("test", output_type=output_type, system_prompt=system_prompt)
 
     model_settings: dict = {}
     if config.temperature is not None:

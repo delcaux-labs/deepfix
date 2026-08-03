@@ -3,7 +3,6 @@ import sys
 from typing import Optional
 
 import typer
-from dotenv import load_dotenv
 
 from rich.console import Console
 from rich.table import Table
@@ -11,7 +10,6 @@ from rich.panel import Panel
 from rich import box
 
 from .api import run_analyse_artifacts_api
-from .coding_agents.openai_api import run_openai_api
 from .config import settings
 
 app = typer.Typer(
@@ -74,6 +72,7 @@ def launch(
     """Launch DeepFix server."""    
 
     if env_file is not None:
+        from dotenv import load_dotenv
         if not os.path.exists(env_file):
             typer.echo(f"❌ Environment file {env_file} not found", err=True)
             sys.exit(1)
@@ -88,32 +87,6 @@ def launch(
         workers=workers,
         reload=reload,
     )
-
-
-@app.command(name="launch-cursor-agent")
-def launch_cursor_agent_api(
-    port: int = typer.Option(8841, "-port", help="Port to run Cursor Agent API on"),
-    host: str = typer.Option(
-        "0.0.0.0", "-host", help="Host to bind Cursor Agent API to"
-    ),
-    fast_queue: bool = typer.Option(False, "-fast-queue", help="Fast queue"),
-    env_file: Optional[str] = typer.Option(
-        None, "-e", "--env-file", help="Environment file to load"
-    ),
-):
-    """Launch Cursor Agent API."""
-    if env_file is not None:
-        if not os.path.exists(env_file):
-            typer.echo(f"❌ Environment file {env_file} not found", err=True)
-            sys.exit(1)
-        load_dotenv(env_file)
-
-    if os.getenv("CURSOR_API_KEY") is None:
-        typer.echo("❌ CURSOR_API_KEY is not set in the environment file", err=True)
-        sys.exit(1)
-
-    typer.echo(f"🚀 Starting Cursor Agent API on {host}:{port}")
-    run_openai_api(port=port, host=host, fast_queue=fast_queue)
 
 
 def main():

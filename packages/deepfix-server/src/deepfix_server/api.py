@@ -24,9 +24,8 @@ from sqlalchemy.orm import Session
 from .config import settings, LLMConfig
 from .coordinators import ArtifactAnalysisCoordinator
 from .database import get_db, get_engine, init_database, Base
-from .db_models import AnalysisJob
 from .logging import get_logger, setup_mlflow_tracing
-from .models import AgentContext
+from .models import AgentContext, AnalysisJob
 
 LOGGER = get_logger(__name__)
 

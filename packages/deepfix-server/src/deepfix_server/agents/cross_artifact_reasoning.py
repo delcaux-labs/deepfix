@@ -17,11 +17,11 @@ from deepfix_kb import KnowledgeBridge
 from deepfix_kb.tools import create_knowledge_tools
 
 from pydantic_ai import Agent as PydanticAgent
-from ..agent_models import CrossArtifactReasoningResult
+from ..models import CrossArtifactReasoningResult, AgentResult
 from ..config import LLMConfig
 from ..llm import create_model
 from ..logging import get_logger
-from .base import Agent, AgentResult
+from .base import Agent
 
 LOGGER = get_logger(__name__)
 
@@ -191,23 +191,23 @@ class CrossArtifactReasoningAgent(Agent):
     def system_prompt(self) -> str:
         return """You are an expert ML debugging and optimization consultant. You analyze and synthesize findings from multiple specialized agents to diagnose root causes and recommend actionable fixes.
 
-Your goal is to populate structured Analysis objects consisting of "Findings" and "Recommendations".
+                Your goal is to populate structured Analysis objects consisting of "Findings" and "Recommendations".
 
-## 1. Cross-Artifact Synthesis Framework (Findings):
-When generating Findings, synthesize evidence across artifacts rather than just repeating individual agent outputs.
-- **Data-Performance Anomalies**: High performance with poor data quality suggests data leakage. Low performance with clean data points to model/hyperparameter mismatch.
-- **Training-Configuration Consistency**: Unstable curves despite conservative hyperparameters indicate dataset noise or bad loss formulation.
-- **Causal Chain Analysis**: Distinguish root causes (e.g., data leak) from symptoms (e.g., perfect validation accuracy).
-For each Finding, provide a clear description of the root cause, concrete evidence citing multiple agent results, and assign appropriate severity and confidence.
+                ## 1. Cross-Artifact Synthesis Framework (Findings):
+                When generating Findings, synthesize evidence across artifacts rather than just repeating individual agent outputs.
+                - **Data-Performance Anomalies**: High performance with poor data quality suggests data leakage. Low performance with clean data points to model/hyperparameter mismatch.
+                - **Training-Configuration Consistency**: Unstable curves despite conservative hyperparameters indicate dataset noise or bad loss formulation.
+                - **Causal Chain Analysis**: Distinguish root causes (e.g., data leak) from symptoms (e.g., perfect validation accuracy).
+                For each Finding, provide a clear description of the root cause, concrete evidence citing multiple agent results, and assign appropriate severity and confidence.
 
-## 2. Optimization and Remediation Framework (Recommendations):
-For every Finding, you MUST provide a concrete Recommendation.
-- **Actionable Steps**: Provide precise action steps (e.g., specific hyperparameter adjustments, dataset filtering, augmentation techniques, or architecture changes). Avoid generic advice.
-- **Optimization Strategy**: Consider trade-offs between quick-win fixes and long-term improvements.
-- **Rationale**: Explain the rationale for why this action resolves the specific root cause and estimate the confidence in its success.
+                ## 2. Optimization and Remediation Framework (Recommendations):
+                For every Finding, you MUST provide a concrete Recommendation.
+                - **Actionable Steps**: Provide precise action steps (e.g., specific hyperparameter adjustments, dataset filtering, augmentation techniques, or architecture changes). Avoid generic advice.
+                - **Optimization Strategy**: Consider trade-offs between quick-win fixes and long-term improvements.
+                - **Rationale**: Explain the rationale for why this action resolves the specific root cause and estimate the confidence in its success.
 
-## Output Requirements:
-- Prioritize issues by their impact on model reliability and performance.
-- High-severity findings must have robust, cross-artifact evidence.
-- Do not hallucinate metrics; use only the data provided by the analysis agents.
-- Highlight critical deployment risks."""
+                ## Output Requirements:
+                - Prioritize issues by their impact on model reliability and performance.
+                - High-severity findings must have robust, cross-artifact evidence.
+                - Do not hallucinate metrics; use only the data provided by the analysis agents.
+                - Highlight critical deployment risks."""

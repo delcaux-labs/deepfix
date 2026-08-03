@@ -16,8 +16,10 @@ from openhands.sdk.tools.core import Tool
 from deepfix_core.models.api import APIResponse
 from .config import AutonomousFixConfig
 from .skill_builder import DeepFixSkillBuilder
+from .logging import get_logger
 
-logger = structlog.get_logger(__name__)
+
+LOGGER = get_logger(__name__)
 
 
 class OpenHandsExecutor:
@@ -34,7 +36,7 @@ class OpenHandsExecutor:
             job_id: The unique identifier for this fix job.
             diagnosis_response: The prior diagnostic findings from DeepFix Server.
         """
-        logger.info("Preparing autonomous fix session", job_id=job_id)
+        LOGGER.info("Preparing autonomous fix session", job_id=job_id)
         
         # We don't have experiment_id natively in diagnosis_response, so default to 0
         exp_id = 0
@@ -81,14 +83,14 @@ class OpenHandsExecutor:
                 max_iterations=10,
             )
             
-            logger.info(
+            LOGGER.info(
                 "OpenHands Goal finished",
                 job_id=job_id,
                 status=outcome.status,
                 iterations=outcome.iterations,
             )
         except Exception as e:
-            logger.exception("Failed to run OpenHands agent", job_id=job_id, error=str(e))
+            LOGGER.exception("Failed to run OpenHands agent", job_id=job_id, error=str(e))
 
     def _build_system_prompt(self, job_id: str, diagnosis_response: APIResponse) -> str:
         """Constructs the system prompt instructing OpenHands on what to do."""

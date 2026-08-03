@@ -14,9 +14,8 @@ from abc import ABC, abstractmethod
 from ..config import LLMConfig, PromptConfig
 from ..llm import create_agent_for_analysis
 from ..logging import get_logger
-from ..models import AgentContext, AgentResult, Artifacts
+from ..models import AgentContext, AgentResult, Artifacts, ArtifactAnalysisResult
 from ..prompt_builders import PromptBuilder
-from ..agent_models import ArtifactAnalysisResult
 
 
 LOGGER = get_logger(__name__)
@@ -27,8 +26,6 @@ class Agent(ABC):
 
     Provides common functionality for LLM configuration and context management.
     Subclasses should implement the forward method and system_prompt property.
-
-    This replaces ``dspy.Module`` as the base class.
 
     Attributes:
         _llm_config: Optional LLM configuration for the agent.
