@@ -77,11 +77,11 @@ class AutonomousFixConfig(BaseModel):
         default=None, description="API key for OpenHands LLM provider"
     )
     openhands_llm_model: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929",
+        default="openai/deepseek/deepseek-v4-flash-0731",
         description="Model name for OpenHands LLM",
     )
     openhands_llm_base_url: Optional[str] = Field(
-        default=None, description="Base URL for OpenHands LLM provider"
+        default="https://api.tensorix.ai/v1", description="Base URL for OpenHands LLM provider"
     )
     openhands_docker_image: str = Field(
         default="ghcr.io/openhands/agent-server:latest-python",
@@ -99,6 +99,13 @@ class AutonomousFixConfig(BaseModel):
         description="URL of the local OpenHands agent server",
     )
 
+    # persistence
+    persistence_dir : str = Field(
+        default=".openhands-conversations", description="Path to persistence directory"
+    )
+    load_memory : bool = Field(
+        default=True, description="Whether to load memory from persistence"
+    )
 
     # OTEL Settings
     otel_exporter_otlp_endpoint: str = Field(

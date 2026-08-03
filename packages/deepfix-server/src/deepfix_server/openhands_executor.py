@@ -8,18 +8,41 @@ import structlog
 from pydantic import SecretStr
 
 from openhands.sdk import LLM, Agent, AgentContext, Conversation, Workspace
+from openhands.sdk.workspace.docker import DockerWorkspace
 from openhands.sdk.conversation.goal import run_goal
 from openhands.sdk.tools import FileEditorTool, TerminalTool, TaskTrackerTool
 from openhands.sdk.tools.core import Tool
 
+import pathlib
+import deepfix_kb
+from openhands.sdk.context import AgentContext
+from openhands.sdk.skills import Skill, load_skills_from_dir
 
 from deepfix_core.models.api import APIResponse
 from .config import AutonomousFixConfig
-from .skill_builder import DeepFixSkillBuilder
 from .logging import get_logger
 
 
 LOGGER = get_logger(__name__)
+
+def detect_platform():
+    import platform
+    """Detects the correct Docker platform string."""
+    machine = platform.machine().lower()
+    if "arm" in machine or "aarch64" in machine:
+        return "linux/arm64"
+    return "linux/amd64"
+
+DEFAULT_AUTONOMOUS_FIX_SYSTEM_SUFFIX = (
+    "You are an autonomous ML model fix agent for DeepFix.\n"
+    "Your objective is to diagnose performance bottlenecks, generate code fix patches, "
+    "run sandboxed experiments with MLflow tracking, evaluate metric improvements across iterations, "
+    "and iterate until you are satisfied.\n\n"
+    "Workflow Guidelines:\n"
+    "1. Data Access: Use the `mlflow-data-access` skill to load models and datasets if needed.\n"
+    "2. Sandboxed Execution: Execute candidate fix scripts in your terminal. Ensure your script evaluates the model and captures the metrics.\n"
+    "3. Completion: When you are done fixing the model, you MUST use the `deepfix-communication` skill to report your status using the webhook script.\n"
+)
 
 
 class OpenHandsExecutor:
@@ -27,9 +50,53 @@ class OpenHandsExecutor:
 
     def __init__(self, config: AutonomousFixConfig):
         self.config = config
-        self.skill_builder = DeepFixSkillBuilder()
+        self.skills_dir = pathlib.Path(__file__).parent / "skills"
 
-    async def launch_autonomous_fix(self, job_id: str, diagnosis_response: APIResponse) -> None:
+    def load_skills(self) -> list[Skill]:
+        """Load skills from the skills directory using OpenHands SDK load_skills_from_dir.
+
+        Returns:
+            List of loaded Skill objects.
+
+        Raises:
+            FileNotFoundError: If skills_dir does not exist.
+        """
+        if not self.skills_dir.exists():
+            raise FileNotFoundError(f"Skills directory does not exist: {self.skills_dir}")
+
+        repo_skills, knowledge_skills, agent_skills = load_skills_from_dir(self.skills_dir)
+
+        loaded_skills: list[Skill] = []
+        for skill_dict in (repo_skills, knowledge_skills, agent_skills):
+            loaded_skills.extend(skill_dict.values())
+        return loaded_skills
+
+    def build_agent_context(
+        self,
+        system_message_suffix: str | None = None,
+        load_public_skills: bool = False,
+    ) -> AgentContext:
+        """Build OpenHands AgentContext populated with loaded DeepFix skills.
+
+        Args:
+            system_message_suffix: Optional system message instructions for agent workflow.
+                                  Defaults to DEFAULT_AUTONOMOUS_FIX_SYSTEM_SUFFIX.
+            load_public_skills: Whether to load public skills into context (default False).
+
+        Returns:
+            Configured AgentContext instance.
+        """
+        skills = self.load_skills()
+        suffix = system_message_suffix or DEFAULT_AUTONOMOUS_FIX_SYSTEM_SUFFIX
+
+        return AgentContext(
+            skills=skills,
+            load_public_skills=load_public_skills,
+            system_message_suffix=suffix,
+            load_memory=self.config.load_memory
+        )
+
+    async def launch_autonomous_fix(self, job_id: str, diagnosis_response: APIResponse, mlflow_experiment_id:int=0) -> None:
         """Launches the OpenHands agent to fix the identified issues.
         
         Args:
@@ -37,10 +104,7 @@ class OpenHandsExecutor:
             diagnosis_response: The prior diagnostic findings from DeepFix Server.
         """
         LOGGER.info("Preparing autonomous fix session", job_id=job_id)
-        
-        # We don't have experiment_id natively in diagnosis_response, so default to 0
-        exp_id = 0
-        self.config.setup_otel_environment(exp_id)
+        self.config.setup_otel_environment(mlflow_experiment_id)
 
         llm_kwargs: dict[str, Any] = {"model": self.config.openhands_llm_model}
         if self.config.openhands_llm_api_key:
@@ -69,26 +133,40 @@ class OpenHandsExecutor:
                 ],
             )
             # Equip our domain-specific skills
-            agent.agent_context = self.skill_builder.build_agent_context()
+            agent.agent_context = self.build_agent_context()
 
-            # Initialize a connection to the sandbox
-            workspace = Workspace(host=self.config.openhands_server_url)
-            conversation = Conversation(agent=agent, workspace=workspace)
+            # Build conversation kwargs for persistence
+            conversation_kwargs = {"persistence_dir":self.config.persistence_dir, "conversation_id":job_id}
 
-            # Iterate until goal is reached
-            outcome = run_goal(
-                conversation=conversation,
-                objective=system_prompt,
-                judge_llm=judge_llm,
-                max_iterations=10,
-            )
-            
-            LOGGER.info(
-                "OpenHands Goal finished",
-                job_id=job_id,
-                status=outcome.status,
-                iterations=outcome.iterations,
-            )
+            if self.config.openhands_use_local_server:
+                workspace = Workspace(host=self.config.openhands_server_url)
+                conversation = Conversation(agent=agent, workspace=workspace,**conversation_kwargs)
+                
+                outcome = run_goal(
+                    conversation=conversation,
+                    objective=system_prompt,
+                    judge_llm=judge_llm,
+                    max_iterations=10,
+                )
+            else:
+                with DockerWorkspace(
+                    server_image=self.config.openhands_docker_image,
+                    host_port=self.config.openhands_sandbox_port,
+                    platform=detect_platform(),
+                ) as workspace:
+                    conversation = Conversation(agent=agent, workspace=workspace, **conversation_kwargs)
+                    outcome = run_goal(
+                        conversation=conversation,
+                        objective=system_prompt,
+                        judge_llm=judge_llm,
+                        max_iterations=10,
+                    )
+                LOGGER.info(
+                    "OpenHands Goal finished",
+                    job_id=job_id,
+                    status=outcome.status,
+                    iterations=outcome.iterations,
+                )
         except Exception as e:
             LOGGER.exception("Failed to run OpenHands agent", job_id=job_id, error=str(e))
 
