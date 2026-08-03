@@ -12,6 +12,7 @@ from openhands.sdk.workspace.docker import DockerWorkspace
 from openhands.sdk.conversation.goal import run_goal
 from openhands.sdk.tools import FileEditorTool, TerminalTool, TaskTrackerTool
 from openhands.sdk.tools.core import Tool
+from openhands.sdk.utils.async_utils import AsyncCallbackWrapper
 
 import pathlib
 import deepfix_kb
@@ -138,35 +139,41 @@ class OpenHandsExecutor:
             # Build conversation kwargs for persistence
             conversation_kwargs = {"persistence_dir":self.config.persistence_dir, "conversation_id":job_id}
 
-            if self.config.openhands_use_local_server:
-                workspace = Workspace(host=self.config.openhands_server_url)
-                conversation = Conversation(agent=agent, workspace=workspace,**conversation_kwargs)
-                
-                outcome = run_goal(
-                    conversation=conversation,
-                    objective=system_prompt,
-                    judge_llm=judge_llm,
-                    max_iterations=10,
-                )
-            else:
-                with DockerWorkspace(
-                    server_image=self.config.openhands_docker_image,
-                    host_port=self.config.openhands_sandbox_port,
-                    platform=detect_platform(),
-                ) as workspace:
+            def run_sync():
+                if self.config.openhands_use_local_server:
+                    workspace = Workspace(host=self.config.openhands_server_url)
                     conversation = Conversation(agent=agent, workspace=workspace, **conversation_kwargs)
+                    
                     outcome = run_goal(
                         conversation=conversation,
                         objective=system_prompt,
                         judge_llm=judge_llm,
                         max_iterations=10,
                     )
+                else:
+                    with DockerWorkspace(
+                        server_image=self.config.openhands_docker_image,
+                        host_port=self.config.openhands_sandbox_port,
+                        platform=detect_platform(),
+                    ) as workspace:
+                        conversation = Conversation(agent=agent, workspace=workspace, **conversation_kwargs)
+                        outcome = run_goal(
+                            conversation=conversation,
+                            objective=system_prompt,
+                            judge_llm=judge_llm,
+                            max_iterations=10,
+                        )
+                
                 LOGGER.info(
                     "OpenHands Goal finished",
                     job_id=job_id,
                     status=outcome.status,
                     iterations=outcome.iterations,
                 )
+
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, run_sync)
+
         except Exception as e:
             LOGGER.exception("Failed to run OpenHands agent", job_id=job_id, error=str(e))
 

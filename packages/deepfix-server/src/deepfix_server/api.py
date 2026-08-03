@@ -17,7 +17,6 @@ from deepfix_core.models import (
     AutonomousFixRequest,
 )
 from deepfix_core.models.fixes import FinalFixReport
-from deepfix_server.openhands_executor import OpenHandsExecutor
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
@@ -26,6 +25,8 @@ from .coordinators import ArtifactAnalysisCoordinator
 from .database import get_db, get_engine, init_database, Base
 from .logging import get_logger, setup_mlflow_tracing
 from .models import AgentContext, AnalysisJob
+from .openhands_executor import OpenHandsExecutor
+
 
 LOGGER = get_logger(__name__)
 
