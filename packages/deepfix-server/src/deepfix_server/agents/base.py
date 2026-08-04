@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from ..config import LLMConfig, PromptConfig
 from ..llm import create_agent_for_analysis
 from ..logging import get_logger
-from ..models import AgentContext, AgentResult, Artifacts, ArtifactAnalysisResult
+from .schemas import AgentContext, AgentResult, Artifacts, ArtifactAnalysisResult
 from ..prompt_builders import PromptBuilder
 
 

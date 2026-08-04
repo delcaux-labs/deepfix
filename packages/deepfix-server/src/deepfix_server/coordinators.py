@@ -14,9 +14,10 @@ from .agents.artifact_analyzers import (
 )
 from .agents.base import Agent, ArtifactAnalyzer
 from .agents.cross_artifact_reasoning import CrossArtifactReasoningAgent
+from .agents.schemas import AgentContext, AgentResult
 from .config import LLMConfig
 from .logging import get_logger
-from .models import AgentContext, AgentResult, ArtifactAnalysisResult
+from .models import Result
 
 LOGGER = get_logger(__name__)
 
@@ -54,14 +55,14 @@ class ArtifactAnalysisCoordinator(Agent):
             raise e
 
     @mlflow.trace(name="ArtifactAnalysisCoordinator.arun")
-    async def _acall(self, context: AgentContext) -> ArtifactAnalysisResult:
+    async def _acall(self, context: AgentContext) -> Result:
         """Analyze artifacts asynchronously and return results.
 
         Args:
             context: Agent context containing artifacts and configuration.
 
         Returns:
-            ArtifactAnalysisResult containing analysis results from all agents.
+            Result containing analysis results from all agents.
         """
         # 1. Analyze artifacts
         LOGGER.info(
@@ -81,20 +82,20 @@ class ArtifactAnalysisCoordinator(Agent):
         context.agent_results[cross_artifact_result.agent_name] = cross_artifact_result
 
         # 4. Output results
-        output = ArtifactAnalysisResult(
+        output = Result(
             context=context,
             summary=cross_artifact_result.additional_outputs.get("summary", None),
         )
         return output
 
-    async def arun(self, context: AgentContext) -> ArtifactAnalysisResult:
+    async def arun(self, context: AgentContext) -> Result:
         """Run the coordinator asynchronously with error handling.
 
         Args:
             context: Agent context containing artifacts and configuration.
 
         Returns:
-            ArtifactAnalysisResult with analysis results or error message if execution fails.
+            Result with analysis results or error message if execution fails.
         """
         try:
             return await self._acall(context)
@@ -104,19 +105,19 @@ class ArtifactAnalysisCoordinator(Agent):
             )
             error_result = AgentResult(agent_name=self.agent_name, error_message=str(e))
             context.agent_results[self.agent_name] = error_result
-            return ArtifactAnalysisResult(
+            return Result(
                 context=context,
                 summary=None,
             )
 
-    def run(self, context: AgentContext) -> ArtifactAnalysisResult:
+    def run(self, context: AgentContext) -> Result:
         """Run the coordinator (alias for arun for backward compatibility).
 
         Args:
             context: Agent context containing artifacts and configuration.
 
         Returns:
-            ArtifactAnalysisResult containing analysis results from all agents.
+            Result containing analysis results from all agents.
         """
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, self.arun(context))

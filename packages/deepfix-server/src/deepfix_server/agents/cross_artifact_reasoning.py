@@ -17,7 +17,7 @@ from deepfix_kb import KnowledgeBridge
 from deepfix_kb.tools import create_knowledge_tools
 
 from pydantic_ai import Agent as PydanticAgent
-from ..models import CrossArtifactReasoningResult, AgentResult
+from .schemas import CrossArtifactReasoningResult, AgentResult
 from ..config import LLMConfig
 from ..llm import create_model
 from ..logging import get_logger

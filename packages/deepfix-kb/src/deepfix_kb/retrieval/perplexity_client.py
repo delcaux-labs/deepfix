@@ -202,7 +202,7 @@ class PerplexitySonarRetriever(BaseRetriever):
         Returns:
             List containing a single RetrievalResult with the synthesized answer.
         """
-        logger.info(f"Perplexity query ({self.model_name}): '{query[:100]}...'")
+        logger.info(f"Perplexity query ({self.config.model}): '{query[:100]}...'")
 
         try:
             user_message = query

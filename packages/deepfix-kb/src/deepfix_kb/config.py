@@ -90,6 +90,7 @@ class TavilyConfig(BaseModel):
         "general", description="Default topic"
     )
     include_answer: bool = Field(False, description="Include AI answer")
+    include_raw_content: bool = Field(False, description="Include raw content")
 
 class PerplexityConfig(BaseModel):
     """Configuration for Perplexity Sonar client.

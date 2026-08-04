@@ -14,7 +14,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.litellm import LiteLLMProvider
 
 from .config import LLMConfig
-from .models import ArtifactAnalysisResult, CrossArtifactReasoningResult
+from .agents.schemas import ArtifactAnalysisResult, CrossArtifactReasoningResult
 
 
 def create_model(config: LLMConfig) -> OpenAIChatModel:

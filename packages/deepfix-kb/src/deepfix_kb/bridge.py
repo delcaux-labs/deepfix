@@ -76,13 +76,12 @@ class KnowledgeBridge:
             raise ValueError("Local KB not implemented yet")
 
         # Initialize hybrid retriever
-        self._hybrid = HybridRetriever(
+        self.retriever = HybridRetriever(
             tavily=self._tavily,
             perplexity=self._perplexity,
             local_kb=local_kb,
             config=active_config.hybrid_retriever
         )
-        self.retriever = self._hybrid
         self.default_strategy = active_config.default_strategy
 
         # Log available sources
