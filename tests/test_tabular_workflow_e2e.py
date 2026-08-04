@@ -6,7 +6,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 
 from deepfix_sdk import DeepFixClient
-from deepfix_sdk.data.datasets import TabularDataset
+from deepfix_sdk.tabular.dataset import TabularDataset
 from deepfix_core.models import APIResponse
 
 

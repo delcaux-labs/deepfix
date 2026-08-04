@@ -4,14 +4,13 @@ import os
 import sys
 from typing import Any, Optional, Union
 
-import structlog
 from pydantic import SecretStr
 
 from openhands.sdk import LLM, Agent, AgentContext, Conversation, Workspace
-from openhands.sdk.workspace.docker import DockerWorkspace
+from openhands.workspace import DockerWorkspace
 from openhands.sdk.conversation.goal import run_goal
-from openhands.sdk.tools import FileEditorTool, TerminalTool, TaskTrackerTool
-from openhands.sdk.tools.core import Tool
+from openhands.tools import FileEditorTool, TerminalTool, TaskTrackerTool
+from openhands.sdk.tool import Tool
 from openhands.sdk.utils.async_utils import AsyncCallbackWrapper
 
 import pathlib
