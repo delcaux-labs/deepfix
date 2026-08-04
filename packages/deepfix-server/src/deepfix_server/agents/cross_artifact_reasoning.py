@@ -94,7 +94,7 @@ class CrossArtifactReasoningAgent(Agent):
         Returns:
             AgentResult with consolidated cross-artifact analysis and summary.
         """
-        LOGGER.info("Running cross-artifact reasoning agent...")
+        LOGGER.debug("Running cross-artifact reasoning agent...")
         assert len(previous_analyses) > 0, "At least one analysis must be provided"
 
         # Build the reasoning prompt from previous analyses
