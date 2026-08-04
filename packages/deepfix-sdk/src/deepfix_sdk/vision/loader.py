@@ -97,7 +97,7 @@ class ClassificationVisionDataLoader:
         batch_size: int = 8,
         shuffle: bool = True,
         model: Optional[Callable] = None,
-    ):
+    ) -> VisionData:
 
         assert isinstance(dataset, Dataset), (
             "dataset must be an instance of torch.utils.data.Dataset. Received: {}".format(
@@ -117,7 +117,7 @@ class ClassificationVisionDataLoader:
     @classmethod
     def load_from_dataloader(
         cls, dataloader, label_map: Optional[Dict[int, str]] = None
-    ):
+    ) -> VisionData:
 
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(
@@ -140,7 +140,7 @@ class DetectionVisionDataLoader:
         label_map: Dict[int, str],
         batch_size: int = 8,
         shuffle: bool = True,
-    ):
+    ) -> VisionData:
         from torch.utils.data import DataLoader
 
         assert isinstance(dataset, DetectionDataset), (
@@ -161,7 +161,7 @@ class DetectionVisionDataLoader:
     @classmethod
     def load_from_dataloader(
         cls, dataloader, label_map: Dict[int, str]
-    ):
+    ) -> VisionData:
         
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(
@@ -185,7 +185,7 @@ class SegmentationVisionDataLoader:
         label_map: Dict[int, str],
         batch_size: int = 8,
         shuffle: bool = False,
-    ):
+    ) -> VisionData:
 
         dataloader = DataLoader(
             dataset,
@@ -199,7 +199,7 @@ class SegmentationVisionDataLoader:
     @classmethod
     def load_from_dataloader(
         cls, dataloader, label_map: Dict[int, str]
-    ):
+    ) -> VisionData:
        
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(

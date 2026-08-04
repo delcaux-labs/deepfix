@@ -3,12 +3,7 @@ import pandas as pd
 from typing import List, Union, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-# Forward reference to avoid circular imports
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from deepfix_sdk.data.base import InformationRetrievalDataset
-
-from ..data import InformationRetrievalDataset
+from .datasets import InformationRetrievalDataset
 
 class IRLookupModel(BaseEstimator, ClassifierMixin):
     """A lookup-based model for Information Retrieval tasks to interface with Deepchecks.
@@ -18,7 +13,7 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
     from the IR dataset when Deepchecks evaluates it.
     """
     
-    def __init__(self, train_dataset: "InformationRetrievalDataset", test_dataset: Optional["InformationRetrievalDataset"] = None, classes: List[str] = None):
+    def __init__(self, train_dataset: InformationRetrievalDataset, test_dataset: Optional[InformationRetrievalDataset] = None, classes: List[str] = None):
         """Initialize the lookup model.
         
         Args:

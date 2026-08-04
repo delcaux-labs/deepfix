@@ -30,6 +30,9 @@ class VisionDataset(BaseDataset):
     @property
     def data_type(self) -> DataType:
         return DataType.VISION
+    
+    def to_loader(self, **kwargs) -> VisionData:
+        raise NotImplementedError("should be implemented by subclass")
 
     @property
     def name(self) -> str:
@@ -37,12 +40,15 @@ class VisionDataset(BaseDataset):
 
 
 class ImageClassificationDataset(VisionDataset):
-    def __init__(self, dataset_name: str, dataset):
+    def __init__(self, dataset_name: str, dataset: VisionData | Iterable):
         super().__init__(dataset_name=dataset_name, dataset=dataset)
 
     def to_loader(
         self, model: Optional[Callable] = None, batch_size: int = 8
-    ):       
+    ) -> VisionData:
+
+        if isinstance(self.dataset, VisionData):
+            return self.dataset
 
         return ClassificationVisionDataLoader.load_from_dataset(
             self.dataset,
@@ -115,7 +121,9 @@ class ObjectDetectionDataset(VisionDataset):
 
     def to_loader(
         self, batch_size: int = 8, shuffle: bool = False, **kwargs
-    ):
+    ) -> VisionData:
+        if isinstance(self.dataset, VisionData):
+            return self.dataset
         return DetectionVisionDataLoader.load_from_dataset(
             self.dataset,
             label_map=self.get_label_map(),
@@ -168,7 +176,7 @@ class SemanticSegmentationDataset(VisionDataset):
         model: Optional[Callable] = None,
         batch_size: int = 8,
         shuffle: bool = False,
-    ):
+    ) -> VisionData:
         
         if isinstance(self.dataset, VisionData):
             return self.dataset

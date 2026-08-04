@@ -27,7 +27,8 @@ from deepfix_core.models import (
 )
 
 from ..config import DeepchecksConfig, DefaultPaths
-from ..data.base import TabularDataset, InformationRetrievalDataset, NLPDataset
+from ..data.base import BaseDataset
+
 from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -174,12 +175,7 @@ class CheckResultsParser:
         return txts
 
 
-SupportedDatasetType = Union[
-    Any,  # VisionData — avoid importing at module level
-    TabularDataset,
-    NLPDataset,
-    InformationRetrievalDataset,
-]
+SupportedDatasetType = BaseDataset
 TClassPred = Union[Sequence[int], Sequence[str], Sequence[Sequence[int]]]
 TTextProba = Sequence[Sequence[float]]
 
@@ -324,14 +320,15 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
             suite_data_integrity=None,
             suite_model_evaluation=None,
         )
+        from ..ir.dataset import InformationRetrievalDataset
         self.nlp_runner = DeepchecksRunnerForNLP(config=config)
         self.tabular_runner = DeepchecksRunnerForTabular(config=config)
 
     def run_suites(
         self,
-        train_data: InformationRetrievalDataset,
+        train_data: "InformationRetrievalDataset",
         dataset_name: str,
-        test_data: Optional[InformationRetrievalDataset] = None,
+        test_data: Optional["InformationRetrievalDataset"] = None,
         model: Optional[Any] = None,
         model_name: Optional[str] = None,
         train_predictions: Optional[TClassPred] = None,
@@ -342,7 +339,8 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
     ) -> DeepchecksArtifacts:
         """
         Run both NLP and Tabular Deepchecks suites for IR data.
-        """
+        """        
+        from ..ir.dataset import InformationRetrievalDataset
         assert isinstance(train_data, InformationRetrievalDataset), (
             f"Expected InformationRetrievalDataset but got {type(train_data).__name__}"
         )
@@ -462,13 +460,12 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
-        from deepchecks.vision import VisionData
 
         LOGGER.info("Running train-test validation suite")
         self._check_inputs(train_data, test_data)
         return self.suite_train_test_validation.run(
-            train_dataset=train_data,
-            test_dataset=test_data,
+            train_dataset=train_data.to_loader(),
+            test_dataset=test_data.to_loader() if test_data else None,
             max_samples=self.config.max_samples,
             random_state=self.config.random_state,
         )
@@ -482,8 +479,8 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         LOGGER.info("Running data integrity suite")
         self._check_inputs(train_data, test_data)
         return self.suite_data_integrity.run(
-            train_dataset=train_data,
-            test_dataset=test_data,
+            train_dataset=train_data.to_loader(),
+            test_dataset=test_data.to_loader() if test_data else None,
             max_samples=self.config.max_samples,
             random_state=self.config.random_state,
         )
@@ -499,23 +496,22 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         self._check_inputs(train_data, test_data)
         LOGGER.info("Running model evaluation suite")
         return self.suite_model_evaluation.run(
-            train_dataset=train_data,
+            train_dataset=train_data.to_loader(),
+            test_dataset=test_data.to_loader() if test_data else None,
             model=model,
-            test_dataset=test_data,
             max_samples=self.config.max_samples,
             random_state=self.config.random_state,
         )
 
     def _check_inputs(
-        self, train_data, test_data=None
+        self, train_data: Any, test_data: Optional[Any] = None
     ) -> None:
-        from deepchecks.vision import VisionData
-
-        assert isinstance(train_data, VisionData), (
+        from ..vision.dataset import VisionDataset
+        assert isinstance(train_data, VisionDataset), (
             f"train_data must be an instance of VisionData, got {type(train_data)}"
         )
         if test_data is not None:
-            assert isinstance(test_data, VisionData), (
+            assert isinstance(test_data, VisionDataset), (
                 f"test_data must be an instance of VisionData, got {type(test_data)}"
             )
 
@@ -560,8 +556,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         feature drift, label distribution differences, and potential data leakage.
 
         Args:
-            train_data: Training dataset as Deepchecks TabularDataset
-            test_data: Optional test dataset as Deepchecks TabularDataset
+            train_data: Training dataset as TabularDataset
+            test_data: Optional test dataset as TabularDataset
 
         Returns:
             SuiteResult containing validation results
@@ -587,8 +583,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         missing values, and inconsistent labels.
 
         Args:
-            train_data: Training dataset as Deepchecks TabularDataset
-            test_data: Optional test dataset as Deepchecks TabularDataset
+            train_data: Training dataset as TabularDataset
+            test_data: Optional test dataset as TabularDataset
 
         Returns:
             SuiteResult containing data integrity check results
@@ -614,8 +610,8 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         and identifying underperforming segments.
 
         Args:
-            train_data: Training dataset as Deepchecks TabularDataset
-            test_data: Optional test dataset as Deepchecks TabularDataset
+            train_data: Training dataset as TabularDataset
+            test_data: Optional test dataset as TabularDataset
 
         Returns:
             SuiteResult containing model evaluation results
@@ -629,8 +625,9 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         )
 
     def _check_inputs(
-        self, train_data: TabularDataset, test_data: Optional[TabularDataset] = None
+        self, train_data: Any, test_data: Optional[Any] = None
     ) -> None:
+        from ..tabular.dataset import TabularDataset
         assert isinstance(train_data, TabularDataset), (
             f"train_data must be an instance of TabularDataset, got {type(train_data)}"
         )
@@ -669,8 +666,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_train_test_validation(
         self,
-        train_data: NLPDataset,
-        test_data: Optional[NLPDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -687,6 +684,7 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             SuiteResult containing validation results
         """
         LOGGER.info("Running train-test validation suite for NLP text data")
+        self._check_inputs(train_data, test_data)
         return self.suite_train_test_validation.run(
             train_dataset=train_data.dataset,
             test_dataset=test_data.dataset if test_data is not None else None,
@@ -696,8 +694,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_model_evaluation(
         self,
-        train_data: NLPDataset,
-        test_data: Optional[NLPDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         model: Optional[Any] = None,
         model_classes: Optional[List[str]] = None,
         train_predictions: Optional[TClassPred] = None,
@@ -710,6 +708,7 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         Run model evaluation suite on NLP text data.
         """
         LOGGER.info("Running model evaluation suite for NLP text data")
+        self._check_inputs(train_data, test_data)
 
         # Deepchecks NLP suite.run accepts these arguments
         return self.suite_model_evaluation.run(
@@ -726,8 +725,8 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
 
     def run_suite_data_integrity(
         self,
-        train_data: NLPDataset,
-        test_data: Optional[NLPDataset] = None,
+        train_data: SupportedDatasetType,
+        test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
         """
@@ -739,9 +738,22 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         Raises:
             NotImplementedError: This suite is not available for NLP data
         """
+        self._check_inputs(train_data, test_data)
         return self.suite_data_integrity.run(
             train_dataset=train_data.dataset,
             test_dataset=test_data.dataset if test_data is not None else None,
             random_state=self.config.random_state,
             **kwargs,
         )
+    
+    def _check_inputs(
+        self, train_data: Any, test_data: Optional[Any] = None
+    ) -> None:
+        from ..nlp.dataset import NLPDataset
+        assert isinstance(train_data, NLPDataset), (
+            f"train_data must be an instance of NLPDataset, got {type(train_data)}"
+        )
+        if test_data is not None:
+            assert isinstance(test_data, NLPDataset), (
+                f"test_data must be an instance of NLPDataset, got {type(test_data)}"
+            )

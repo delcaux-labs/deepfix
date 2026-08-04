@@ -498,7 +498,7 @@ class DeepFixClient:
             Exception: If data validation fails or ingestion fails.
 
         Example:
-            >>> from deepfix_sdk.data.base import TabularDataset
+            >>> from deepfix_sdk.tabular import TabularDataset
             >>> import pandas as pd
             >>> df = pd.read_csv("train.csv")
             >>> train_dataset = TabularDataset(
