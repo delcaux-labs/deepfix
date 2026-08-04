@@ -182,7 +182,7 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     @property
     def is_available(self) -> bool:
-        return self.config.api_key is not None
+        return bool(str(self.config.api_key).strip())
 
     async def retrieve(
         self,

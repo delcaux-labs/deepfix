@@ -122,7 +122,7 @@ class HybridRetriever:
             logger.warning("No active sources available for retrieval")
             return []
 
-        logger.info(
+        logger.debug(
             f"Hybrid retrieval: strategy={strategy}, "
             f"sources={list(active_sources.keys())}"
         )

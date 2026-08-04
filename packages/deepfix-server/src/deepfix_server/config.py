@@ -165,7 +165,7 @@ class Settings(BaseSettings):
 
     # Mlflow
     mlflow_exp_name: str = Field(default="deepfix-server", alias="MLFLOW_EXP_NAME")
-    mlflow_tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
+    mlflow_tracking_uri: Optional[str] = Field(default=None, alias="MLFLOW_TRACKING_URI")
 
     # Autonomous Fix System Settings
     openhands_llm_api_key: Optional[str] = Field(default=None, alias="OPENHANDS_LLM_API_KEY")

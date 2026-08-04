@@ -76,7 +76,7 @@ class TavilySearchRetriever(BaseRetriever):
     @property
     def is_available(self) -> bool:
         """Check if Tavily is properly configured."""
-        return self._config.api_key is not None
+        return bool(str(self._config.api_key).strip())
 
     async def retrieve(
         self,
