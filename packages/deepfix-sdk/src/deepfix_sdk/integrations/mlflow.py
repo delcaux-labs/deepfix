@@ -21,12 +21,13 @@ from deepfix_core.models import (
     DatasetArtifacts,
     DeepchecksArtifacts,
     TrainingArtifacts,
+    DeepchecksConfig
 )
 from mlflow.entities import Experiment, Run
 from mlflow.tracking import MlflowClient
 from omegaconf import OmegaConf
 
-from ..config import DeepchecksConfig, DefaultPaths, MLflowConfig
+from ..config import DefaultPaths, MLflowConfig
 from ..logging import get_logger
 
 LOGGER = get_logger(__name__)

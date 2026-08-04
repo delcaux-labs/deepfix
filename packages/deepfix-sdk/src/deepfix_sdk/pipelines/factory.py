@@ -3,12 +3,11 @@ from __future__ import annotations
 from typing import Any, Callable, List, Optional, Union
 
 import numpy as np
-from deepfix_core.models import ArtifactPath, DataType
+from deepfix_core.models import ArtifactPath, DataType, DeepchecksConfig
 
 from ..artifacts import ArtifactRepository, ArtifactsManager
 from ..config import (
     ArtifactConfig,
-    DeepchecksConfig,
     DefaultPaths,
     IngestionPipelineConfig,
     MLflowConfig,

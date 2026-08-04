@@ -86,6 +86,11 @@ class TestTabularWorkflowE2E:
         print("8. Verifying response...")
         assert check_response(response)
 
+        # Save diagnosis to a file for local debugging of the agent
+        with open(f"{dataset_name}.txt", "w", encoding="utf-8") as f:
+            f.write(response.get_results_as_text())
+        print(f"9. Saved diagnosis to {dataset_name}.txt")
+
     def test_tabular_diagnosis_without_model(
         self, api_url: str,deepfix_timeout: int, check_response: callable
     ):
@@ -142,3 +147,8 @@ class TestTabularWorkflowE2E:
         # 4. Verify Response
         print("6. Verifying response...")
         assert check_response(response)
+
+        # Save diagnosis to a file for local debugging of the agent
+        with open(f"{dataset_name}.txt", "w", encoding="utf-8") as f:
+            f.write(response.get_results_as_text())
+        print("7. Saved diagnosis to {dataset_name}.txt")

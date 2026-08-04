@@ -15,18 +15,7 @@ try:
 except Exception:
     pass
 
-# Import DeepchecksConfig without loading the full deepchecks.py module
-try:
-    from deepfix_core.models import APIResponse
-    from deepfix_sdk.config import DeepchecksConfig
-except ImportError:
-    # Try alternate import path
-    import os
-
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-    from deepfix_core.models import APIResponse
-    from deepfix_sdk.config import DeepchecksConfig
-
+from deepfix_core.models import APIResponse, DeepchecksConfig
 
 @pytest.fixture
 def minimal_deepchecks_config() -> DeepchecksConfig:
