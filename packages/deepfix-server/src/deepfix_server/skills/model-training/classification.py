@@ -16,8 +16,7 @@ from pydantic import BaseModel, Field
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Recall
 
-from ...integrations.lightning import DeepSightCallback
-from ...logging import get_logger
+from logging import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -268,7 +267,6 @@ class ClassificationTrainer(object):
         model: torch.nn.Module,
         train_dataset: Dataset,
         val_dataset: Dataset,
-        deepsight_callback: Optional[DeepSightCallback] = None,
         debug: bool = False,
     ) -> None:
         """
@@ -297,8 +295,7 @@ class ClassificationTrainer(object):
 
         # Callbacks
         callbacks, mlflow_logger = self.get_callbacks()
-        if isinstance(deepsight_callback, DeepSightCallback):
-            callbacks.append(deepsight_callback)
+
         trainer = Trainer(
             max_epochs=self.config.epochs if not debug else 1,
             accelerator=self.config.accelerator,

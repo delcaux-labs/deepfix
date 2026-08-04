@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from tqdm import tqdm
 
-from ..feature_extractor import FeatureExtractor
 
 ing2label = {
     "apple_pie": 0,
@@ -152,7 +151,7 @@ class FoodDataset(Dataset):
 class FoodDatasetWithEmbeddings(FoodDataset):
     def __init__(
         self,
-        embedding_model: Optional[FeatureExtractor] = None,
+        embedding_model: Optional[torch.nn.Module] = None,
         split="train[0:500]",
         image_size: int = 1024,
     ):
@@ -241,7 +240,7 @@ class FoodDatasetWithEmbeddings(FoodDataset):
 def create_train_and_val_datasets(
     split: str = "train[0:500]",
     image_size: int = 518,
-    embedding_model: Optional[FeatureExtractor] = None,
+    embedding_model: Optional[torch.nn.Module] = None,
     device: str = "cpu",
     num_workers: int = 4,
     batch_size: int = 8,
@@ -264,7 +263,7 @@ def create_train_and_val_datasets(
 
 def load_train_and_val_datasets(
     image_size: int = 518,
-    embedding_model: Optional[FeatureExtractor] = None,
+    embedding_model: Optional[torch.nn.Module] = None,
     device: str = "cpu",
     num_workers: int = 4,
     split_size: str = ":10%",

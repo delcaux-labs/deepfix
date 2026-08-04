@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Callable
 
 import numpy as np
 import torch
@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from tqdm import tqdm
 
-from ..feature_extractor import FeatureExtractor
 
 eng = [
     "dressing_portion",
@@ -156,7 +155,7 @@ class FoodWasteDatasetWithEmbeddings(FoodWasteDataset):
         self,
         ing2label: OrderedDict,
         ing2name: OrderedDict,
-        embedding_model: Optional[FeatureExtractor] = None,
+        embedding_model: Optional[torch.nn.Module] = None,
         split="train",
         image_size: int = 1024,
     ):
@@ -280,7 +279,7 @@ def create_classification_dataset(
     ing2name: OrderedDict,
     split="train",
     image_size: int = 1024,
-    embedding_model: Optional[FeatureExtractor] = None,
+    embedding_model: Optional[torch.nn.Module] = None,
     device: str = "cpu",
     num_workers: int = 4,
     batch_size: int = 8,
@@ -309,7 +308,7 @@ def create_classification_dataset(
 
 def load_train_and_val_datasets(
     image_size: int = 1024,
-    embedding_model: Optional[FeatureExtractor] = None,
+    embedding_model: Optional[torch.nn.Module] = None,
     device: str = "cpu",
     num_workers: int = 4,
     batch_size: int = 8,
