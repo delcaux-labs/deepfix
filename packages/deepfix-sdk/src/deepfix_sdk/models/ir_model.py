@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 # Forward reference to avoid circular imports
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from deepfix_sdk.data.datasets import InformationRetrievalDataset
+    from deepfix_sdk.data.base import InformationRetrievalDataset
 
 from ..data import InformationRetrievalDataset
 

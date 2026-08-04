@@ -28,7 +28,7 @@ from tenacity import (
 
 from .artifacts import ArtifactRepository, ArtifactStatus
 from .config import ArtifactConfig, MLflowConfig
-from .data.datasets import BaseDataset
+from .data.base import BaseDataset
 
 console = Console()
 
@@ -498,7 +498,7 @@ class DeepFixClient:
             Exception: If data validation fails or ingestion fails.
 
         Example:
-            >>> from deepfix_sdk.data.datasets import TabularDataset
+            >>> from deepfix_sdk.data.base import TabularDataset
             >>> import pandas as pd
             >>> df = pd.read_csv("train.csv")
             >>> train_dataset = TabularDataset(

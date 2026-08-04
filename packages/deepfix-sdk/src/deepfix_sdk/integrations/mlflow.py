@@ -27,7 +27,7 @@ from mlflow.tracking import MlflowClient
 from omegaconf import OmegaConf
 
 from ..config import DeepchecksConfig, DefaultPaths, MLflowConfig
-from ..utils.logging import get_logger
+from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
 

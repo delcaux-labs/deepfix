@@ -33,12 +33,9 @@ from .artifacts import (
 )
 from .defaults import DataType, TaskType
 from .fixes import (
-    ExecutionResult,
-    Fix,
-    FixIteration,
-    FixSessionResult,
-    FixType,
-    StopCriteria,
+    FinalFixReport,
+    FixJob,
+    FixJobStatus,
 )
 
 __all__ = [
@@ -64,18 +61,14 @@ __all__ = [
     "DeepchecksCheckResult",
     "DeepchecksResultHeaders",
     "DeepchecksConditionResult",
-    "DatasetStatistics",
+    "BaseDatasetStatistics",
     "TaskType",
     "ObjectDetectionStatistics",
     "VisionStatistics",
     "TabularStatistics",
     "NLPStatistics",
     "IRStatistics",
-    "BaseDatasetStatistics",
-    "FixType",
-    "Fix",
-    "FixIteration",
-    "StopCriteria",
-    "FixSessionResult",
-    "ExecutionResult",
+    "FinalFixReport",
+    "FixJob",
+    "FixJobStatus",
 ]

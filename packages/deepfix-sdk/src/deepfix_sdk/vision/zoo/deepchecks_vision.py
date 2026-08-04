@@ -3,21 +3,26 @@ DeepChecks vision datasets utilities.
 
 This module provides convenient loaders for pre-built vision datasets from the DeepChecks library,
 supporting classification, object detection, and segmentation tasks.
+
+Requires the ``[vision]`` extra: ``pip install deepfix-sdk[vision]``
 """
 
-import logging
-from typing import Optional, Tuple, Union
+from __future__ import annotations
 
-import torch
-from deepchecks.vision.datasets import classification, detection
+import logging
+from typing import TYPE_CHECKING, Optional, Tuple, Union
+
 
 try:
-    from deepchecks.vision.datasets.segmentation import segmentation_coco
+    import torch  # noqa: F811
+    import deepchecks.vision.datasets
 except ImportError:
-    segmentation_coco = None
+    raise ImportError(
+        "Vision dependencies are required for these datasets. "
+        "Install with: pip install deepfix-sdk[vision]"
+    ) from None
 
 LOGGER = logging.getLogger(__name__)
-
 
 # Classification Datasets
 def load_mnist_classification(
@@ -47,6 +52,7 @@ def load_mnist_classification(
     Returns:
         Tuple of (train_vision_data, test_vision_data)
     """
+    from deepchecks.vision.datasets import classification
 
     object_type = "DataLoader"
     try:
@@ -104,9 +110,7 @@ def load_coco_detection(
     Returns:
         Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]
     """
-
-    if detection is None:
-        raise ImportError("DeepChecks vision module not installed")
+    from deepchecks.vision.datasets import detection
 
     object_type = "DataLoader"
 
@@ -144,7 +148,7 @@ def load_mask_detection(
     num_workers: int = 0,
     pin_memory: bool = False,
     day_index: int = 0,
-) -> "torch.utils.data.DataLoader":
+) -> torch.utils.data.DataLoader:
     """
     Load mask face detection dataset from DeepChecks.
 
@@ -165,8 +169,7 @@ def load_mask_detection(
     Raises:
         ImportError: If DeepChecks vision module is not installed
     """
-    if detection is None:
-        raise ImportError("DeepChecks vision module not installed")
+    from deepchecks.vision.datasets import detection
 
     try:
         kwargs = {
@@ -214,9 +217,8 @@ def load_segmentation_dataset(
         ImportError: If DeepChecks vision module is not installed
     """
 
-    if segmentation_coco is None:
-        raise ImportError("DeepChecks vision module not installed")
-
+    from deepchecks.vision.datasets.segmentation import segmentation_coco
+    
     object_type = "DataLoader"
 
     try:

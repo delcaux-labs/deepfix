@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from tqdm import tqdm
 
-from ...utils.feature_extractor import FeatureExtractor
+from ..feature_extractor import FeatureExtractor
 
 ing2label = {
     "apple_pie": 0,

@@ -17,35 +17,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
 
 from deepchecks.core import CheckFailure, CheckResult, SuiteResult
-from deepchecks.nlp import TextData
-from deepchecks.nlp.suites import (
-    data_integrity as nlp_data_integrity,
-)
-from deepchecks.nlp.suites import (
-    model_evaluation as nlp_model_evaluation,
-)
-from deepchecks.nlp.suites import (
-    train_test_validation as nlp_train_test_validation,
-)
-from deepchecks.tabular.suites import (
-    data_integrity as tabular_data_integrity,
-)
-from deepchecks.tabular.suites import (
-    model_evaluation as tabular_model_evaluation,
-)
-from deepchecks.tabular.suites import (
-    train_test_validation as tabular_train_test_validation,
-)
-from deepchecks.vision import VisionData
-from deepchecks.vision.suites import (
-    data_integrity as vision_data_integrity,
-)
-from deepchecks.vision.suites import (
-    model_evaluation as vision_model_evaluation,
-)
-from deepchecks.vision.suites import (
-    train_test_validation as vision_train_test_validation,
-)
 from deepfix_core.models import (
     DataType,
     DeepchecksArtifacts,
@@ -54,11 +25,10 @@ from deepfix_core.models import (
     DeepchecksParsedResult,
     DeepchecksResultHeaders,
 )
-from sklearn.base import BaseEstimator
 
 from ..config import DeepchecksConfig, DefaultPaths
-from ..data.datasets import TabularDataset, InformationRetrievalDataset, NLPDataset
-from ..utils.logging import get_logger
+from ..data.base import TabularDataset, InformationRetrievalDataset, NLPDataset
+from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -205,7 +175,10 @@ class CheckResultsParser:
 
 
 SupportedDatasetType = Union[
-    VisionData, TabularDataset, NLPDataset, InformationRetrievalDataset
+    Any,  # VisionData — avoid importing at module level
+    TabularDataset,
+    NLPDataset,
+    InformationRetrievalDataset,
 ]
 TClassPred = Union[Sequence[int], Sequence[str], Sequence[Sequence[int]]]
 TTextProba = Sequence[Sequence[float]]
@@ -214,9 +187,9 @@ TTextProba = Sequence[Sequence[float]]
 class BaseDeepchecksRunner(ABC):
     def __init__(
         self,
-        suite_train_test_validation: SuiteResult,
-        suite_data_integrity: SuiteResult,
-        suite_model_evaluation: SuiteResult,
+        suite_train_test_validation,
+        suite_data_integrity,
+        suite_model_evaluation,
         config: Optional[DeepchecksConfig] = None,
     ):
         self.config = config or DeepchecksConfig()
@@ -245,7 +218,7 @@ class BaseDeepchecksRunner(ABC):
         train_data: SupportedDatasetType,
         dataset_name: str,
         test_data: Optional[SupportedDatasetType] = None,
-        model: Optional[BaseEstimator] = None,
+        model: Optional[Any] = None,
         model_name: Optional[str] = None,
         **kwargs,
     ) -> DeepchecksArtifacts:
@@ -359,7 +332,7 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         train_data: InformationRetrievalDataset,
         dataset_name: str,
         test_data: Optional[InformationRetrievalDataset] = None,
-        model: Optional[BaseEstimator] = None,
+        model: Optional[Any] = None,
         model_name: Optional[str] = None,
         train_predictions: Optional[TClassPred] = None,
         test_predictions: Optional[TClassPred] = None,
@@ -466,6 +439,16 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         """
         Initialize Deepchecks runner with configuration.
         """
+        from deepchecks.vision.suites import (
+            data_integrity as vision_data_integrity,
+        )
+        from deepchecks.vision.suites import (
+            model_evaluation as vision_model_evaluation,
+        )
+        from deepchecks.vision.suites import (
+            train_test_validation as vision_train_test_validation,
+        )
+
         super().__init__(
             config=config,
             suite_train_test_validation=vision_train_test_validation(),
@@ -479,6 +462,8 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
     ) -> SuiteResult:
+        from deepchecks.vision import VisionData
+
         LOGGER.info("Running train-test validation suite")
         self._check_inputs(train_data, test_data)
         return self.suite_train_test_validation.run(
@@ -522,8 +507,10 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
         )
 
     def _check_inputs(
-        self, train_data: VisionData, test_data: Optional[VisionData] = None
+        self, train_data, test_data=None
     ) -> None:
+        from deepchecks.vision import VisionData
+
         assert isinstance(train_data, VisionData), (
             f"train_data must be an instance of VisionData, got {type(train_data)}"
         )
@@ -543,6 +530,16 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
         """
         Initialize Deepchecks runner with configuration for tabular data.
         """
+        from deepchecks.tabular.suites import (
+            data_integrity as tabular_data_integrity,
+        )
+        from deepchecks.tabular.suites import (
+            model_evaluation as tabular_model_evaluation,
+        )
+        from deepchecks.tabular.suites import (
+            train_test_validation as tabular_train_test_validation,
+        )
+
         super().__init__(
             config=config,
             suite_train_test_validation=tabular_train_test_validation(),
@@ -605,7 +602,7 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
 
     def run_suite_model_evaluation(
         self,
-        model: BaseEstimator,
+        model: Any,
         train_data: SupportedDatasetType,
         test_data: Optional[SupportedDatasetType] = None,
         **kwargs,
@@ -653,6 +650,16 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
         """
         Initialize Deepchecks runner with configuration for NLP text data.
         """
+        from deepchecks.nlp.suites import (
+            data_integrity as nlp_data_integrity,
+        )
+        from deepchecks.nlp.suites import (
+            model_evaluation as nlp_model_evaluation,
+        )
+        from deepchecks.nlp.suites import (
+            train_test_validation as nlp_train_test_validation,
+        )
+
         super().__init__(
             config=config,
             suite_train_test_validation=nlp_train_test_validation(),

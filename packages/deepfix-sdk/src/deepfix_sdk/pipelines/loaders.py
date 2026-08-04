@@ -8,7 +8,7 @@ from deepfix_core.models import (
 )
 
 from ..artifacts import ArtifactsManager
-from ..utils.logging import get_logger
+from ..logging import get_logger
 from .base import Step
 
 

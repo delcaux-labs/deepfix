@@ -3,15 +3,30 @@ DeepChecks NLP datasets utilities.
 
 This module provides convenient loaders for pre-built NLP datasets from the DeepChecks library,
 supporting text classification and token classification (NER) tasks with TextData return types.
+
+Requires the ``[nlp]`` extra: ``pip install deepfix-sdk[nlp]``
 """
 
-import logging
-from typing import Tuple, Union
+from __future__ import annotations
 
-from deepchecks.nlp import TextData
-from deepchecks.nlp.datasets import classification, token_classification
+import logging
+from typing import TYPE_CHECKING, Tuple, Union
+
+if TYPE_CHECKING:
+    from deepchecks.nlp import TextData
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _require_nlp():
+    try:
+        from deepchecks.nlp import TextData  # noqa: F811
+        from deepchecks.nlp.datasets import classification, token_classification  # noqa: F811
+    except ImportError:
+        raise ImportError(
+            "NLP dependencies are required for these datasets. "
+            "Install with: pip install deepfix-sdk[nlp]"
+        ) from None
 
 
 # Classification Datasets
@@ -27,6 +42,9 @@ def load_tweet_emotion_classification(
     Returns:
         TextData object
     """
+    _require_nlp()
+    from deepchecks.nlp.datasets import classification
+
     LOGGER.info("Loading Tweet Emotion classification dataset")
     try:
         data = classification.tweet_emotion.load_data(
@@ -53,6 +71,9 @@ def load_just_dance_comment_classification(
     Returns:
         TextData object
     """
+    _require_nlp()
+    from deepchecks.nlp.datasets import classification
+
     LOGGER.info("Loading Just Dance comment classification dataset")
     try:
         data = classification.just_dance_comment_analysis.load_data(
@@ -83,6 +104,9 @@ def load_scierc_ner(include_embeddings: bool = False) -> Tuple[TextData, TextDat
     Returns:
         Tuple of (train_data, test_data) as TextData objects for token classification
     """
+    _require_nlp()
+    from deepchecks.nlp.datasets import token_classification
+
     LOGGER.info("Loading SciERC NER dataset")
     try:
         train_data, test_data = token_classification.scierc_ner.load_data(

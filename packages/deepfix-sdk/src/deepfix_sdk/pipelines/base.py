@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from ..utils.logging import get_logger
+from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
 

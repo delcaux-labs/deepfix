@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Recall
 
 from ...integrations.lightning import DeepSightCallback
-from ...utils.logging import get_logger
+from ...logging import get_logger
 
 LOGGER = get_logger(__name__)
 

@@ -1,12 +1,29 @@
+"""
+Lightning integration for DeepFix.
+
+.. deprecated::
+    The ``lightning`` package is no longer a required dependency of ``deepfix-sdk``.
+    To use this module, install ``lightning`` separately:
+    ``pip install lightning``
+"""
+
 from typing import List, Optional
 
-import lightning as L
-from lightning.pytorch.callbacks import Callback
-
-from ..pipelines.factory import TrainLoggingPipeline
-from ..utils.logging import get_logger
+from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
+
+try:
+    import lightning as L
+    from lightning.pytorch.callbacks import Callback
+
+    _HAS_LIGHTNING = True
+except ImportError:
+    _HAS_LIGHTNING = False
+
+    # Provide a stub so the module can still be imported
+    class Callback:  # type: ignore[no-redef]
+        pass
 
 
 class DeepSightCallback(Callback):
@@ -16,6 +33,11 @@ class DeepSightCallback(Callback):
         metric_names: List[str],
         batch_size: int = 16,
     ):
+        if not _HAS_LIGHTNING:
+            raise ImportError(
+                "lightning is required for DeepSightCallback. "
+                "Install it with: pip install lightning"
+            )
         super().__init__()
         self.mlflow_run_id = None
         self.mlflow_experiment_id = None
@@ -46,7 +68,7 @@ class DeepSightCallback(Callback):
     def state_dict(self):
         return self.state.copy()
 
-    def on_fit_start(self, trainer: L.Trainer, pl_module: L.LightningModule):
+    def on_fit_start(self, trainer, pl_module):
         self.mlflow_run_id = getattr(pl_module.logger, "run_id", None)
         self.mlflow_experiment_id = getattr(pl_module.logger, "experiment_id", None)
         if self.mlflow_run_id is not None:
@@ -56,7 +78,9 @@ class DeepSightCallback(Callback):
             LOGGER.warning("No mlflow logger found")
 
     # TODO: make it work with any logger?
-    def run(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
+    def run(self, trainer, pl_module) -> None:
+        from ..pipelines.factory import TrainLoggingPipeline
+
         # get best model path and score from trainer
         self.best_model_path = trainer.checkpoint_callback.best_model_path
         self.best_model_score = trainer.checkpoint_callback.best_model_score
@@ -75,5 +99,5 @@ class DeepSightCallback(Callback):
         return None
 
     # TODO: make sure that on_fit_end pl_module is the best model, automatically loaded by trainer
-    def on_fit_end(self, trainer: L.Trainer, pl_module: L.LightningModule):
+    def on_fit_end(self, trainer, pl_module):
         self.run(trainer=trainer, pl_module=pl_module)

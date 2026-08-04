@@ -1,17 +1,35 @@
-from typing import List
+"""
+Timm model wrappers for vision tasks.
 
-import timm
-import torch
-import torch.nn as nn
-from open_clip import create_model_from_pretrained, get_tokenizer
-from torchvision import transforms as T
+Requires the ``[vision]`` extra: ``pip install deepfix-sdk[vision]``
+"""
 
-from ..utils.feature_extractor import FeatureExtractor
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    import torch
+
+
+def _require_vision():
+    try:
+        import timm  # noqa: F811
+        import torch  # noqa: F811
+    except ImportError:
+        raise ImportError(
+            "Vision dependencies are required for timm models. "
+            "Install with: pip install deepfix-sdk[vision]"
+        ) from None
 
 
 def get_timm_model(
     model_name: str, pretrained: bool = True, num_classes: int = 10
-) -> torch.nn.Module:
+) -> "torch.nn.Module":
+    import timm
+    import torch
+    from torchvision import transforms as T
+
     model = timm.create_model(
         model_name, pretrained=pretrained, num_classes=num_classes
     )
@@ -21,7 +39,9 @@ def get_timm_model(
     return model
 
 
-class ClassifierHead(nn.Module):
+class ClassifierHead:
+    """MLP classification head on top of a feature extractor."""
+
     def __init__(
         self,
         input_dim: int,
@@ -30,7 +50,10 @@ class ClassifierHead(nn.Module):
         hidden_dim: int = 128,
         num_layers: int = 2,
     ):
-        super().__init__()
+        _require_vision()
+
+        import torch.nn as nn
+
         layers = []
         if num_layers > 1:
             for i in range(num_layers - 1):
@@ -62,8 +85,13 @@ class ClassifierHead(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fc(x)
 
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return self.forward(x)
 
-class TimmClassificationModel(torch.nn.Module):
+
+class TimmClassificationModel:
+    """Timm-backed classification model with a trainable MLP head."""
+
     def __init__(
         self,
         model_name: str = "timm/vit_base_patch14_reg4_dinov2.lvd142m",
@@ -76,7 +104,10 @@ class TimmClassificationModel(torch.nn.Module):
         """
         Timm classification model.
         """
-        super().__init__()
+        _require_vision()
+
+        from ..utils.feature_extractor import FeatureExtractor
+
         self.backbone = FeatureExtractor(
             model_name, freeze=freeze_backbone, to_torchscript=False
         )
@@ -91,12 +122,22 @@ class TimmClassificationModel(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.mlp(self.backbone(x))
 
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return self.forward(x)
 
-class CLIPModel(torch.nn.Module):
+
+class CLIPModel:
+    """CLIP model wrapper for zero-shot classification."""
+
     def __init__(
         self, timm_model_name: str, labels_list: List[str], device: str = "cpu"
     ):
-        super().__init__()
+        _require_vision()
+
+        import torch
+        from open_clip import create_model_from_pretrained, get_tokenizer
+        from torchvision import transforms as T
+
         self.model, self.preprocess = create_model_from_pretrained(
             f"hf-hub:timm/{timm_model_name}"
         )
@@ -118,6 +159,8 @@ class CLIPModel(torch.nn.Module):
         self.model.eval()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        import torch
+
         x = x.float().to(self.device)
         image = self.preprocess(x).to(self.device)
         with torch.inference_mode():
@@ -126,6 +169,9 @@ class CLIPModel(torch.nn.Module):
             text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
         text_probs = text_probs.cpu()
         return text_probs
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return self.forward(x)
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         if len(x.shape) == 3:

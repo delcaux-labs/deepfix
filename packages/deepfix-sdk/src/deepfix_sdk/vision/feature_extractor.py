@@ -3,21 +3,33 @@ Feature extraction for image filtering algorithms.
 
 This module provides feature extraction capabilities for clustering
 and filtering algorithms in object detection training data selection.
+
+Requires the ``[vision]`` extra: ``pip install deepfix-sdk[vision]``
 """
 
+from __future__ import annotations
+
 from contextlib import nullcontext
-from typing import List, Union
+from typing import TYPE_CHECKING, List, Union
 
-import timm
-import torch
-import torch.nn as nn
-import torchvision.transforms as T
-from PIL import Image
+try:
+    import torch  # noqa: F811
+    import timm  # noqa: F811
+    import torch.nn as nn
+    import torchvision.transforms as T  # noqa: F811
+    from PIL import Image
+except ImportError:
+    raise ImportError(
+        "Vision dependencies are required for FeatureExtractor. "
+        "Install with: pip install deepfix-sdk[vision]"
+    ) from None
 
 
-class FeatureExtractor(nn.Module):
+class FeatureExtractor:
     """
-    Feature extractor.
+    Feature extractor backed by a timm model.
+
+    Requires ``pip install deepfix-sdk[vision]``.
     """
 
     def __init__(
@@ -32,8 +44,7 @@ class FeatureExtractor(nn.Module):
             model_name: timm model name (default: 'timm/vit_small_patch16_224.dino')
             device: Device to run inference on ('cpu', 'cuda',)
         """
-        super().__init__()
-
+        
         self.backbone = model_name
         self.model = None
         self.transform = None
@@ -51,6 +62,7 @@ class FeatureExtractor(nn.Module):
             self.num_features = self.forward(torch.randn(1, 3, 224, 224)).shape[1]
 
     def _set_model_and_transform(self) -> str:
+        
         global_pool = "" if "vit" in self.backbone else "avg"
         self.model = timm.create_model(
             self.backbone, pretrained=True, num_classes=0, global_pool=global_pool
@@ -73,20 +85,22 @@ class FeatureExtractor(nn.Module):
         """
         return self.num_features
 
-    def forward(self, images: Union[torch.Tensor, List[Image.Image]]) -> torch.Tensor:
+    def forward(self, images: Union[torch.Tensor, List[Image]]) -> torch.Tensor:
         """
         Extract features
         """
         images = self._load(images)
         return self._forward(images)
 
-    def _load(self, images: Union[torch.Tensor, List[Image.Image]]):
+    def _load(self, images: Union[torch.Tensor, List[Image]]):
+        import torch
+
         if isinstance(images, torch.Tensor):
             images = images.float()
             images = self.transform(images)
         else:
             for image in images:
-                assert isinstance(image, Image.Image), (
+                assert isinstance(image, Image), (
                     f"Image must be a PIL Image. Received {type(image)}"
                 )
             images = torch.stack(
