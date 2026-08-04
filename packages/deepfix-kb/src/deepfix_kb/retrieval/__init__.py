@@ -1,5 +1,8 @@
 """Retrieval package for knowledge retrieval from multiple sources."""
 
+from deepfix_kb.config import RetrievalStrategy
+from deepfix_kb.models import RetrievalResult
+
 from .base import BaseRetriever
 from .hybrid_retriever import HybridRetriever
 from .perplexity_client import (
@@ -10,9 +13,6 @@ from .perplexity_client import (
     PerplexitySonarRetriever,
 )
 from .tavily_client import TavilySearchRetriever
-
-from deepfix_kb.config import RetrievalStrategy
-from deepfix_kb.models import RetrievalResult
 
 __all__ = [
     "BaseRetriever",

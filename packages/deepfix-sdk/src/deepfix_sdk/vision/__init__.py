@@ -1,8 +1,8 @@
 from .dataset import (
-    VisionDataset,
     ImageClassificationDataset,
     ObjectDetectionDataset,
     SemanticSegmentationDataset,
+    VisionDataset,
 )
 from .utils import VisionDataStatistics
 

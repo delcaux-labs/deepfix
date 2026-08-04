@@ -5,22 +5,18 @@ This module provides the API endpoint for analyzing ML artifacts,
 replicating the functionality of LitServe-based deepfix-server.
 """
 
-import json
 import logging
-import os
 import time
 import traceback
-from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urljoin
 
 import httpx
-from deepfix_core.models import APIRequest, APIResponse, APIJobResponse, AnalysisJobStatus
+from deepfix_core.models import AnalysisJobStatus, APIJobResponse, APIRequest
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from langfuse import get_client, observe
 from sqlalchemy.orm import Session
-from functools import lru_cache
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 from ..config import settings
 from ..database import get_db
@@ -183,7 +179,7 @@ async def proxy_to_deepfix_server(
             raise HTTPException(
                 status_code=503, detail=f"DeepFix Server is unavailable: {exc}"
             )
-        
+
         except Exception as exc:
             LOGGER.exception(f"Analysis failed: {exc}")
             raise exc
@@ -222,7 +218,7 @@ async def analyse_artifacts(
         job_data = await proxy_to_deepfix_server(
             request.model_dump(mode="json"), urljoin(settings.DEEPFIX_SERVER_URL, endpoint), timeout=360.0
         )
-        
+
         # 3. Log successful request
         duration_ms = (time.perf_counter() - start_time) * 1000
         background_tasks.add_task(
@@ -282,7 +278,7 @@ async def analyse_artifacts_v2(
         )
 
         return job_data
-    
+
     except HTTPException as exc:
         # Re-raise HTTP exceptions (auth failures, bad requests)
         LOGGER.error(f"Analysis submission failed: {exc}")

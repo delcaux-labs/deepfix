@@ -14,7 +14,7 @@ import re
 import traceback
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from deepchecks.core import CheckFailure, CheckResult, SuiteResult
 from deepfix_core.models import (
@@ -26,9 +26,8 @@ from deepfix_core.models import (
     DeepchecksResultHeaders,
 )
 
-from ..config import DeepchecksConfig, DefaultPaths
+from ..config import DeepchecksConfig
 from ..data.base import BaseDataset
-
 from ..logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -320,15 +319,14 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
             suite_data_integrity=None,
             suite_model_evaluation=None,
         )
-        from ..ir.dataset import InformationRetrievalDataset
         self.nlp_runner = DeepchecksRunnerForNLP(config=config)
         self.tabular_runner = DeepchecksRunnerForTabular(config=config)
 
     def run_suites(
         self,
-        train_data: "InformationRetrievalDataset",
+        train_data: BaseDataset,
         dataset_name: str,
-        test_data: Optional["InformationRetrievalDataset"] = None,
+        test_data: Optional[BaseDataset] = None,
         model: Optional[Any] = None,
         model_name: Optional[str] = None,
         train_predictions: Optional[TClassPred] = None,
@@ -339,7 +337,7 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
     ) -> DeepchecksArtifacts:
         """
         Run both NLP and Tabular Deepchecks suites for IR data.
-        """        
+        """
         from ..ir.dataset import InformationRetrievalDataset
         assert isinstance(train_data, InformationRetrievalDataset), (
             f"Expected InformationRetrievalDataset but got {type(train_data).__name__}"
@@ -745,7 +743,7 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             random_state=self.config.random_state,
             **kwargs,
         )
-    
+
     def _check_inputs(
         self, train_data: Any, test_data: Optional[Any] = None
     ) -> None:

@@ -3,9 +3,9 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
+import mlflow
 from deepfix_core.models import Artifacts
 from deepfix_kb import KnowledgeBridge
-import mlflow
 
 from .agents.artifact_analyzers import (
     DatasetArtifactsAnalyzer,

@@ -1,14 +1,14 @@
 import re
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+
 import numpy as np
 import pandas as pd
-
 from deepfix_core.models import DataType
 
 from ..data.base import BaseDataset
+from ..logging import get_logger
 from ..nlp.dataset import NLPDataset
 from ..tabular.dataset import TabularDataset
-from ..logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -108,7 +108,7 @@ class InformationRetrievalDataset(BaseDataset):
 
         if self._text_data is not None:
             return self._text_data
-            
+
         logger.info("Materialising TextData for '%s' …", self.dataset_name)
 
         # Build lookup dicts
@@ -175,7 +175,7 @@ class InformationRetrievalDataset(BaseDataset):
         )
         self.calculate_text_properties()
         return self._text_data
-    
+
     def calculate_text_properties(self):
         self._text_data.calculate_builtin_properties()
         if self._text_data.properties is not None:
@@ -189,7 +189,7 @@ class InformationRetrievalDataset(BaseDataset):
         return self._qrels.rename(
             columns={"qid": "query_id", "docno": "doc_id", "label": "relevance"}
         )
-    
+
     @property
     def metadata(self) -> pd.DataFrame:
         return self._metadata
@@ -435,7 +435,7 @@ class InformationRetrievalDataset(BaseDataset):
             embeddings.append(q_emb - d_emb)
             l1_norm.append(np.linalg.norm(q_emb - d_emb, ord=1))
             cosine_sim.append(np.dot(q_emb, d_emb) / (np.linalg.norm(q_emb) * np.linalg.norm(d_emb)))
-        
+
         self._l1_norm = np.array(l1_norm)
         self._cosine_sim = np.array(cosine_sim)
         self._embeddings = np.array(embeddings)
@@ -468,7 +468,7 @@ class InformationRetrievalDataset(BaseDataset):
             df["cosine_sim"] = self.cosine_sim
 
         # Remove id columns from categorical features
-        cat_features = list(self.categorical_metadata)        
+        cat_features = list(self.categorical_metadata)
         if "query_id" in df.columns:
             df.drop(columns=["query_id",], inplace=True)
             cat_features.remove('query_id')
@@ -477,7 +477,7 @@ class InformationRetrievalDataset(BaseDataset):
             cat_features.remove('doc_id')
 
         # TODO: provide embeddings as features for tabular dataset?
-        
+
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
             dataset=df,

@@ -1,7 +1,8 @@
 import argparse
 import json
-import urllib.request
 import sys
+import urllib.request
+
 
 def main():
     parser = argparse.ArgumentParser(description="Report completion to DeepFix Server webhook.")

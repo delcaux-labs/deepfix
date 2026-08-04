@@ -5,19 +5,16 @@ This module provides a standalone cache (no longer dependent on dspy.clients.Cac
 that stores LLM request/response pairs in the database with hit count tracking.
 """
 
-import copy
+import hashlib
 import json
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy import Column, DateTime, Integer, String, Text, func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
-import hashlib
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
 

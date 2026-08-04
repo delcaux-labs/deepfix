@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from tqdm import tqdm
 
-
 ing2label = {
     "apple_pie": 0,
     "baby_back_ribs": 1,

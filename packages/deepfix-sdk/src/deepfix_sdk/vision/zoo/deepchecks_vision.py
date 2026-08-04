@@ -10,17 +10,9 @@ Requires the ``[vision]`` extra: ``pip install deepfix-sdk[vision]``
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
-
-try:
-    import torch  # noqa: F811
-    import deepchecks.vision.datasets
-except ImportError:
-    raise ImportError(
-        "Vision dependencies are required for these datasets. "
-        "Install with: pip install deepfix-sdk[vision]"
-    ) from None
+import torch  # noqa: F811
 
 LOGGER = logging.getLogger(__name__)
 
@@ -218,7 +210,7 @@ def load_segmentation_dataset(
     """
 
     from deepchecks.vision.datasets.segmentation import segmentation_coco
-    
+
     object_type = "DataLoader"
 
     try:

@@ -1,12 +1,12 @@
 from functools import partial
 from typing import Callable, Dict, Optional
+
 import numpy as np
 
 try:
-    from deepchecks.vision import VisionData
-    from deepchecks.vision import BatchOutputFormat
-    from torch.utils.data import DataLoader, Dataset
+    from deepchecks.vision import BatchOutputFormat, VisionData
     from supervision.dataset.core import DetectionDataset
+    from torch.utils.data import DataLoader, Dataset
 except ImportError:
         raise ImportError(
             "Vision dependencies are required for this module. "
@@ -28,7 +28,7 @@ def classification_collate_with_model(data, model):
 
 
 def detection_collate_without_model(data):
-    
+
     images = []
     labels = []
     for item in data:
@@ -70,7 +70,7 @@ def detection_collate_without_model(data):
 
 
 def segmentation_collate_without_model(data):
-   
+
     images = []
     labels = []
     for item in data:
@@ -79,17 +79,17 @@ def segmentation_collate_without_model(data):
             image = np.array(image)
         if image.shape[0] in [1, 3] and image.ndim == 3:
             image = image.transpose(1, 2, 0)
-            
+
         if not isinstance(mask, np.ndarray):
             mask = np.array(mask, dtype=np.int64)
-            
+
         images.append(image)
         labels.append(mask)
     return BatchOutputFormat(images=images, labels=labels)
 
 
 class ClassificationVisionDataLoader:
-    
+
     @classmethod
     def load_from_dataset(
         cls,
@@ -132,7 +132,7 @@ class ClassificationVisionDataLoader:
 
 
 class DetectionVisionDataLoader:
-    
+
     @classmethod
     def load_from_dataset(
         cls,
@@ -162,7 +162,7 @@ class DetectionVisionDataLoader:
     def load_from_dataloader(
         cls, dataloader, label_map: Dict[int, str]
     ) -> VisionData:
-        
+
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(
                 type(dataloader)
@@ -176,7 +176,7 @@ class DetectionVisionDataLoader:
 
 
 class SegmentationVisionDataLoader:
-    
+
 
     @classmethod
     def load_from_dataset(
@@ -200,7 +200,7 @@ class SegmentationVisionDataLoader:
     def load_from_dataloader(
         cls, dataloader, label_map: Dict[int, str]
     ) -> VisionData:
-       
+
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(
                 type(dataloader)

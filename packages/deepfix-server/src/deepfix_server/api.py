@@ -1,32 +1,30 @@
-import os
+import asyncio
+import json
 import traceback
-from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Any, Dict, List
 
 import uvicorn
-import json
-import asyncio
-import pandas as pd
 from deepfix_core.models import (
-    APIRequest,
-    APIResponse,
-    DatasetArtifacts,
     AnalysisJobStatus,
     APIJobResponse,
+    APIRequest,
+    APIResponse,
     AutonomousFixRequest,
+    DatasetArtifacts,
 )
 from deepfix_core.models.fixes import FinalFixReport
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from .config import settings, LLMConfig
+from .config import settings
 from .coordinators import ArtifactAnalysisCoordinator
-from .database import get_db, get_engine, init_database, Base
+from .database import Base, get_db, get_engine, init_database
 from .logging import get_logger, setup_mlflow_tracing
 from .models import AgentContext, AnalysisJob
 from .openhands_executor import OpenHandsExecutor
-
 
 LOGGER = get_logger(__name__)
 
@@ -347,9 +345,6 @@ async def get_job_status(job_id: str, db: Session = Depends(get_db)):
     return response
 
 
-from pydantic import BaseModel
-from typing import List, Dict, Any
-
 class WebhookPayload(BaseModel):
     job_id: str
     success: bool
@@ -380,7 +375,7 @@ async def webhook_completion(
             applied_fixes=payload.applied_fixes,
             run_id=payload.run_id,
         )
-        
+
         job.result_data = response.model_dump_json()
         job.status = AnalysisJobStatus.COMPLETED
         db.commit()

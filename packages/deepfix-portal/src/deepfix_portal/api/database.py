@@ -2,7 +2,6 @@
 Database configuration and session management
 """
 
-import os
 
 from fastapi import HTTPException
 from sqlalchemy import create_engine

@@ -1,29 +1,29 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Optional, Union
 
 import requests
 from deepfix_core.models import (
+    AnalysisJobStatus,
+    APIJobResponse,
     APIRequest,
     APIResponse,
-    APIJobResponse,
     ArtifactPath,
-    DataType,
-    AnalysisJobStatus,
     AutonomousFixRequest,
+    DataType,
 )
 from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
-import time
 from tenacity import (
+    RetryError,
     Retrying,
+    retry_if_exception_type,
+    retry_if_result,
     stop_after_delay,
     wait_fixed,
-    retry_if_result,
-    retry_if_exception_type,
-    RetryError,
 )
 
 from .artifacts import ArtifactRepository, ArtifactStatus
@@ -248,9 +248,9 @@ class DeepFixClient:
         Returns:
             tuple[str, Optional[str], Optional[str]]: (save_dir, digest, uri)
         """
+        import mlflow.data
         import pandas as pd
         from datasets import Dataset, DatasetDict
-        import mlflow.data
 
         def _get_df(data_obj: Any) -> pd.DataFrame:
             if hasattr(data_obj, "to_dataframe"):
@@ -679,7 +679,7 @@ class DeepFixClient:
                 return True
             return not job_data.is_finished
 
-        start_time = time.time()
+        time.time()
         with Live(
             Spinner("dots", text="[cyan]Analysis pending...[/cyan]", style="cyan"),
             console=console,

@@ -1,21 +1,23 @@
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import List, Union, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from .datasets import InformationRetrievalDataset
 
+
 class IRLookupModel(BaseEstimator, ClassifierMixin):
     """A lookup-based model for Information Retrieval tasks to interface with Deepchecks.
-    
+
     In IR, predictions are usually pre-computed (e.g. scores for query-document pairs).
     This model acts as a wrapper that looks up the pre-computed scores and relevance
     from the IR dataset when Deepchecks evaluates it.
     """
-    
+
     def __init__(self, train_dataset: InformationRetrievalDataset, test_dataset: Optional[InformationRetrievalDataset] = None, classes: List[str] = None):
         """Initialize the lookup model.
-        
+
         Args:
             train_dataset: The training dataset.
             test_dataset: The test dataset.
@@ -25,7 +27,7 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
         self.test_dataset = test_dataset
         self.classes = classes if classes is not None else ["0", "1"]
         self.classes_ = np.array(self.classes)
-            
+
         lookup_data = []
         datasets = [ds for ds in [self.train_dataset, self.test_dataset] if ds is not None]
         for ds in datasets:
@@ -34,16 +36,16 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
             qrels['relevance_pred'] = ds.predictions
             qrels['score_pred'] = ds.probabilities
             lookup_data.append(qrels[['query_id', 'doc_id', 'relevance_pred', 'score_pred']])
-            
+
         retrievals_df = pd.concat(lookup_data, ignore_index=True)
-            
+
         # Ensure query_id and doc_id are strings for consistent lookup
         retrievals_df['query_id'] = retrievals_df['query_id'].astype(str)
         retrievals_df['doc_id'] = retrievals_df['doc_id'].astype(str)
-        
+
         # Drop duplicates just in case (keep first occurrence)
         retrievals_df = retrievals_df.drop_duplicates(subset=['query_id', 'doc_id'], keep='first')
-        
+
         # Set index for O(1) lookup
         self._lookup = retrievals_df.set_index(['query_id', 'doc_id'])
 
@@ -80,7 +82,7 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
             except KeyError:
                 raise KeyError(f"Query {q_id} and entity {e_id} not found in lookup table")
         return np.array(probas)
-        
+
     def get_params(self, deep=False) -> dict:
         """Override get_params to avoid serializing the datasets."""
         return {"classes": self.classes}

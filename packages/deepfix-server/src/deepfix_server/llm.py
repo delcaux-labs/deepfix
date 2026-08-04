@@ -6,15 +6,14 @@ project's existing LLMConfig, replacing dspy.LM + dspy.context(lm=...).
 
 from __future__ import annotations
 
-import os
 from typing import Optional
 
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.litellm import LiteLLMProvider
 
-from .config import LLMConfig
 from .agents.schemas import ArtifactAnalysisResult, CrossArtifactReasoningResult
+from .config import LLMConfig
 
 
 def create_model(config: LLMConfig) -> OpenAIChatModel:
@@ -29,7 +28,7 @@ def create_model(config: LLMConfig) -> OpenAIChatModel:
     Returns:
         Configured OpenAIChatModel instance.
     """
-    
+
     if not config.api_key:
         raise ValueError("No LLM API key configured. Please provide LLM configuration.")
 
@@ -63,7 +62,7 @@ def create_agent_for_analysis(
     Returns:
         A PydanticAgent ready for ``.run()`` calls.
     """
-    
+
     model = create_model(config)
 
     model_settings: dict = {}

@@ -1,21 +1,17 @@
 
 from typing import Any, Dict, List, Optional
 
-import uuid
-from datetime import datetime
-
-from sqlalchemy import Column, DateTime, Enum, String, Text
-
 from deepfix_core.models import (
     AgentResult,
-    Artifacts,
     Analysis,
+    Artifacts,
     DatasetArtifacts,
     DeepchecksArtifacts,
     ModelCheckpointArtifacts,
     TrainingArtifacts,
 )
 from pydantic import BaseModel, Field
+
 
 class AgentContext(BaseModel):
     """Context for agent execution.
@@ -93,7 +89,7 @@ class ArtifactAnalysisResult(BaseModel):
 
     summary: Optional[str] = Field(default=..., description="Summary of the analysis")
     analysis: List[Analysis] = Field(default=[], description="List of Analysis elements")
-    
+
 class CrossArtifactReasoningResult(BaseModel):
     """Structured output for the cross-artifact reasoning agent."""
 

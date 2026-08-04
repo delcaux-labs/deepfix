@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Callable
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -10,7 +10,6 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms as T
 from tqdm import tqdm
-
 
 eng = [
     "dressing_portion",

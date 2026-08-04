@@ -6,22 +6,19 @@ replacing dspy.ReAct / dspy.ChainOfThought / dspy.MultiChainComparison.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import traceback
-from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
 from typing import Dict, Optional
 
 from deepfix_kb import KnowledgeBridge
 from deepfix_kb.tools import create_knowledge_tools
-
 from pydantic_ai import Agent as PydanticAgent
-from .schemas import CrossArtifactReasoningResult, AgentResult
+
 from ..config import LLMConfig
 from ..llm import create_model
 from ..logging import get_logger
 from .base import Agent
+from .schemas import AgentResult, CrossArtifactReasoningResult
 
 LOGGER = get_logger(__name__)
 
@@ -51,7 +48,7 @@ class CrossArtifactReasoningAgent(Agent):
         """
         super().__init__(config=llm_config)
         self.knowledge_bridge = knowledge_bridge
-        self.num_attempts = num_attempts      
+        self.num_attempts = num_attempts
 
         model = create_model(llm_config) if llm_config else None
 
@@ -114,7 +111,6 @@ class CrossArtifactReasoningAgent(Agent):
             completions, previous_analyses, output_language
         )
         final_result = await self.agent.run(consolidation_prompt)
-        output_data = final_result.output
 
         # Collect analyzed artifacts and retrieved knowledge from inputs
         analyzed_artifacts: list = []

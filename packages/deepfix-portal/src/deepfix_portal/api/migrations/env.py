@@ -7,11 +7,10 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
+from deepfix_core.models import DatabaseBase
 from sqlalchemy import engine_from_config, pool
 
 from deepfix_portal.api.database import Base
-from deepfix_portal.api.models import User, APIKey
-from deepfix_core.models import DatabaseBase
 
 # this is the Alembic Config object
 config = context.config

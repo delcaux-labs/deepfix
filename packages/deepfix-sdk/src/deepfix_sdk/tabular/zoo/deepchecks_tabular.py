@@ -18,17 +18,6 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-def _require_tabular():
-    try:
-        from deepchecks.tabular import Dataset  # noqa: F811
-        from deepchecks.tabular.datasets import classification, regression  # noqa: F811
-    except ImportError:
-        raise ImportError(
-            "Tabular dependencies are required for these datasets. "
-            "Install with: pip install deepfix-sdk[tabular]"
-        ) from None
-
-
 # Classification Datasets
 def load_iris_classification(as_train_test: bool = True) -> Tuple["Dataset", "Dataset"]:
     """
@@ -43,7 +32,6 @@ def load_iris_classification(as_train_test: bool = True) -> Tuple["Dataset", "Da
     Returns:
         Tuple of (train_data, test_data) as TabularDataset objects
     """
-    _require_tabular()
     from deepchecks.tabular.datasets import classification
 
     LOGGER.info("Loading Iris classification dataset")
@@ -72,7 +60,6 @@ def load_breast_cancer_classification(
     Returns:
         Tuple of (train_data, test_data) as TabularDataset objects
     """
-    _require_tabular()
     from deepchecks.tabular.datasets import classification
 
     LOGGER.info("Loading Breast Cancer classification dataset")
@@ -101,7 +88,6 @@ def load_adult_classification(
     Returns:
         Tuple of (train_data, test_data) as TabularDataset objects
     """
-    _require_tabular()
     from deepchecks.tabular.datasets import classification
 
     LOGGER.info("Loading Adult Income classification dataset")
@@ -131,7 +117,6 @@ def load_california_housing_regression(
     Returns:
         Tuple of (train_data, test_data) as TabularDataset objects
     """
-    _require_tabular()
     from deepchecks.tabular.datasets import regression
 
     LOGGER.info("Loading California Housing regression dataset")

@@ -1,4 +1,5 @@
 from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
             "from_name": self.SMTP_FROM_NAME,
             "use_tls": self.SMTP_USE_TLS,
         }
-    
+
     def get_frontend_url(self) -> str:
         """
         Get frontend URL from centralized settings and validate it.

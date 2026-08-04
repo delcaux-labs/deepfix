@@ -26,8 +26,6 @@ from .retrieval import (
     TavilySearchRetriever,
 )
 
-
-
 __all__ = [
     # Main interface
     "KnowledgeBridge",

@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 from deepfix_core.models import (
     ObjectDetectionStatistics,
     TaskType,
     VisionStatistics,
 )
+from tqdm import tqdm
 
 from ..data.base import BaseDataStatistics
 from .dataset import (
@@ -103,7 +103,7 @@ class VisionDataStatistics(BaseDataStatistics):
 
         first_image = dataset[0]["image"]
 
-        H, W, C = first_image.shape  
+        H, W, C = first_image.shape
         assert C in [1, 3], (
             f"Expected image of shape H*W*1 or H*W*3. But got {H}*{W}*{C}."
         )
@@ -111,7 +111,7 @@ class VisionDataStatistics(BaseDataStatistics):
         sum_pixels = torch.zeros(C, dtype=torch.float64)
         sum_squared_pixels = torch.zeros(C, dtype=torch.float64)
         count = 0
-        class_counts = {}  
+        class_counts = {}
         pixel_class_ratio = dict()
 
         for idx in tqdm(range(len(dataset)), desc="Computing dataset base statistics"):
@@ -157,12 +157,12 @@ class VisionDataStatistics(BaseDataStatistics):
                 if torch.max(image) > 1.0 and torch.min(image) >= 0.0:
                     image = image / 255.0
 
-            image_flat = image.permute(2, 0, 1).reshape(C, -1)  
+            image_flat = image.permute(2, 0, 1).reshape(C, -1)
 
             sum_pixels += image_flat.sum(dim=1).to(
                 torch.float64
-            )  
-            count += image_flat.shape[1]  
+            )
+            count += image_flat.shape[1]
             sum_squared_pixels += (image_flat**2).sum(dim=1).to(torch.float64)
 
         mean = sum_pixels / count
@@ -214,10 +214,10 @@ class VisionDataStatistics(BaseDataStatistics):
             num_boxes_total += num_boxes_in_image
             boxes_per_image_list.append(num_boxes_in_image)
 
-            boxes = annotation.xyxy  
+            boxes = annotation.xyxy
 
-            width = boxes[:, 2] - boxes[:, 0]  
-            heights = boxes[:, 3] - boxes[:, 1]  
+            width = boxes[:, 2] - boxes[:, 0]
+            heights = boxes[:, 3] - boxes[:, 1]
             areas = width * heights
             box_areas.extend(areas)
             box_widths.extend(width)

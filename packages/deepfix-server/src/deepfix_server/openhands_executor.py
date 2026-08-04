@@ -1,27 +1,18 @@
 import asyncio
-import logging
-import os
-import sys
-from typing import Any, Optional, Union
-
-from pydantic import SecretStr
-
-from openhands.sdk import LLM, Agent, AgentContext, Conversation, Workspace
-from openhands.workspace import DockerWorkspace
-from openhands.sdk.conversation.goal import run_goal
-from openhands.tools import FileEditorTool, TerminalTool, TaskTrackerTool
-from openhands.sdk.tool import Tool
-from openhands.sdk.utils.async_utils import AsyncCallbackWrapper
-
 import pathlib
-import deepfix_kb
-from openhands.sdk.context import AgentContext
-from openhands.sdk.skills import Skill, load_skills_from_dir
+from typing import Any
 
 from deepfix_core.models.api import APIResponse
+from openhands.sdk import LLM, Agent, AgentContext, Conversation, Workspace
+from openhands.sdk.conversation.goal import run_goal
+from openhands.sdk.skills import Skill, load_skills_from_dir
+from openhands.sdk.tool import Tool
+from openhands.tools import FileEditorTool, TaskTrackerTool, TerminalTool
+from openhands.workspace import DockerWorkspace
+from pydantic import SecretStr
+
 from .config import AutonomousFixConfig
 from .logging import get_logger
-
 
 LOGGER = get_logger(__name__)
 
@@ -98,7 +89,7 @@ class OpenHandsExecutor:
 
     async def launch_autonomous_fix(self, job_id: str, diagnosis_response: APIResponse, mlflow_experiment_id:int=0) -> None:
         """Launches the OpenHands agent to fix the identified issues.
-        
+
         Args:
             job_id: The unique identifier for this fix job.
             diagnosis_response: The prior diagnostic findings from DeepFix Server.
@@ -111,23 +102,23 @@ class OpenHandsExecutor:
             llm_kwargs["api_key"] = SecretStr(self.config.openhands_llm_api_key)
         if self.config.openhands_llm_base_url:
             llm_kwargs["base_url"] = self.config.openhands_llm_base_url
-        
+
         agent_llm_kwargs = llm_kwargs.copy()
         agent_llm_kwargs["usage_id"] = "agent"
         llm = LLM(**agent_llm_kwargs)
-        
+
         judge_llm_kwargs = llm_kwargs.copy()
         judge_llm_kwargs["usage_id"] = "goal-judge"
         judge_llm = LLM(**judge_llm_kwargs)
 
         system_prompt = self._build_system_prompt(job_id, diagnosis_response)
-        
+
         try:
             # We configure the OpenHands agent with essential standard tools
             agent = Agent(
                 llm=llm,
                 tools=[
-                    Tool(name=TerminalTool.name), 
+                    Tool(name=TerminalTool.name),
                     Tool(name=TaskTrackerTool.name),
                     Tool(name=FileEditorTool.name)
                 ],
@@ -142,7 +133,7 @@ class OpenHandsExecutor:
                 if self.config.openhands_use_local_server:
                     workspace = Workspace(host=self.config.openhands_server_url)
                     conversation = Conversation(agent=agent, workspace=workspace, **conversation_kwargs)
-                    
+
                     outcome = run_goal(
                         conversation=conversation,
                         objective=system_prompt,
@@ -162,7 +153,7 @@ class OpenHandsExecutor:
                             judge_llm=judge_llm,
                             max_iterations=10,
                         )
-                
+
                 LOGGER.info(
                     "OpenHands Goal finished",
                     job_id=job_id,
@@ -179,7 +170,7 @@ class OpenHandsExecutor:
     def _build_system_prompt(self, job_id: str, diagnosis_response: APIResponse) -> str:
         """Constructs the system prompt instructing OpenHands on what to do."""
         diagnosis_text = diagnosis_response.get_results_as_text()
-        
+
         prompt = f"""
                     You are an autonomous Machine Learning engineer. Your goal is to apply fixes to a model based on the following diagnostic findings:
 
@@ -191,7 +182,7 @@ class OpenHandsExecutor:
 
                     CRITICAL INSTRUCTIONS:
                     1. Use your `mlflow-data-access` skill to download datasets and models from MLflow.
-                    2. Iterate on the training script (`train.py`) to resolve the issues found above. Run the script to evaluate metrics.
+                    2. Create and Iterate on the training script (`train.py`) to resolve the issues found above. Run the script to evaluate metrics.
                     3. When you have achieved a satisfactory fix, or exhausted all possibilities, you MUST communicate the result back to the server.
                     4. Use your `deepfix-communication` skill to run `report_completion.py`. Your Job ID is: {job_id}.
                     """

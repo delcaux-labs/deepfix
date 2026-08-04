@@ -1,11 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from deepfix_core.models import IRStatistics, TaskType
 
 from ..data.base import BaseDataStatistics
-from .dataset import InformationRetrievalDataset
 from ..nlp.utils import NLPDataStatistics
 from ..tabular.utils import TabularDataStatistics
+from .dataset import InformationRetrievalDataset
 
 
 class IRDataStatistics(BaseDataStatistics):
@@ -55,7 +55,7 @@ class IRDataStatistics(BaseDataStatistics):
                 "doc_id"
             ].nunique()
         )
-        num_non_relevant_docs = int(
+        int(
             dataset.qrels[dataset.qrels["relevance"].astype(int) < 1][
                 "doc_id"
             ].nunique()

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
-from deepfix_core.models import ArtifactPath, DataType
 import numpy as np
+from deepfix_core.models import ArtifactPath, DataType
 
 from ..artifacts import ArtifactRepository, ArtifactsManager
 from ..config import (
@@ -270,7 +270,7 @@ class IngestionPipeline(Pipeline):
             if mlflow_run_id:
                 mlflow_run_ids.add(mlflow_run_id)
             self.artifact_mgr.delete_artifact(run_name, artifact_key)
-            
+
         for mlflow_run_id in mlflow_run_ids:
             self.mlflow_manager.delete_run(mlflow_run_id)
             LOGGER.info(f"Deleted MLflow run `{mlflow_run_id}`")

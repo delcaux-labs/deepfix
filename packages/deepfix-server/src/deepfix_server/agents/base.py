@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import traceback
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, List, Optional
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional
+
 from ..config import LLMConfig, PromptConfig
 from ..llm import create_agent_for_analysis
 from ..logging import get_logger
-from .schemas import AgentContext, AgentResult, Artifacts, ArtifactAnalysisResult
 from ..prompt_builders import PromptBuilder
-
+from .schemas import AgentContext, AgentResult, ArtifactAnalysisResult, Artifacts
 
 LOGGER = get_logger(__name__)
 
@@ -73,7 +73,7 @@ class Agent(ABC):
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, self.arun(context))
             return future.result()
-    
+
     @abstractmethod
     async def arun(self, context: AgentContext) -> AgentResult:
         """Run the analyzer asynchronously.
@@ -113,7 +113,7 @@ class ArtifactAnalyzer(Agent):
             config_prompt_builder: Optional prompt builder configuration.
         """
         super().__init__(config=config)
-        self.prompt_builder = PromptBuilder(config=config_prompt_builder)       
+        self.prompt_builder = PromptBuilder(config=config_prompt_builder)
 
         self.agent = create_agent_for_analysis(
             config=config,

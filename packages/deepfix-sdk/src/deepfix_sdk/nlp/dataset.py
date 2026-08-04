@@ -5,6 +5,7 @@ from deepfix_core.models import DataType
 
 from ..data.base import BaseDataset
 
+
 class NLPDataset(BaseDataset):
     def __init__(self, dataset_name: str, dataset):
         self.dataset = dataset

@@ -1,6 +1,6 @@
 from typing import Callable, Dict, Iterable, Optional, Union
-import numpy as np
 
+import numpy as np
 from deepchecks.vision import VisionData
 from deepfix_core.models import DataType
 from supervision.dataset.core import DetectionDataset
@@ -30,7 +30,7 @@ class VisionDataset(BaseDataset):
     @property
     def data_type(self) -> DataType:
         return DataType.VISION
-    
+
     def to_loader(self, **kwargs) -> VisionData:
         raise NotImplementedError("should be implemented by subclass")
 
@@ -73,7 +73,7 @@ class ObjectDetectionDataset(VisionDataset):
         annotations_path: str,
         force_masks: bool = False,
     ):
-        
+
         data = DetectionDataset.from_coco(
             images_directory_path=images_directory_path,
             annotations_path=annotations_path,
@@ -105,7 +105,6 @@ class ObjectDetectionDataset(VisionDataset):
         return dict(zip(labels, self.dataset.classes))
 
     def get_annotations(self):
-        from supervision.detection.core import Detections
 
         return self.dataset.annotations
 
@@ -177,7 +176,7 @@ class SemanticSegmentationDataset(VisionDataset):
         batch_size: int = 8,
         shuffle: bool = False,
     ) -> VisionData:
-        
+
         if isinstance(self.dataset, VisionData):
             return self.dataset
         else:

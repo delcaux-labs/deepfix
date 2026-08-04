@@ -6,17 +6,21 @@ Requires the ``[vision]`` extra: ``pip install deepfix-sdk[vision]``
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from contextlib import nullcontext
+from typing import List, Union
 
 import timm
 import torch
-from torchvision import transforms as T
+import torch.nn as nn
 from open_clip import create_model_from_pretrained, get_tokenizer
+from PIL import Image
+from torchvision import transforms as T
+
 
 def get_timm_model(
     model_name: str, pretrained: bool = True, num_classes: int = 10
 ) -> "torch.nn.Module":
-    
+
     model = timm.create_model(
         model_name, pretrained=pretrained, num_classes=num_classes
     )
@@ -37,9 +41,6 @@ class ClassifierHead:
         hidden_dim: int = 128,
         num_layers: int = 2,
     ):
-        _require_vision()
-
-        import torch.nn as nn
 
         layers = []
         if num_layers > 1:
@@ -94,7 +95,7 @@ class FeatureExtractor:
             model_name: timm model name (default: 'timm/vit_small_patch16_224.dino')
             device: Device to run inference on ('cpu', 'cuda',)
         """
-        
+
         self.backbone = model_name
         self.model = None
         self.transform = None
@@ -112,7 +113,7 @@ class FeatureExtractor:
             self.num_features = self.forward(torch.randn(1, 3, 224, 224)).shape[1]
 
     def _set_model_and_transform(self) -> str:
-        
+
         global_pool = "" if "vit" in self.backbone else "avg"
         self.model = timm.create_model(
             self.backbone, pretrained=True, num_classes=0, global_pool=global_pool

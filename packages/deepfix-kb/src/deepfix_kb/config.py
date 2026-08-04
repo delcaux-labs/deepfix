@@ -214,14 +214,14 @@ class KnowledgeBridgeConfig(BaseSettings):
         description="Enable local KB",
     )
     enable_deduplication: bool = Field(
-        True, 
-        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_DEDUPLICATION"), 
+        True,
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_DEDUPLICATION"),
         description="Enable result deduplication"
     )
     similarity_threshold: float = Field(
-        0.85, 
-        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_SIMILARITY_THRESHOLD"), 
-        ge=0.0, le=1.0, 
+        0.85,
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_SIMILARITY_THRESHOLD"),
+        ge=0.0, le=1.0,
         description="Similarity threshold for deduplication"
     )
 

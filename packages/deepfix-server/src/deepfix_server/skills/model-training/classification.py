@@ -1,4 +1,5 @@
 import os
+from logging import get_logger
 from typing import Any, Dict, Literal, Optional, Tuple
 
 import lightning as L
@@ -15,8 +16,6 @@ from lightning.pytorch.loggers import MLFlowLogger
 from pydantic import BaseModel, Field
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics.classification import AUROC, Accuracy, F1Score, Precision, Recall
-
-from logging import get_logger
 
 LOGGER = get_logger(__name__)
 

@@ -1,20 +1,14 @@
-from typing import Any, Dict, List, Optional
-
 import uuid
 from datetime import datetime
+from typing import Any, Dict, Optional
 
+from deepfix_core.models import AgentResult, AnalysisJobStatus
+from pydantic import BaseModel, Field
 from sqlalchemy import Column, DateTime, Enum, String, Text
 
+from .agents.schemas import AgentContext
 from .database import Base
 
-from deepfix_core.models import (
-    AgentResult,
-    AnalysisJobStatus
-)
-
-from .agents.schemas import AgentContext
-
-from pydantic import BaseModel, Field
 
 ## Database
 class AnalysisJob(Base):

@@ -6,10 +6,10 @@ from .analysis import (
     Severity,
 )
 from .api import (
+    AnalysisJobStatus,
     APIJobResponse,
     APIRequest,
     APIResponse,
-    AnalysisJobStatus,
     AutonomousFixRequest,
 )
 from .artifacts import (

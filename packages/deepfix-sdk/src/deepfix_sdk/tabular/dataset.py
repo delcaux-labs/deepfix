@@ -5,6 +5,7 @@ from deepfix_core.models import DataType
 
 from ..data.base import BaseDataset
 
+
 class TabularDataset(BaseDataset):
     def __init__(
         self,

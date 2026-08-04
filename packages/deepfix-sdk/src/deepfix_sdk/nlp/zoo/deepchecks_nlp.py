@@ -20,8 +20,11 @@ LOGGER = logging.getLogger(__name__)
 
 def _require_nlp():
     try:
-        from deepchecks.nlp import TextData  # noqa: F811
-        from deepchecks.nlp.datasets import classification, token_classification  # noqa: F811
+        from deepchecks.nlp import TextData  # noqa: F811, F401
+        from deepchecks.nlp.datasets import (  # noqa: F811, F401
+            classification,
+            token_classification,
+        )
     except ImportError:
         raise ImportError(
             "NLP dependencies are required for these datasets. "

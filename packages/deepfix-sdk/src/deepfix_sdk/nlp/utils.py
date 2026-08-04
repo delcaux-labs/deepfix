@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-
 from deepfix_core.models import NLPStatistics, TaskType
 from deepfix_core.models.artifacts import (
     LabelStatistics,

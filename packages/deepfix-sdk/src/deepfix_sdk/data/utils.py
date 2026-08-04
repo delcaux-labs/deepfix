@@ -1,6 +1,9 @@
 from typing import Optional, Union
+
 from deepfix_core.models import DataType
+
 from .base import BaseDataset
+
 
 def get_data_statistics(
     data_type: Union[str, DataType],

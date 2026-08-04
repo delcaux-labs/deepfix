@@ -2,13 +2,11 @@ import logging
 import os
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
-from omegaconf import DictConfig, OmegaConf
+from deepfix_core.models import DataType
 from platformdirs import user_data_dir
 from pydantic import BaseModel, Field, field_validator, model_validator
-
-from deepfix_core.models import DataType, DeepchecksConfig
 
 # Defaults
 logger = logging.getLogger(__name__)
