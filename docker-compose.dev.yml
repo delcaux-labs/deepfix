@@ -33,7 +33,7 @@ services:
     environment:
       - DEEPFIX_LLM_API_KEY=${DEEPFIX_LLM_API_KEY}
       - DEEPFIX_LLM_BASE_URL=https://api.tensorix.ai/v1
-      - DEEPFIX_LLM_MODEL_NAME=deepseek/deepseek-v4-flash-0731
+      - DEEPFIX_LLM_MODEL_NAME=openai/deepseek/deepseek-v4-flash-0731
       - DEEPFIX_LLM_TEMPERATURE=0.7
       - DEEPFIX_LLM_MAX_TOKENS=8000
       - DEEPFIX_LLM_CACHE=1
