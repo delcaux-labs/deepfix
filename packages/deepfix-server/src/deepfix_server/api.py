@@ -275,7 +275,7 @@ async def process_fix_job(job_id: str, request: AutonomousFixRequest, db: Sessio
         executor = OpenHandsExecutor(config=fix_config)
 
         # Launch agent (asynchronously)
-        await executor.launch_autonomous_fix(job_id=job_id, diagnosis_response=response)
+        await executor.launch_autonomous_fix(job_id=job_id, diagnosis=response.get_results_as_text())
 
     except Exception as exc:
         LOGGER.error(f"Fix job failed to start for job {job_id}: {traceback.format_exc()}")

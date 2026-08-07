@@ -87,12 +87,12 @@ class OpenHandsExecutor:
             load_memory=self.config.load_memory
         )
 
-    async def launch_autonomous_fix(self, job_id: str, diagnosis_response: APIResponse, mlflow_experiment_id:int=0) -> None:
+    async def launch_autonomous_fix(self, job_id: str, diagnosis: str, mlflow_experiment_id:int=0) -> None:
         """Launches the OpenHands agent to fix the identified issues.
 
         Args:
             job_id: The unique identifier for this fix job.
-            diagnosis_response: The prior diagnostic findings from DeepFix Server.
+            diagnosis: The prior diagnostic findings from DeepFix Server.
         """
         LOGGER.info("Preparing autonomous fix session", job_id=job_id)
         self.config.setup_otel_environment(mlflow_experiment_id)
@@ -111,7 +111,7 @@ class OpenHandsExecutor:
         judge_llm_kwargs["usage_id"] = "goal-judge"
         judge_llm = LLM(**judge_llm_kwargs)
 
-        system_prompt = self._build_system_prompt(job_id, diagnosis_response)
+        system_prompt = self._build_system_prompt(job_id, diagnosis)
 
         try:
             # We configure the OpenHands agent with essential standard tools
@@ -167,15 +167,15 @@ class OpenHandsExecutor:
         except Exception as e:
             LOGGER.exception("Failed to run OpenHands agent", job_id=job_id, error=str(e))
 
-    def _build_system_prompt(self, job_id: str, diagnosis_response: APIResponse) -> str:
+    
+    def _build_system_prompt(self, job_id: str, diagnosis: str) -> str:
         """Constructs the system prompt instructing OpenHands on what to do."""
-        diagnosis_text = diagnosis_response.get_results_as_text()
 
         prompt = f"""
                     You are an autonomous Machine Learning engineer. Your goal is to apply fixes to a model based on the following diagnostic findings:
 
                     === DIAGNOSIS FINDINGS ===
-                    {diagnosis_text}
+                    {diagnosis}
                     ==========================
 
                     You are executing in a sandboxed environment with access to specific tools.

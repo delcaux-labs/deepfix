@@ -125,25 +125,6 @@ Create `openhands_executor.py`:
 
 ---
 
-## Phase 3 — Testing & Validation
-
-### Stream 6: Test Suite & E2E Workflow Verification
-**Assignable to**: 1 subagent
-**Depends on**: All above
-
-Create end-to-end test workflow in `tests/test_autonomous_fix_e2e.py`:
-1. Initialize Client.
-2. Log dataset/model artifacts.
-3. Call `client.diagnose_and_fix()`.
-4. Ensure the backend properly launches OpenHands and that the webhook eventually gets called.
-5. Verify the final `APIResponse` contains a valid `FinalFixReport`.
-
-**Deliverables**:
-- [ ] `tests/test_autonomous_fix_e2e.py`
-- [ ] Verified test execution via `uv run --env-file test.env pytest tests/test_autonomous_fix_e2e.py`
-
----
-
 ## Execution Schedule
 
 | Phase | Streams | Parallelism | Estimated Effort | Blocked By |
