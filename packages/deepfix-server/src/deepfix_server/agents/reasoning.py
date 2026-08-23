@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import traceback
 from typing import Dict, List, Optional
@@ -17,7 +18,10 @@ from .schemas import AgentResult, CrossArtifactReasoningResult
 
 LOGGER = get_logger(__name__)
 
-from .prompts import CROSS_ARTIFACT_SYSTEM_PROMPT
+from .prompts import (
+    CROSS_ARTIFACT_SYSTEM_PROMPT,
+    CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
+)
 
 
 def serialize_previous_analyses(previous_analyses: Dict[str, AgentResult]) -> str:
@@ -114,26 +118,72 @@ def build_cross_artifact_prompt(
     return "\n".join(sections)
 
 
+async def _run_single_reasoning_chain(
+    structured_llm: Any,
+    messages: List[Any],
+    chain_index: int,
+) -> CrossArtifactReasoningResult:
+    """Execute a single reasoning chain invocation."""
+    LOGGER.debug("Starting reasoning chain #%d", chain_index)
+    result = await structured_llm.ainvoke(messages)
+    LOGGER.debug("Completed reasoning chain #%d", chain_index)
+    return result
+
+
+async def _synthesize_candidate_analyses(
+    candidates: List[CrossArtifactReasoningResult],
+    structured_llm: Any,
+    output_language: str,
+) -> CrossArtifactReasoningResult:
+    """Synthesize multiple candidate reasoning outputs into a single consolidated result."""
+    formatted_candidates = []
+    for idx, c in enumerate(candidates, 1):
+        analysis_data = [a.model_dump() for a in c.analysis] if c.analysis else []
+        formatted_candidates.append(
+            f"### Candidate Chain #{idx}\n"
+            f"Summary:\n{c.summary}\n\n"
+            f"Findings & Recommendations:\n{json.dumps(analysis_data, indent=2, default=str)}\n"
+        )
+
+    prompt_body = (
+        "Below are candidate analyses independently produced by multiple reasoning chains analyzing the same ML system.\n"
+        "Consolidate and synthesize them into a single, cohesive, highly reliable final analysis with calibrated severities and confidences.\n\n"
+        + "\n\n".join(formatted_candidates)
+        + f"\n\nOutput language: {output_language}\n"
+    )
+
+    synthesis_messages = [
+        SystemMessage(content=CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT),
+        HumanMessage(content=prompt_body),
+    ]
+
+    LOGGER.info("Synthesizing %d candidate analyses with LLM judge...", len(candidates))
+    synthesized: CrossArtifactReasoningResult = await structured_llm.ainvoke(synthesis_messages)
+    return synthesized
+
+
 async def run_cross_artifact_reasoning(
     previous_analyses: Dict[str, AgentResult],
     llm: BaseChatModel,
     knowledge_bridge: Optional[KnowledgeBridge] = None,
     output_language: str = "english",
+    num_chains: int = 3,
 ) -> AgentResult:
-    """Execute cross-artifact reasoning synthesis given prior agent analyses.
+    """Execute cross-artifact reasoning synthesis given prior agent analyses with multi-chain comparison.
 
     Args:
         previous_analyses: Results collected from analyzer agents.
         llm: Configured LangChain BaseChatModel.
         knowledge_bridge: Optional KnowledgeBridge for domain context.
         output_language: Target language for output.
+        num_chains: Number of parallel reasoning chains to run and compare (default 3).
 
     Returns:
         AgentResult with synthesized findings, recommendations, and summary.
     """
     agent_name = "CrossArtifactReasoningAgent"
     try:
-        LOGGER.info("Running %s synthesis...", agent_name)
+        LOGGER.info("Running %s synthesis with %d chains...", agent_name, num_chains)
 
         # 1. Serialize analyses
         analyses_json = serialize_previous_analyses(previous_analyses)
@@ -148,13 +198,42 @@ async def run_cross_artifact_reasoning(
             output_language=output_language,
         )
 
-        # 4. Invoke LLM with structured output
+        # 4. Invoke LLM with structured output across multiple chains
         structured_llm = llm.with_structured_output(CrossArtifactReasoningResult)
         messages = [
             SystemMessage(content=CROSS_ARTIFACT_SYSTEM_PROMPT),
             HumanMessage(content=user_message),
         ]
-        result: CrossArtifactReasoningResult = await structured_llm.ainvoke(messages)
+
+        if num_chains <= 1:
+            result: CrossArtifactReasoningResult = await structured_llm.ainvoke(messages)
+        else:
+            tasks = [
+                _run_single_reasoning_chain(structured_llm, messages, i + 1)
+                for i in range(num_chains)
+            ]
+            raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            candidates: List[CrossArtifactReasoningResult] = []
+            for i, res in enumerate(raw_results, 1):
+                if isinstance(res, CrossArtifactReasoningResult):
+                    candidates.append(res)
+                elif isinstance(res, Exception):
+                    LOGGER.warning("Reasoning chain #%d failed: %s", i, res)
+
+            if not candidates:
+                first_err = next((r for r in raw_results if isinstance(r, Exception)), None)
+                raise RuntimeError(
+                    f"All {num_chains} reasoning chains failed. Last error: {first_err}"
+                )
+
+            if len(candidates) == 1:
+                LOGGER.info("Only 1 reasoning chain succeeded; bypassing synthesis step.")
+                result = candidates[0]
+            else:
+                result = await _synthesize_candidate_analyses(
+                    candidates, structured_llm, output_language
+                )
 
         # 5. Collect metadata
         analyzed_artifacts: list = []
@@ -176,3 +255,4 @@ async def run_cross_artifact_reasoning(
             agent_name=agent_name,
             error_message=str(e),
         )
+

@@ -136,9 +136,8 @@ def route_initial_artifacts(state: AnalysisGraphState) -> Sequence[str]:
     if context.training_artifacts is not None:
         nodes.append("training_analyzer")
 
-    # If no specific artifacts are present, proceed directly to cross-artifact reasoning
     if not nodes:
-        return ["cross_artifact_reasoner"]
+        raise ValueError("No artifacts provided in AgentContext for analysis.")
 
     return nodes
 
@@ -182,6 +181,7 @@ def create_analyzer_node(
 def create_cross_artifact_node(
     llm: BaseChatModel,
     knowledge_bridge: Optional[KnowledgeBridge] = None,
+    num_chains: int = 3,
 ):
     """Factory creating the cross-artifact reasoning synthesis node."""
 
@@ -194,6 +194,7 @@ def create_cross_artifact_node(
             llm=llm,
             knowledge_bridge=knowledge_bridge,
             output_language=context.language,
+            num_chains=num_chains,
         )
 
         summary = (
@@ -220,6 +221,7 @@ def build_analysis_graph(
     llm_config: Optional[LLMConfig] = None,
     knowledge_bridge: Optional[KnowledgeBridge] = None,
     chat_model: Optional[BaseChatModel] = None,
+    num_chains: int = 3,
 ) -> CompiledStateGraph:
     """Build and compile the multi-agent analysis LangGraph StateGraph.
 
@@ -227,6 +229,7 @@ def build_analysis_graph(
         llm_config: Optional LLM configuration.
         knowledge_bridge: Optional KnowledgeBridge for domain knowledge.
         chat_model: Optional pre-configured LangChain chat model (for testing/mocking).
+        num_chains: Number of parallel reasoning chains for cross-artifact reasoning.
 
     Returns:
         CompiledStateGraph ready for async invocation (`ainvoke`).
@@ -284,6 +287,7 @@ def build_analysis_graph(
         create_cross_artifact_node(
             llm=llm,
             knowledge_bridge=knowledge_bridge,
+            num_chains=num_chains,
         ),
     )
 
@@ -296,7 +300,6 @@ def build_analysis_graph(
             "dataset_analyzer",
             "checkpoint_analyzer",
             "training_analyzer",
-            "cross_artifact_reasoner",
         ],
     )
 
