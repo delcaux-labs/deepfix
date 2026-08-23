@@ -105,13 +105,28 @@ print(result.to_text())
 
 ### How It Works (High-Level)
 - The API endpoint receives an `APIRequest`, decodes it into an `AgentContext` and runs the `DiagnosticSystem`.
-- The coordinator dispatches artifacts to specialized analyzer agents:
+- The coordinator dispatches artifacts to specialized analyzer agents in parallel via LangGraph:
   - `DeepchecksArtifactsAnalyzer`: data quality, drift, integrity
   - `DatasetArtifactsAnalyzer`: dataset stats, class balance, anomalies
   - `ModelCheckpointArtifactsAnalyzer`: checkpoint integrity, config consistency, deployment readiness
-  - `TrainingArtifactsAnalyzer`: training dynamics (currently scaffolded, not fully implemented)
-- `CrossArtifactReasoningAgent` synthesizes findings across agents into a concise summary and consolidated analysis.
+  - `TrainingArtifactsAnalyzer`: training dynamics
+- `CrossArtifactReasoningAgent` fans in all agent findings and performs multi-chain reasoning comparison and synthesis.
 - Response is returned as `deepfix_core.models.APIResponse` with structured findings and summary.
+
+```mermaid
+graph TD
+    START([START]) -->|Dynamic Fan-Out| deepchecks_analyzer[DeepchecksArtifactsAnalyzer]
+    START -->|Dynamic Fan-Out| dataset_analyzer[DatasetArtifactsAnalyzer]
+    START -->|Dynamic Fan-Out| checkpoint_analyzer[ModelCheckpointArtifactsAnalyzer]
+    START -->|Dynamic Fan-Out| training_analyzer[TrainingArtifactsAnalyzer]
+
+    deepchecks_analyzer -->|Fan-In| cross_artifact_reasoner[CrossArtifactReasoningAgent<br/>Multi-Chain Reasoning & Synthesis]
+    dataset_analyzer -->|Fan-In| cross_artifact_reasoner
+    checkpoint_analyzer -->|Fan-In| cross_artifact_reasoner
+    training_analyzer -->|Fan-In| cross_artifact_reasoner
+
+    cross_artifact_reasoner --> END([END])
+```
 
 ### Logging
 Logging is configured via `deepfix_server.logging`. By default logs are printed to stdout. You can integrate it into your application and customize formats or levels if embedding the server.

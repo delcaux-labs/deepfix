@@ -56,7 +56,7 @@ SEVERITY_WEIGHTS = {
 async def prefetch_knowledge(
     previous_analyses: Dict[str, AgentResult],
     knowledge_bridge: Optional[KnowledgeBridge],
-    max_queries: int = 3,
+    max_queries: int = 6,
 ) -> List[str]:
     """Retrieve relevant domain knowledge based on findings prioritized by severity and confidence."""
     if not knowledge_bridge or not knowledge_bridge.has_available_sources:
