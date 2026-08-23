@@ -6,7 +6,7 @@ DeepFix Server provides an HTTP API and CLI to analyze ML experiment artifacts (
 - Agentic analysis of multiple artifact types: dataset, deepchecks, model checkpoints, training
 - Cross-artifact reasoning to synthesize holistic insights and a concise summary
 - Configurable LLM backend via environment variables
-- Simple HTTP API served with LitServe (FastAPI under the hood)
+- Simple HTTP API served with FastAPI
 - Typer-based CLI to launch the server locally
 
 ### Requirements
@@ -59,7 +59,7 @@ deepfix-server launch -host 0.0.0.0 -port 8844 -e .env
 Startup message: "Starting DeepFix server on <host>:<port>".
 
 ### HTTP API
-The API is hosted via LitServe. The Analyse Artifacts endpoint is available at:
+The API is hosted via FastAPI. The Analyse Artifacts endpoint is available at:
 
 - POST `/v1/analyse`
 
@@ -104,7 +104,7 @@ print(result.to_text())
 ```
 
 ### How It Works (High-Level)
-- `AnalyseArtifactsAPI` receives an `APIRequest`, decodes it into an `AgentContext` and runs the `ArtifactAnalysisCoordinator`.
+- The API endpoint receives an `APIRequest`, decodes it into an `AgentContext` and runs the `DiagnosticSystem`.
 - The coordinator dispatches artifacts to specialized analyzer agents:
   - `DeepchecksArtifactsAnalyzer`: data quality, drift, integrity
   - `DatasetArtifactsAnalyzer`: dataset stats, class balance, anomalies

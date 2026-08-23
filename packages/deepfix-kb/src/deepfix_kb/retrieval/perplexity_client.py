@@ -1,7 +1,4 @@
-"""Perplexity Sonar integration via OpenRouter using Pydantic AI for AI-powered research.
-
-Replaces DSPy Signatures and Modules with Pydantic AI Agents.
-"""
+"""Perplexity Sonar integration via OpenAI client for AI-powered research."""
 
 from __future__ import annotations
 
@@ -9,11 +6,9 @@ import logging
 import re
 from typing import Any, List, Literal, Optional
 
-from pydantic_ai import Agent as PydanticAgent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from openai import AsyncOpenAI
 
-from ..config import PerplexityConfig
+from ..config import PerplexityConfig, PerplexityModels
 from .base import BaseRetriever, RetrievalResult
 
 logger = logging.getLogger(__name__)
@@ -89,7 +84,7 @@ COMPREHENSIVE_SYSTEM_PROMPT = (
 
 
 class PerplexitySonarRetriever(BaseRetriever):
-    """Perplexity Sonar integration via OpenRouter using Pydantic AI for research.
+    """Perplexity Sonar integration via OpenAI client for research.
 
     Features:
         - AI-powered web search with reasoning
@@ -98,7 +93,7 @@ class PerplexitySonarRetriever(BaseRetriever):
         - Configurable research depth (brief, detailed, comprehensive)
 
     Example:
-        >>> retriever = PerplexitySonarRetriever(model="sonar-pro")
+        >>> retriever = PerplexitySonarRetriever(api_key="your-key", model="sonar-pro")
         >>> results = await retriever.retrieve(
         ...     "What are the best practices for training vision transformers?"
         ... )
@@ -106,75 +101,57 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     def __init__(
         self,
-        config: PerplexityConfig
+        config: Optional[PerplexityConfig] = None,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        api_base: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
     ):
-        """Initialize Perplexity Sonar client via OpenRouter with Pydantic AI.
+        """Initialize Perplexity Sonar client.
 
         Args:
-            config: Perplexity config
+            config: Optional PerplexityConfig instance.
+            api_key: Optional API key.
+            model: Optional model identifier.
+            api_base: Optional base URL endpoint.
+            temperature: Optional sampling temperature.
+            max_tokens: Optional max output tokens.
         """
-        self.config = config
+        if config is not None:
+            self.config = config
+        else:
+            kwargs: dict = {}
+            if api_key is not None:
+                kwargs["api_key"] = api_key
+            if model is not None:
+                kwargs["model"] = model
+            if api_base is not None:
+                kwargs["api_base"] = api_base
+            if temperature is not None:
+                kwargs["temperature"] = temperature
+            if max_tokens is not None:
+                kwargs["max_tokens"] = max_tokens
+            self.config = PerplexityConfig(**kwargs)
 
-        # Pydantic AI agents are created lazily
-        self._researcher_agent = None
-        self._brief_agent = None
-        self._detailed_agent = None
-        self._comprehensive_agent = None
-
-    def _get_model(self):
-        """Lazy-create the Pydantic AI OpenAIChatModel."""
-        if not self.config.api_key:
-            raise ValueError(
-                "OpenRouter API key not provided. Set OPENROUTER_API_KEY "
-                "environment variable or pass api_key parameter."
-            )
-
-        return OpenAIChatModel(
-            model_name=f"openai/{str(self.config.model)}",
-            provider=OpenAIProvider(
-                api_key=self.config.api_key,
-                base_url=self.config.api_base,
-            ),
-        )
-
-    def _get_agent(self, system_prompt: str):
-        """Create a Pydantic AI Agent with the given system prompt."""
-
-        model = self._get_model()
-        model_settings = {"temperature": self.config.temperature}
-        if self.config.max_tokens:
-            model_settings["max_tokens"] = self.config.max_tokens
-
-        return PydanticAgent(
-            model=model,
-            output_type=str,
-            system_prompt=system_prompt,
-            model_settings=model_settings,
-        )
+        self._client: Optional[AsyncOpenAI] = None
 
     @property
-    def researcher_agent(self):
-        if self._researcher_agent is None:
-            self._researcher_agent = self._get_agent(RESEARCH_SYSTEM_PROMPT)
-        return self._researcher_agent
+    def model_name(self) -> str:
+        """Return model name string."""
+        model_str = str(self.config.model)
+        if model_str.startswith("perplexity/"):
+            return model_str[len("perplexity/") :]
+        return model_str
 
     @property
-    def brief_agent(self):
-        if self._brief_agent is None:
-            self._brief_agent = self._get_agent(BRIEF_SYSTEM_PROMPT)
-        return self._brief_agent
+    def _api_key(self) -> Optional[str]:
+        return self.config.api_key
 
-    @property
-    def detailed_agent(self):
-        if self._detailed_agent is None:
-            self._detailed_agent = self._get_agent(DETAILED_SYSTEM_PROMPT)
-        return self._detailed_agent
-
-    @property
-    def comprehensive_agent(self):
-        if self._comprehensive_agent is None:
-            self._comprehensive_agent = self._get_agent(COMPREHENSIVE_SYSTEM_PROMPT)
-        return self._comprehensive_agent
+    @_api_key.setter
+    def _api_key(self, value: Optional[str]):
+        self.config.api_key = value
+        self._client = None
 
     @property
     def source_type(self) -> str:
@@ -182,7 +159,43 @@ class PerplexitySonarRetriever(BaseRetriever):
 
     @property
     def is_available(self) -> bool:
-        return bool(str(self.config.api_key).strip())
+        return bool(self.config.api_key and str(self.config.api_key).strip())
+
+    def _get_client(self) -> AsyncOpenAI:
+        """Lazy-create the AsyncOpenAI client."""
+        if not self.config.api_key:
+            raise ValueError(
+                "API key not provided. Set OPENROUTER_API_KEY "
+                "environment variable or pass api_key parameter."
+            )
+
+        if self._client is None:
+            kwargs: dict = {"api_key": self.config.api_key}
+            if self.config.api_base:
+                kwargs["base_url"] = self.config.api_base
+            self._client = AsyncOpenAI(**kwargs)
+
+        return self._client
+
+    async def _call_llm(self, system_prompt: str, user_message: str) -> str:
+        """Make an async chat completion call using AsyncOpenAI."""
+        client = self._get_client()
+        kwargs: dict = {
+            "model": str(self.config.model),
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            "temperature": self.config.temperature if self.config.temperature is not None else 0.7,
+        }
+        if self.config.max_tokens:
+            kwargs["max_tokens"] = self.config.max_tokens
+
+        response = await client.chat.completions.create(**kwargs)
+        if not response.choices or not response.choices[0].message:
+            raise ValueError("Empty response received from LLM completion.")
+
+        return response.choices[0].message.content or ""
 
     async def retrieve(
         self,
@@ -202,7 +215,7 @@ class PerplexitySonarRetriever(BaseRetriever):
         Returns:
             List containing a single RetrievalResult with the synthesized answer.
         """
-        logger.info(f"Perplexity query ({self.config.model}): '{query[:100]}...'")
+        logger.info("Perplexity query (%s): '%s...'", self.config.model, query[:100])
 
         try:
             user_message = query
@@ -211,8 +224,10 @@ class PerplexitySonarRetriever(BaseRetriever):
             if system_prompt:
                 user_message = f"{system_prompt}\n\n{user_message}"
 
-            result = await self.detailed_agent.run(user_message)
-            content = result.output
+            content = await self._call_llm(
+                system_prompt=DETAILED_SYSTEM_PROMPT,
+                user_message=user_message,
+            )
 
             citations = self._extract_citations(content)
 
@@ -230,10 +245,10 @@ class PerplexitySonarRetriever(BaseRetriever):
             ]
 
         except ValueError as e:
-            logger.error(f"Perplexity configuration error: {e}")
+            logger.error("Perplexity configuration error: %s", e)
             raise PerplexityConfigError(str(e)) from e
         except AttributeError as e:
-            logger.error(f"Perplexity response error: {e}")
+            logger.error("Perplexity response error: %s", e)
             raise PerplexityResponseError(f"Failed to parse response: {e}") from e
         except Exception as e:
             error_msg = f"Perplexity API call failed: {e}"
@@ -257,19 +272,24 @@ class PerplexitySonarRetriever(BaseRetriever):
             Single RetrievalResult with the research findings.
         """
         logger.info(
-            f"Perplexity research ({self.config.model}, {depth}): '{topic[:80]}...'"
+            "Perplexity research (%s, %s): '%s...'",
+            self.config.model,
+            depth,
+            topic[:80],
         )
 
         try:
             if depth == "brief":
-                agent = self.brief_agent
+                sys_prompt = BRIEF_SYSTEM_PROMPT
             elif depth == "comprehensive":
-                agent = self.comprehensive_agent
+                sys_prompt = COMPREHENSIVE_SYSTEM_PROMPT
             else:
-                agent = self.detailed_agent
+                sys_prompt = DETAILED_SYSTEM_PROMPT
 
-            result = await agent.run(topic)
-            content = result.output
+            content = await self._call_llm(
+                system_prompt=sys_prompt,
+                user_message=topic,
+            )
             citations = self._extract_citations(content)
 
             return RetrievalResult(
@@ -285,10 +305,10 @@ class PerplexitySonarRetriever(BaseRetriever):
             )
 
         except ValueError as e:
-            logger.error(f"Perplexity configuration error: {e}")
+            logger.error("Perplexity configuration error: %s", e)
             raise PerplexityConfigError(str(e)) from e
         except AttributeError as e:
-            logger.error(f"Perplexity response error: {e}")
+            logger.error("Perplexity response error: %s", e)
             raise PerplexityResponseError(f"Failed to parse response: {e}") from e
         except Exception as e:
             error_msg = f"Perplexity research failed: {e}"

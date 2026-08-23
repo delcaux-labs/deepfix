@@ -5,9 +5,11 @@ description = "DeepFix server."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic-ai>=0.0.50",
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
     "httpx>=0.28.1",
-    "litserve>=0.2.16",
     "mlflow>=3.3.2",
     "pydantic>=2.11.7",
     "pytest>=8.4.1",

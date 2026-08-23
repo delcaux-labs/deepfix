@@ -107,12 +107,12 @@ class AutonomousFixConfig(BaseModel):
     )
 
     # OTEL Settings
-    otel_exporter_otlp_endpoint: str = Field(
-        default="http://localhost:5000",
+    otel_exporter_otlp_endpoint: Optional[str] = Field(
+        default=None,
         description="OTEL OTLP exporter endpoint",
     )
-    otel_exporter_otlp_headers: str = Field(
-        default="x-mlflow-experiment-id=0",
+    otel_exporter_otlp_headers: Optional[str] = Field(
+        default=None,
         description="OTEL OTLP exporter headers",
     )
     otel_exporter_otlp_traces_protocol: str = Field(
@@ -129,10 +129,14 @@ class AutonomousFixConfig(BaseModel):
         Returns:
             Dict[str, str]: Dictionary of set environment variables.
         """
+        if not self.otel_exporter_otlp_endpoint:
+            return {}
         env_vars = {
             "OTEL_EXPORTER_OTLP_ENDPOINT": self.otel_exporter_otlp_endpoint,
             "OTEL_EXPORTER_OTLP_HEADERS": f"x-mlflow-experiment-id={experiment_id}",
             "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": self.otel_exporter_otlp_traces_protocol,
+            "OTEL_METRICS_EXPORTER": "none",
+            "OTEL_LOGS_EXPORTER": "none",
         }
         for key, value in env_vars.items():
             os.environ[key] = str(value)
@@ -182,8 +186,8 @@ class Settings(BaseSettings):
     plateau_window: int = Field(default=2, alias="PLATEAU_WINDOW")
 
     # OTEL Settings
-    otel_exporter_otlp_endpoint: str = Field(default="http://localhost:5000", alias="OTEL_EXPORTER_OTLP_ENDPOINT")
-    otel_exporter_otlp_headers: str = Field(default="x-mlflow-experiment-id=0", alias="OTEL_EXPORTER_OTLP_HEADERS")
+    otel_exporter_otlp_endpoint: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+    otel_exporter_otlp_headers: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_HEADERS")
     otel_exporter_otlp_traces_protocol: str = Field(default="http/protobuf", alias="OTEL_EXPORTER_OTLP_TRACES_PROTOCOL")
 
     def get_autonomous_fix_config(self) -> AutonomousFixConfig:

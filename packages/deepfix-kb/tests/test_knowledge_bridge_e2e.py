@@ -193,7 +193,7 @@ class TestPerplexitySonarRetriever:
         retriever._api_key = None
 
         with pytest.raises(ValueError, match="API key not provided"):
-            _ = retriever.lm
+            _ = retriever._get_client()
 
 
 # ============================================================================

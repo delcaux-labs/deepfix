@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 from enum import StrEnum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -110,11 +110,20 @@ class PerplexityConfig(BaseModel):
         "https://openrouter.ai/api/v1",
         description="OpenRouter API base URL",
     )
-    model: PerplexityModels = Field(
+    model: Union[PerplexityModels, str] = Field(
         PerplexityModels.SONAR, description="Perplexity model variant"
     )
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="Temperature")
     max_tokens: Optional[int] = Field(None, description="Max tokens")
+
+    @field_validator("model", mode="before")
+    @classmethod
+    def validate_model(cls, v: Any) -> Any:
+        if isinstance(v, str) and not v.startswith("perplexity/"):
+            for m in PerplexityModels:
+                if m.value == f"perplexity/{v}":
+                    return m
+        return v
 
 class HybridRetrieverConfig(BaseModel):
     """Configuration for hybrid retriever.

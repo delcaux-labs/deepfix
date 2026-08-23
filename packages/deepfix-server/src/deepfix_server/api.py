@@ -19,8 +19,8 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from .engine import DiagnosticSystem
 from .config import settings
-from .coordinators import ArtifactAnalysisCoordinator
 from .database import Base, get_db, get_engine, init_database
 from .logging import get_logger, setup_mlflow_tracing
 from .models import AgentContext, AnalysisJob
@@ -29,8 +29,10 @@ from .openhands_executor import OpenHandsExecutor
 LOGGER = get_logger(__name__)
 
 
-def setup_llm_tracing():
-    """Setup logging for LLM traces."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle management for the FastAPI application."""
+    # Startup logic
     if settings.mlflow_exp_name and settings.mlflow_tracking_uri:
         setup_mlflow_tracing(
             experiment_name=settings.mlflow_exp_name,
@@ -40,13 +42,6 @@ def setup_llm_tracing():
         LOGGER.warning(
             "No MLflow tracking configured, LLMs traces will not be sent to MLflow."
         )
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifecycle management for the FastAPI application."""
-    # Startup logic
-    setup_llm_tracing()
 
     # Initialize database
     init_database(settings.database_url, settings.database_echo)
@@ -88,10 +83,10 @@ async def health_check():
     }
 
 
-def get_coordinator() -> ArtifactAnalysisCoordinator:
-    """Dependency that provides an ArtifactAnalysisCoordinator instance."""
+def get_coordinator() -> DiagnosticSystem:
+    """Dependency that provides a DiagnosticSystem instance."""
     llm_config = settings.get_llm_config()
-    return ArtifactAnalysisCoordinator(config=llm_config)
+    return DiagnosticSystem(config=llm_config)
 
 async def decode_agent_context(request: APIRequest) -> AgentContext:
     """Helper to convert APIRequest to AgentContext."""
@@ -393,6 +388,8 @@ def run_analyse_artifacts_api(
     host: str = "0.0.0.0",
     workers: int = 1,
     reload: bool = False,
+    reload_dirs: list[str] | None = None,
+    reload_excludes: list[str] = ["server_data*", "*.venv*", ".git*"],
     **kwargs,
 ):
     """Run the artifact analysis API server using uvicorn.
@@ -402,12 +399,17 @@ def run_analyse_artifacts_api(
         host: Host address to bind to. Defaults to "0.0.0.0".
         workers: Number of worker processes. Defaults to 1.
         reload: Enable auto-reload. Defaults to False.
+        reload_dirs: List of directories to watch for reload.
+        reload_excludes: List of glob patterns to exclude from reload watching.
     """
+
     uvicorn.run(
         "deepfix_server.api:app",
         host=host,
         port=port,
         workers=workers,
         reload=reload,
+        reload_dirs=reload_dirs,
+        reload_excludes=reload_excludes,
         log_level="info",
     )
