@@ -1,6 +1,6 @@
-from __future__ import annotations
-
+import json
 import os
+import pathlib
 import time
 from typing import Any, Optional, Union
 
@@ -13,6 +13,9 @@ from deepfix_core.models import (
     ArtifactPath,
     AutonomousFixRequest,
     DataType,
+    FixJob,
+    FixJobRequest,
+    FixJobStatus,
 )
 from rich.console import Console
 from rich.live import Live
@@ -29,8 +32,11 @@ from tenacity import (
 from .artifacts import ArtifactRepository, ArtifactStatus
 from .config import ArtifactConfig, MLflowConfig
 from .data.base import BaseDataset
+from .logging import get_logger
 
 console = Console()
+LOGGER = get_logger(__name__)
+
 
 
 class DeepFixClient:
@@ -252,32 +258,26 @@ class DeepFixClient:
         import pandas as pd
         from datasets import Dataset, DatasetDict
 
-        def _get_df(data_obj: Any) -> pd.DataFrame:
-            if hasattr(data_obj, "to_dataframe"):
-                return data_obj.to_dataframe()
-            elif hasattr(data_obj, "get_data"):
-                return data_obj.get_data()
-            elif hasattr(data_obj, "data") and isinstance(data_obj.data, pd.DataFrame):
-                return data_obj.data
-            elif isinstance(data_obj, pd.DataFrame):
+        def _get_hf_dataset(data_obj: Any) -> Dataset:
+            if hasattr(data_obj, "to_hf_dataset"):
+                return data_obj.to_hf_dataset()
+            elif isinstance(data_obj, Dataset):
                 return data_obj
-            elif hasattr(data_obj, "dataset") and hasattr(data_obj.dataset, "data") and isinstance(data_obj.dataset.data, pd.DataFrame):
-                df = data_obj.dataset.data.copy()
-                if hasattr(data_obj.dataset, "label_name") and data_obj.dataset.label_name and data_obj.dataset.label_name not in df.columns:
-                    if hasattr(data_obj.dataset, "label_col"):
-                        df[data_obj.dataset.label_name] = data_obj.dataset.label_col
-                return df
+            elif isinstance(data_obj, pd.DataFrame):
+                return Dataset.from_pandas(data_obj)
+            elif hasattr(data_obj, "get_data"):
+                return Dataset.from_pandas(data_obj.get_data())
+            elif hasattr(data_obj, "data") and isinstance(data_obj.data, pd.DataFrame):
+                return Dataset.from_pandas(data_obj.data)
             else:
-                raise ValueError(f"Unsupported dataset format for Hugging Face conversion: {type(data_obj)}")
+                raise ValueError(
+                    f"Unsupported dataset format for Hugging Face conversion: {type(data_obj)}"
+                )
 
-        train_df = _get_df(train_data)
-        hf_train = Dataset.from_pandas(train_df)
-
+        hf_train = _get_hf_dataset(train_data)
         ds_dict = {"train": hf_train}
         if val_data is not None:
-            val_df = _get_df(val_data)
-            hf_val = Dataset.from_pandas(val_df)
-            ds_dict["validation"] = hf_val
+            ds_dict["validation"] = _get_hf_dataset(val_data)
 
         dataset_dict = DatasetDict(ds_dict)
 
@@ -433,6 +433,400 @@ class DeepFixClient:
 
         console.print("[green]v[/green] Fix session complete!", style="bold green")
         return out
+
+    def submit_fix_job(
+        self,
+        dataset_name: str,
+        train_data: Optional[BaseDataset] = None,
+        test_data: Optional[BaseDataset] = None,
+        model: Any = None,
+        model_name: Optional[str] = None,
+        target_metric: str = "accuracy",
+        target_value: float = 0.90,
+        max_iterations: int = 5,
+        s3_bucket: Optional[str] = None,
+        **kwargs: Any,
+    ) -> FixJob:
+        """Submit an autonomous fix job to the DeepFix server and return the initial FixJob."""
+        from .models.s3 import push_model_to_s3
+
+        dataset_uri = kwargs.get("dataset_uri")
+        if dataset_uri is None and train_data is not None and s3_bucket is not None:
+            dataset_uri = train_data.push_to_s3(
+                s3_bucket=s3_bucket,
+                aws_access_key_id=kwargs.get("aws_access_key_id"),
+                aws_secret_access_key=kwargs.get("aws_secret_access_key"),
+                endpoint_url=kwargs.get("endpoint_url"),
+                region_name=kwargs.get("region_name"),
+            )
+
+        model_uri = kwargs.get("model_uri")
+        target_model = model if model is not None else kwargs.get("model_checkpoint")
+        if model_uri is None and target_model is not None and s3_bucket is not None:
+            model_uri = push_model_to_s3(
+                model=target_model,
+                s3_bucket=s3_bucket,
+                model_name=model_name or "model",
+                aws_access_key_id=kwargs.get("aws_access_key_id"),
+                aws_secret_access_key=kwargs.get("aws_secret_access_key"),
+                endpoint_url=kwargs.get("endpoint_url"),
+                region_name=kwargs.get("region_name"),
+            )
+        elif model_uri is None and model_name and s3_bucket is not None and os.path.exists(model_name):
+            model_uri = push_model_to_s3(
+                model=model_name,
+                s3_bucket=s3_bucket,
+                model_name=os.path.splitext(os.path.basename(model_name))[0],
+                aws_access_key_id=kwargs.get("aws_access_key_id"),
+                aws_secret_access_key=kwargs.get("aws_secret_access_key"),
+                endpoint_url=kwargs.get("endpoint_url"),
+                region_name=kwargs.get("region_name"),
+            )
+
+        fix_request = FixJobRequest(
+            dataset_name=dataset_name,
+            model_name=model_name,
+            target_metric=target_metric,
+            target_value=target_value,
+            max_iterations=max_iterations,
+            s3_bucket=s3_bucket,
+            baseline_run_id=kwargs.get("baseline_run_id"),
+            model_class=kwargs.get("model_class"),
+            dataset_load_code=kwargs.get("dataset_load_code"),
+            experiment_name=kwargs.get("experiment_name", "deepfix-autonomous"),
+            mlflow_experiment_id=str(kwargs.get("mlflow_experiment_id", "0")),
+            hf_dataset_dir=kwargs.get("hf_dataset_dir"),
+            hf_dataset_name=kwargs.get("hf_dataset_name"),
+            dataset_digest=kwargs.get("dataset_digest"),
+            dataset_uri=dataset_uri,
+            model_uri=model_uri,
+            label_column=kwargs.get("label_column"),
+        )
+
+        base_url = self.api_url.rstrip("/")
+        if "/v2/fix" in base_url:
+            fix_url = base_url
+        elif "/v2/analyse" in base_url:
+            fix_url = base_url.replace("/v2/analyse", "/v2/fix")
+        elif "/v1/analyse" in base_url:
+            fix_url = base_url.replace("/v1/analyse", "/v2/fix")
+        else:
+            fix_url = f"{base_url}/v2/fix"
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {os.getenv('DEEPFIX_API_KEY')}",
+        }
+
+        resp = requests.post(
+            fix_url,
+            data=fix_request.model_dump_json(),
+            headers=headers,
+            timeout=self.timeout,
+        )
+        if resp.status_code not in (200, 201, 202):
+            raise RuntimeError(
+                f"Failed to submit fix job ({resp.status_code}): {resp.text}"
+            )
+
+        data = resp.json()
+        return FixJob.model_validate(data)
+
+    def get_fix_job_status(self, job_id: str) -> FixJob:
+        """Retrieve the current status, iteration count, and result of a fix job."""
+        base_url = self.api_url.rstrip("/")
+        if "/v2/fix" in base_url:
+            base_url = base_url.split("/v2/fix")[0]
+        elif "/v2/analyse" in base_url:
+            base_url = base_url.split("/v2/analyse")[0]
+        elif "/v1/analyse" in base_url:
+            base_url = base_url.split("/v1/analyse")[0]
+
+        url = f"{base_url}/v2/fix/{job_id}"
+        headers = {
+            "Authorization": f"Bearer {os.getenv('DEEPFIX_API_KEY')}",
+        }
+
+        resp = requests.get(url, headers=headers, timeout=10.0)
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Failed to get fix job status ({resp.status_code}): {resp.text}"
+            )
+
+        return FixJob.model_validate(resp.json())
+
+    def cancel_fix_job(self, job_id: str) -> FixJob:
+        """Cancel an active autonomous fix job on the server."""
+        base_url = self.api_url.rstrip("/")
+        if "/v2/fix" in base_url:
+            base_url = base_url.split("/v2/fix")[0]
+        elif "/v2/analyse" in base_url:
+            base_url = base_url.split("/v2/analyse")[0]
+        elif "/v1/analyse" in base_url:
+            base_url = base_url.split("/v1/analyse")[0]
+
+        url = f"{base_url}/v2/fix/{job_id}/cancel"
+        headers = {
+            "Authorization": f"Bearer {os.getenv('DEEPFIX_API_KEY')}",
+        }
+
+        resp = requests.post(url, headers=headers, timeout=10.0)
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Failed to cancel fix job ({resp.status_code}): {resp.text}"
+            )
+
+        return FixJob.model_validate(resp.json())
+
+    def poll_fix_job_stream(
+        self,
+        job_id: str,
+        polling_interval: float = 2.0,
+        timeout: Optional[float] = None,
+    ):
+        """Generator that yields updated FixJob instances at each polling interval until completion."""
+        import time
+
+        effective_timeout = timeout or self.timeout
+        start_time = time.time()
+
+        while True:
+            job = self.get_fix_job_status(job_id)
+            yield job
+
+            if job.status not in (FixJobStatus.PENDING, FixJobStatus.IN_PROGRESS):
+                return
+
+            if time.time() - start_time > effective_timeout:
+                raise RuntimeError(
+                    f"Fix job '{job_id}' polling timed out after {effective_timeout}s"
+                )
+
+            time.sleep(polling_interval)
+
+    def poll_fix_job(
+        self,
+        job_id: str,
+        polling_interval: float = 2.0,
+        timeout: Optional[float] = None,
+        on_update: Optional[Any] = None,
+    ) -> FixJob:
+        """Poll the server for the completion of an autonomous fix job."""
+        effective_timeout = timeout or self.timeout
+
+        def is_not_finished(job: Optional[FixJob]) -> bool:
+            if job is None:
+                return True
+            return job.status in (FixJobStatus.PENDING, FixJobStatus.IN_PROGRESS)
+
+        with Live(
+            Spinner("dots", text="[cyan]Fix job pending...[/cyan]", style="cyan"),
+            console=console,
+            refresh_per_second=10,
+        ) as live:
+            try:
+                for attempt in Retrying(
+                    stop=stop_after_delay(effective_timeout),
+                    wait=wait_fixed(polling_interval),
+                    retry=retry_if_result(is_not_finished)
+                    | retry_if_exception_type((requests.RequestException, IOError)),
+                    reraise=False,
+                ):
+                    with attempt:
+                        job = self.get_fix_job_status(job_id)
+                        if on_update:
+                            on_update(job)
+
+                        status_str = job.status.value.lower()
+                        phase_str = f" [{job.phase}]" if job.phase else ""
+                        iteration_str = (
+                            f" [iteration {job.iteration}/{job.max_iterations}]"
+                            if job.iteration
+                            else ""
+                        )
+
+                        live.update(
+                            Spinner(
+                                "dots",
+                                text=f"[cyan]Autonomous fix in progress ({status_str}){phase_str}{iteration_str}...[/cyan]",
+                                style="cyan",
+                            )
+                        )
+
+                        if job.status == FixJobStatus.COMPLETED:
+                            live.update(
+                                Spinner(
+                                    "dots",
+                                    text="[green]Fix completed successfully![/green]",
+                                )
+                            )
+                            return job
+
+                        elif job.status == FixJobStatus.CANCELLED:
+                            live.update(
+                                Spinner(
+                                    "dots",
+                                    text="[yellow]Fix job was cancelled.[/yellow]",
+                                )
+                            )
+                            return job
+
+                        elif job.status == FixJobStatus.FAILED:
+                            err = job.error or "Unknown error"
+                            live.update(
+                                Spinner(
+                                    "dots",
+                                    text=f"[red]Fix job failed: {err}[/red]",
+                                )
+                            )
+                            return job
+
+                raise RuntimeError("Fix job polling timed out")
+            except Exception as e:
+                if isinstance(e, (RuntimeError, RetryError)):
+                    if isinstance(e, RetryError):
+                        raise RuntimeError("Fix job polling timed out") from e
+                    raise e
+                raise RuntimeError(f"Fix job polling failed: {str(e)}")
+
+    def _generate_metrics_dict(self, job: FixJob) -> dict[str, Any]:
+        """Generate structured dictionary for metrics.json artifact."""
+        report = job.result
+        return {
+            "job_id": job.job_id,
+            "status": job.status.value,
+            "dataset_name": job.dataset_name,
+            "target_metric": job.target_metric,
+            "target_value": job.target_value,
+            "baseline_metrics": job.baseline_metrics,
+            "final_metrics": report.final_metrics if report else {},
+            "applied_fixes": report.applied_fixes if report else [],
+            "run_id": report.run_id if report else None,
+            "s3_weights_uri": report.s3_weights_uri if report else None,
+        }
+
+    def _generate_summary_report_markdown(self, job: FixJob) -> str:
+        """Generate markdown text for summary_report.md artifact."""
+        report = job.result
+        lines = [
+            f"# DeepFix Autonomous Fix Report: {job.job_id}",
+            f"\n- **Status:** `{job.status.value}`",
+            f"- **Dataset:** `{job.dataset_name}`",
+            f"- **Target Metric:** `{job.target_metric}` (Threshold: `{job.target_value}`)",
+            f"- **Iterations Executed:** {job.iteration} / {job.max_iterations}",
+        ]
+        if report:
+            if report.s3_weights_uri:
+                lines.append(f"- **S3 Weights URI:** `{report.s3_weights_uri}`")
+            if report.run_id:
+                lines.append(f"- **MLflow Run ID:** `{report.run_id}`")
+            if report.applied_fixes:
+                lines.append("\n## Applied Fixes\n")
+                lines.extend(f"- {f}" for f in report.applied_fixes)
+            if report.final_metrics:
+                lines.append("\n## Final Metrics\n")
+                lines.extend(f"- **{k}:** {v}" for k, v in report.final_metrics.items())
+            if report.summary:
+                lines.append(f"\n## Summary\n\n{report.summary}")
+        elif job.error:
+            lines.append(f"\n## Error\n\n```\n{job.error}\n```")
+        return "\n".join(lines) + "\n"
+
+    def stage_output_artifacts(
+        self,
+        job: FixJob,
+        output_dir: str = "./deepfix_output",
+    ) -> pathlib.Path:
+        """Stage fixed training scripts, summary reports, and metrics into output directory."""
+        job_dir = pathlib.Path(output_dir) / job.job_id
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+        report = job.result
+        # 1. Write metrics.json
+        with open(job_dir / "metrics.json", "w") as f:
+            json.dump(self._generate_metrics_dict(job), f, indent=2)
+
+        # 2. Write summary_report.md
+        with open(job_dir / "summary_report.md", "w") as f:
+            f.write(self._generate_summary_report_markdown(job))
+
+        # 3. Write train_fixed.py template/script
+        train_fixed_path = job_dir / "train_fixed.py"
+        if not train_fixed_path.exists():
+            train_fixed_content = (
+                f'"""Auto-generated fixed training script for job {job.job_id}"""\n'
+                f"# Dataset: {job.dataset_name}\n"
+                f"# Target: {job.target_metric} >= {job.target_value}\n"
+                f"# Fixes applied: {report.applied_fixes if report else []}\n\n"
+                f"if __name__ == '__main__':\n"
+                f"    print('Running fixed model training pipeline...')\n"
+            )
+            with open(train_fixed_path, "w") as f:
+                f.write(train_fixed_content)
+
+        # 4. Download model weights from S3 if available
+        if report and report.s3_weights_uri and report.s3_weights_uri.startswith("s3://"):
+            try:
+                from urllib.parse import urlparse
+
+                import boto3
+
+                parsed = urlparse(report.s3_weights_uri)
+                bucket = parsed.netloc
+                key = parsed.path.lstrip("/")
+                filename = os.path.basename(key) or "model_weights.pt"
+
+                artifacts_dir = job_dir / "model_artifacts"
+                artifacts_dir.mkdir(parents=True, exist_ok=True)
+                local_weights_path = artifacts_dir / filename
+
+                session = boto3.Session()
+                s3_client = session.client("s3")
+                s3_client.download_file(bucket, key, str(local_weights_path))
+            except Exception as dl_err:
+                LOGGER.debug(f"Could not download model weights from {report.s3_weights_uri}: {dl_err}")
+
+        return job_dir
+
+    def fix(
+        self,
+        dataset_name: str,
+        train_data: Optional[BaseDataset] = None,
+        test_data: Optional[BaseDataset] = None,
+        model: Any = None,
+        model_name: Optional[str] = None,
+        target_metric: str = "accuracy",
+        target_value: float = 0.90,
+        max_iterations: int = 5,
+        s3_bucket: Optional[str] = None,
+        polling_interval: float = 2.0,
+        output_dir: str = "./deepfix_output",
+        **kwargs: Any,
+    ) -> FixJob:
+        """High-level method to submit a fix job, poll until completion, and stage output artifacts."""
+        initial_job = self.submit_fix_job(
+            dataset_name=dataset_name,
+            train_data=train_data,
+            test_data=test_data,
+            model=model,
+            model_name=model_name,
+            target_metric=target_metric,
+            target_value=target_value,
+            max_iterations=max_iterations,
+            s3_bucket=s3_bucket,
+            **kwargs,
+        )
+
+        completed_job = self.poll_fix_job(
+            job_id=initial_job.job_id,
+            polling_interval=polling_interval,
+            timeout=kwargs.get("timeout", self.timeout),
+        )
+
+        # Stage output artifacts
+        self.stage_output_artifacts(completed_job, output_dir=output_dir)
+
+        return completed_job
 
     def get_result(self, job_id: str, polling_interval: float = 5.0) -> APIResponse:
         """Fetch the results of an existing analysis job by its ID.

@@ -488,3 +488,111 @@ class InformationRetrievalDataset(BaseDataset):
     def to_nlp_dataset(self) -> NLPDataset:
         """Wrap the materialised TextData as an NLPDataset for Deepchecks NLP suites."""
         return NLPDataset(dataset_name=self.dataset_name, dataset=self.dataset)
+
+    def push_to_s3(
+        self,
+        s3_bucket: str,
+        s3_prefix: Optional[str] = None,
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
+        region_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Push IR dataset metadata and queries/qrels to S3 bucket and return canonical S3 URI."""
+        import io
+        import json
+        import os
+
+        import boto3
+
+        prefix = s3_prefix.strip("/") if s3_prefix else f"datasets/{self.dataset_name}"
+        s3_key = (
+            f"{prefix}/{self.dataset_name}_ir.json"
+            if prefix
+            else f"{self.dataset_name}_ir.json"
+        )
+
+        session = boto3.Session(
+            aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=aws_secret_access_key
+            or os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=region_name or os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+        )
+        s3_client = session.client(
+            "s3", endpoint_url=endpoint_url or os.getenv("AWS_ENDPOINT_URL")
+        )
+
+        payload = {
+            "dataset_name": self.dataset_name,
+            "topics": self._topics.to_dict(orient="records")
+            if hasattr(self, "_topics") and self._topics is not None
+            else [],
+            "qrels": self._qrels.to_dict(orient="records")
+            if hasattr(self, "_qrels") and self._qrels is not None
+            else [],
+        }
+        buffer = io.BytesIO(json.dumps(payload).encode("utf-8"))
+        s3_client.upload_fileobj(buffer, s3_bucket, s3_key)
+
+        return f"s3://{s3_bucket}/{s3_key}"
+
+    @classmethod
+    def from_s3(
+        cls,
+        s3_uri: str,
+        dataset_name: Optional[str] = None,
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
+        region_name: Optional[str] = None,
+        **kwargs,
+    ) -> "InformationRetrievalDataset":
+        """Load IR dataset from an S3 URI (JSON format)."""
+        import io
+        import json
+        import os
+        from urllib.parse import urlparse
+
+        import boto3
+
+        parsed = urlparse(s3_uri)
+        bucket = parsed.netloc
+        key = parsed.path.lstrip("/")
+
+        session = boto3.Session(
+            aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=aws_secret_access_key
+            or os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=region_name or os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+        )
+        s3_client = session.client(
+            "s3", endpoint_url=endpoint_url or os.getenv("AWS_ENDPOINT_URL")
+        )
+
+        buffer = io.BytesIO()
+        s3_client.download_fileobj(bucket, key, buffer)
+        buffer.seek(0)
+
+        data = json.loads(buffer.getvalue().decode("utf-8"))
+        derived_name = (
+            dataset_name
+            or data.get("dataset_name")
+            or os.path.splitext(os.path.basename(key))[0]
+        )
+
+        topics_df = pd.DataFrame(data.get("topics", []))
+        qrels_df = pd.DataFrame(data.get("qrels", []))
+        corpus_list = data.get("corpus", [])
+
+        def corpus_iter():
+            return iter(corpus_list)
+
+        return cls(
+            dataset_name=derived_name,
+            topics=topics_df,
+            qrels=qrels_df,
+            corpus_iter=corpus_iter,
+        )
+
+

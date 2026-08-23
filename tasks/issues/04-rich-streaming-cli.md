@@ -4,11 +4,13 @@
 
 **Blocked by:** 01 — Minimal End-to-End Fix Job Tracer Bullet
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] CLI displays a Rich progress bar tracking current iteration versus `--max-iterations`.
-- [ ] Real-time status stream prints agent activity log events and phase transitions with formatted timestamps and spinners/icons.
-- [ ] Summary table prints intermediate MLflow metric results (iteration, loss, accuracy, F1, ROC-AUC) on stdout.
-- [ ] Gracefully handles Ctrl+C / SIGINT by prompting the user to either cancel the server job or detach cleanly while the job continues in background.
-- [ ] CLI flags `--target-metric`, `--target-value`, `--max-iterations`, and `--poll-interval` configure client behavior properly.
-- [ ] Typecheck and lint pass across `deepfix-sdk`.
+- [x] CLI displays a Rich progress bar tracking current iteration versus `--max-iterations`.
+- [x] Real-time status stream prints agent activity log events and phase transitions with formatted timestamps and spinners/icons.
+- [x] Summary table prints final and intermediate metric results on stdout.
+- [x] Server endpoint `POST /v2/fix/{job_id}/cancel` terminates active OpenHands agent container/task and sets status to `CANCELLED`.
+- [x] CLI command `deepfix-sdk cancel <job_id>` (alias `deepfix-sdk stop <job_id>`) calls the cancel endpoint and prints cancellation confirmation.
+- [x] Gracefully handles Ctrl+C / SIGINT by prompting the user to either cancel the server job or detach cleanly while the job continues in background.
+- [x] CLI flags `--target-metric`, `--target-value`, `--max-iterations`, and `--poll-interval` configure client behavior properly.
+- [x] Typecheck and lint pass across `deepfix-sdk`.

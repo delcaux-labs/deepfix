@@ -27,6 +27,7 @@ class AnalysisJobStatus(StrEnum):
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 # API Models

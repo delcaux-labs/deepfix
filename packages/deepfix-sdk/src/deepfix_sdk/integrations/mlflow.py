@@ -20,8 +20,8 @@ from deepfix_core.models import (
     ArtifactPath,
     DatasetArtifacts,
     DeepchecksArtifacts,
+    DeepchecksConfig,
     TrainingArtifacts,
-    DeepchecksConfig
 )
 from mlflow.entities import Experiment, Run
 from mlflow.tracking import MlflowClient

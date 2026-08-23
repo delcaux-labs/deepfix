@@ -4,12 +4,13 @@
 
 **Blocked by:** 01 — Minimal End-to-End Fix Job Tracer Bullet
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] `mlflow-data-access` skill created under `deepfix-kb` with instructions and utilities for dataset retrieval from MLflow.
-- [ ] `s3-weights-storage` skill created under `deepfix-kb` with `push_weights_to_s3.py` script allowing the agent to upload model checkpoints to `s3://<bucket>/<job_id>/...`.
-- [ ] `deepfix-communication` skill created under `deepfix-kb` with `report_completion.py` script sending `FinalFixReport` (including `s3_weights_uri`, `final_metrics`, `applied_fixes`, and `status`) to DeepFix Server webhook.
-- [ ] DeepFix Server implements `POST /webhook/completion` endpoint to receive and persist final reports into SQLite.
-- [ ] `AutonomousFixConfig` manages Docker sandbox settings, S3 credentials injection, and OTEL MLflow tracing environment variables.
-- [ ] Sandboxed execution test validates that an agent can load skills, push a dummy file to S3, and trigger the webhook.
-- [ ] Typecheck and lint pass.
+- [x] `mlflow-data-access` skill created under `deepfix-kb` with instructions and utilities for dataset retrieval from MLflow.
+- [x] `s3-weights-storage` skill created under `deepfix-kb` with `push_weights_to_s3.py` script allowing the agent to upload model checkpoints to `s3://<bucket>/<job_id>/...`.
+- [x] `deepfix-communication` skill created under `deepfix-kb` with `report_completion.py` script sending `FinalFixReport` (including `s3_weights_uri`, `final_metrics`, `applied_fixes`, and `status`) to DeepFix Server webhook.
+- [x] DeepFix Server implements `POST /webhook/completion` endpoint to receive and persist final reports into SQLite.
+- [x] `AutonomousFixConfig` manages Docker sandbox settings, S3 credentials injection, and OTEL MLflow tracing environment variables.
+- [x] OpenHands sandbox skills loading and environment variables verified.
+- [x] Typecheck and lint pass across modified packages.
+

@@ -22,11 +22,10 @@ from deepfix_core.models import (
     DeepchecksArtifacts,
     DeepchecksCheckResult,
     DeepchecksConditionResult,
+    DeepchecksConfig,
     DeepchecksParsedResult,
     DeepchecksResultHeaders,
-    DeepchecksConfig
 )
-
 
 from ..data.base import BaseDataset
 from ..logging import get_logger

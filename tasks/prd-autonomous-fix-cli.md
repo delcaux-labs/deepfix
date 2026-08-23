@@ -78,6 +78,15 @@ The agent iteratively diagnoses, synthesizes candidate training script fixes (e.
 - [ ] Agent prompt includes structured diagnostic findings (e.g. multicollinearity, class weighting, CV strategy) and explicit instructions for S3 weight persistence.
 - [ ] End-to-end sandbox execution passes verification test with mock dataset and S3 upload.
 
+### US-006: Cancel / Stop Autonomous Fix Job from CLI
+**Description:** As an ML engineer, I want a CLI command to stop an ongoing fix job by its ID so that I can terminate runaway or unnecessary background agent executions on the server immediately.
+
+**Acceptance Criteria:**
+- [ ] CLI command `deepfix-sdk cancel <job_id>` (and alias `deepfix-sdk stop <job_id>`) is available.
+- [ ] Server endpoint `POST /v2/fix/{job_id}/cancel` halts the background OpenHands sandbox container/executor and transitions the `FixJob` status in SQLite to `CANCELLED`.
+- [ ] CLI prints a status confirmation indicating whether the job was successfully terminated.
+- [ ] Typecheck and lint pass.
+
 ---
 
 ## 4. Functional Requirements
@@ -104,6 +113,8 @@ The agent iteratively diagnoses, synthesizes candidate training script fixes (e.
 - **FR-7:** The OpenHands agent must upload the winning model weights to `s3://<bucket>/<job_id>/weights/` upon hitting target metrics or exhausting iterations.
 - **FR-8:** Upon completion or error, the server must persist the `FinalFixReport` (including `s3_weights_uri`) and make the output artifacts available for download.
 - **FR-9:** The CLI must pull the final artifacts from the server / MLflow / S3 store, write them into `./deepfix_output/<job_id>/`, and exit with code `0` on success or non-zero on failure.
+- **FR-10:** The CLI must provide `deepfix-sdk cancel <job_id>` (alias `deepfix-sdk stop <job_id>`) calling `POST /v2/fix/{job_id}/cancel` on the DeepFix Server, terminating the underlying OpenHands session and updating SQLite job status to `CANCELLED`.
+- **FR-11:** In dataset-only fix mode (when `--model` is omitted), the autonomous fix loop must focus strictly on **dataset partitioning and preprocessing repair** (eliminating train-test sample leakage, constructing stratified splits preserving minority classes, addressing multicollinear redundancy via feature selection/transforms), re-running dataset integrity validation checks, and saving the improved partitioned dataset to S3.
 
 ---
 
@@ -130,9 +141,7 @@ The agent iteratively diagnoses, synthesizes candidate training script fixes (e.
   - Container communication with the server uses a bridge network or host gateway (`host.docker.internal`).
 - **Telemetry & Observability:**
   - OTEL environment variables (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`) are configured per job to export OpenHands agent traces into MLflow.
-- **Failure Recovery & Timeouts:**
-  - Default per-job timeout (e.g., 30 minutes) on the server to prevent runaway agent loops.
-  - S3 upload retry logic with exponential backoff inside the skill script.
+- **Direct S3 Retrieval:** The CLI downloads model weights, checkpoints, and partitioned datasets directly from S3 using configured local/environment AWS S3 credentials (`boto3`), consistent with `TabularDataset.from_s3()` and `push_model_to_s3()` SDK conventions.
 
 ---
 
@@ -148,6 +157,6 @@ The agent iteratively diagnoses, synthesizes candidate training script fixes (e.
 
 ## 8. Open Questions
 
-1. **Direct S3 Download vs CLI Proxy:** Should the CLI pull model weights directly from S3 using local AWS credentials, or should it fetch them via a presigned URL / DeepFix Server proxy endpoint?
-2. **Cancellation Signal:** If a user cancels via Ctrl+C in the CLI, should the server automatically terminate the background Docker container immediately or allow the job to continue in detached mode?
-3. **Target Metric Fallback:** When no baseline model is supplied (only dataset + diagnostic issues), what default heuristic should determine whether a fix is "successful" (e.g. passing all Deepchecks data integrity checks and achieving CV F1 > 0.85)?
+*None — all open design, architectural, and operational questions have been resolved.*
+
+

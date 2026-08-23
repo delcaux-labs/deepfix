@@ -45,6 +45,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mlflow
+      - rustfs
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
     ports:
       - "8844:8844"
@@ -83,6 +84,20 @@ services:
       timeout: 5s
       retries: 5
 
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - RUSTFS_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
+      - RUSTFS_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RUSTFS_VOLUMES=/data
+      - RUSTFS_CONSOLE_ENABLE=true
+    volumes:
+      - rustfs-data:/data
+
   mlflow:
     build:
       context: .
@@ -104,3 +119,6 @@ services:
       --backend-store-uri postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_portal
 
     restart: unless-stopped
+
+volumes:
+  rustfs-data:

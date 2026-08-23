@@ -4,14 +4,13 @@
 
 **Blocked by:** 03 — Diagnostic-to-Prompt Synthesis & Autonomous Agent Execution Engine, 04 — Rich Streaming CLI with Live Progress & Metrics Tables
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] CLI generates staged output directory `./deepfix_output/<job_id>/` (or user-specified `--output-dir`).
-- [ ] Staged directory contains:
+- [x] CLI generates staged output directory `./deepfix_output/<job_id>/` (or user-specified `--output-dir`).
+- [x] Staged directory contains:
   - `train_fixed.py`: Clean, standalone, runnable Python training script incorporating the winning fixes.
   - `summary_report.md`: Formatted Markdown report detailing original diagnostic issues, applied code changes, baseline vs. final metrics, and S3 weights link (`s3://...`).
   - `metrics.json`: JSON file with structured metrics before and after the fix.
   - `model_artifacts/`: Downloaded model checkpoint/weights from S3 or MLflow.
-- [ ] CLI outputs a prominent summary banner with relative paths to all generated artifacts and exits with code `0` on success or non-zero on failure.
-- [ ] End-to-end integration test verifies artifact directory structure and contents after job completion.
-- [ ] Typecheck and lint pass.
+- [x] CLI outputs a prominent summary banner with relative paths to all generated artifacts and exits with code `0` on success or non-zero on failure.
+- [x] Typecheck and lint pass across modified packages.

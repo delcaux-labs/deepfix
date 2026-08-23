@@ -38,6 +38,51 @@ class VisionDataset(BaseDataset):
     def name(self) -> str:
         return self.dataset_name
 
+    def push_to_s3(
+        self,
+        s3_bucket: str,
+        s3_prefix: Optional[str] = None,
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
+        region_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Push vision dataset metadata/manifest to S3 bucket and return canonical S3 URI."""
+        import io
+        import json
+        import os
+
+        import boto3
+
+        prefix = s3_prefix.strip("/") if s3_prefix else f"datasets/{self.dataset_name}"
+        s3_key = (
+            f"{prefix}/{self.dataset_name}_manifest.json"
+            if prefix
+            else f"{self.dataset_name}_manifest.json"
+        )
+
+        session = boto3.Session(
+            aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=aws_secret_access_key
+            or os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=region_name or os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+        )
+        s3_client = session.client(
+            "s3", endpoint_url=endpoint_url or os.getenv("AWS_ENDPOINT_URL")
+        )
+
+        manifest = {
+            "dataset_name": self.dataset_name,
+            "data_type": self.data_type.value,
+            "sample_count": len(self),
+        }
+        buffer = io.BytesIO(json.dumps(manifest).encode("utf-8"))
+        s3_client.upload_fileobj(buffer, s3_bucket, s3_key)
+
+        return f"s3://{s3_bucket}/{s3_key}"
+
+
 
 class ImageClassificationDataset(VisionDataset):
     def __init__(self, dataset_name: str, dataset: VisionData | Iterable):

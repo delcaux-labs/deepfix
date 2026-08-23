@@ -5,23 +5,22 @@ from __future__ import annotations
 import asyncio
 import json
 import traceback
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from deepfix_core.models import Severity
-
 from deepfix_kb import KnowledgeBridge
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..logging import get_logger
+from .prompts import (
+    CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
+    CROSS_ARTIFACT_SYSTEM_PROMPT,
+)
 from .schemas import AgentResult, CrossArtifactReasoningResult
 
 LOGGER = get_logger(__name__)
 
-from .prompts import (
-    CROSS_ARTIFACT_SYSTEM_PROMPT,
-    CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
-)
 
 
 def serialize_previous_analyses(previous_analyses: Dict[str, AgentResult]) -> str:

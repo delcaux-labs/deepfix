@@ -35,6 +35,7 @@ from .defaults import DataType, TaskType
 from .fixes import (
     FinalFixReport,
     FixJob,
+    FixJobRequest,
     FixJobStatus,
 )
 
@@ -70,5 +71,6 @@ __all__ = [
     "IRStatistics",
     "FinalFixReport",
     "FixJob",
+    "FixJobRequest",
     "FixJobStatus",
 ]

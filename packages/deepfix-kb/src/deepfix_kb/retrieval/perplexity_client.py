@@ -8,7 +8,7 @@ from typing import Any, List, Literal, Optional
 
 from openai import AsyncOpenAI
 
-from ..config import PerplexityConfig, PerplexityModels
+from ..config import PerplexityConfig
 from .base import BaseRetriever, RetrievalResult
 
 logger = logging.getLogger(__name__)
