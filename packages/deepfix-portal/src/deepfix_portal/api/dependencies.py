@@ -2,7 +2,6 @@
 FastAPI dependencies for authentication, etc.
 """
 
-import os
 import time
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -16,6 +15,7 @@ from fastapi.security import (
 )
 from sqlalchemy.orm import Session
 
+from .config import settings
 from .database import SessionLocal, get_db
 from .models import APIKey, User
 from .schemas import APIKeyValidationResponse

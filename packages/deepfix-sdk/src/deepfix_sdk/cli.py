@@ -1,7 +1,9 @@
 import subprocess
 import sys
+from typing import Optional
 
 import typer
+
 from .config import DefaultPaths
 
 app = typer.Typer(
@@ -61,5 +63,37 @@ def launch_mlflow_server(
         sys.exit(1)
 
 
+@app.command(name="diagnose")
+def diagnose(
+    dataset_name: str = typer.Option(..., "--dataset", "-d", help="Name of the dataset"),
+    model_name: Optional[str] = typer.Option(None, "--model", "-m", help="Name of the model"),
+    fix: bool = typer.Option(False, "--fix", help="Trigger autonomous fix loop"),
+    api_url: str = typer.Option("http://localhost:4141/v2/analyse", "--api-url", help="DeepFix API URL"),
+    target_metric: str = typer.Option("accuracy", "--target-metric", help="Target metric name"),
+    target_value: float = typer.Option(0.90, "--target-value", help="Target metric value"),
+    max_iterations: int = typer.Option(5, "--max-iterations", help="Maximum fix iterations"),
+) -> None:
+    """Diagnose ML artifacts and optionally run autonomous fix loop."""
+    from .client import DeepFixClient
+
+    client = DeepFixClient(api_url=api_url)
+    if fix:
+        typer.echo(f"🤖 Starting autonomous fix loop for dataset: {dataset_name}...")
+        response = client.diagnose_and_fix(
+            train_data=None,
+            dataset_name=dataset_name,
+            model_name=model_name,
+            target_metric=target_metric,
+            target_value=target_value,
+            max_iterations=max_iterations,
+        )
+    else:
+        typer.echo(f"🔍 Diagnosing dataset: {dataset_name}...")
+        response = client.diagnose(dataset_name=dataset_name, model_name=model_name)
+
+    typer.echo(response.to_text())
+
+
 def main():
     app()
+

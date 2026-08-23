@@ -3,9 +3,9 @@ name = "deepfix_server"
 version = "0.1.0"
 description = "DeepFix server."
 readme = "README.md"
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
-    "dspy>=3.0.3",
+    "pydantic-ai>=0.0.50",
     "httpx>=0.28.1",
     "litserve>=0.2.16",
     "mlflow>=3.3.2",
@@ -14,12 +14,14 @@ dependencies = [
     "pytest-asyncio>=0.24.0",
     "python-dotenv>=1.1.1",
     "rich>=14.1.0",
-    "structlog>=25.4.0",
     "typer",
     "deepfix-core",
     "deepfix-kb",
-    "seaborn",
     "pydantic-settings>=2.11.0",
+    "openhands-sdk",
+    "openhands-tools",
+    "openhands-workspace",
+    "openhands-agent-server"
 ]
 
 [tool.pytest.ini_options]

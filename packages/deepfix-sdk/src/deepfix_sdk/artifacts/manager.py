@@ -19,7 +19,7 @@ from deepfix_core.models import (
 )
 from omegaconf import OmegaConf
 
-from ..utils.logging import get_logger
+from ..logging import get_logger
 from .repository import ArtifactRecord, ArtifactRepository, ArtifactStatus
 from .services import ChecksumService
 

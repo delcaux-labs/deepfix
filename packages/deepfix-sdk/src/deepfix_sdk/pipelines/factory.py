@@ -1,19 +1,20 @@
+from __future__ import annotations
+
 from typing import Any, Callable, List, Optional, Union
 
-import torch
-from deepfix_core.models import ArtifactPath, DataType
+import numpy as np
+from deepfix_core.models import ArtifactPath, DataType, DeepchecksConfig
 
 from ..artifacts import ArtifactRepository, ArtifactsManager
 from ..config import (
     ArtifactConfig,
-    DeepchecksConfig,
     DefaultPaths,
     IngestionPipelineConfig,
     MLflowConfig,
 )
 from ..data import BaseDataset
 from ..integrations import MLflowManager
-from ..utils.logging import get_logger
+from ..logging import get_logger
 from .base import Pipeline, Step
 from .checks import Checks
 from .data_ingestion import DataIngestor
@@ -50,7 +51,7 @@ class TrainLoggingPipeline(Pipeline):
         sqlite_path: Optional[str] = None,
         batch_size: int = 8,
         model_evaluation_checks: bool = True,
-        model: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+        model: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):
         self.model_evaluation_checks = model_evaluation_checks
 
@@ -110,7 +111,7 @@ class ChecksPipeline(Pipeline):
         train_test_validation: bool = True,
         data_integrity: bool = True,
         model_evaluation: bool = False,
-        model: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+        model: Optional[Callable[[np.ndarray], np.ndarray]] = None,
         mlflow_tracking_uri: Optional[str] = None,
         sqlite_path: Optional[str] = None,
         batch_size: int = 16,
@@ -268,7 +269,7 @@ class IngestionPipeline(Pipeline):
             if mlflow_run_id:
                 mlflow_run_ids.add(mlflow_run_id)
             self.artifact_mgr.delete_artifact(run_name, artifact_key)
-            
+
         for mlflow_run_id in mlflow_run_ids:
             self.mlflow_manager.delete_run(mlflow_run_id)
             LOGGER.info(f"Deleted MLflow run `{mlflow_run_id}`")

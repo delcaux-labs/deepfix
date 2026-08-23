@@ -17,7 +17,8 @@ Example:
 """
 
 from .bridge import KnowledgeBridge
-from .models import KnowledgeResponse, RetrievalResult, RetrievalStrategy
+from .config import RetrievalStrategy
+from .models import KnowledgeResponse, RetrievalResult
 from .retrieval import (
     BaseRetriever,
     HybridRetriever,
@@ -40,3 +41,4 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
+

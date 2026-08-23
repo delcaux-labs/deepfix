@@ -10,8 +10,8 @@ from deepfix_core.models import (
 
 from ..artifacts import ArtifactsManager
 from ..data import BaseDataset, get_data_statistics
-from ..models import get_model_metadata
-from ..utils.logging import get_logger
+from ..logging import get_logger
+from ..utils import get_model_metadata
 from .base import Step
 
 LOGGER = get_logger(__name__)

@@ -16,12 +16,12 @@ import httpx
 import mlflow
 
 
-def setup_dspy_logging(
+def setup_mlflow_tracing(
     experiment_name: str,
     tracking_uri: Optional[str] = None,
     logger: Optional[logging.Logger] = None,
 ):
-    assert isinstance(experiment_name, str), "experiment_name must be a string"
+    """Set up MLflow tracing for LLM calls."""
 
     if tracking_uri is None:
         if logger is not None:
@@ -53,9 +53,9 @@ def setup_dspy_logging(
                     print("Tracing will not be enabled.")
             return
 
-    mlflow.dspy.autolog()
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
+    mlflow.pydantic_ai.autolog()
     if logger is not None:
         logger.info("DSPy logging setup complete.")
     else:

@@ -19,6 +19,24 @@ class KnowledgeDomain(StrEnum):
     MODEL_OPTIMIZATION = "model_optimization"
     DEBUGGING = "debugging"
 
+class RetrievalStrategy(StrEnum):
+    """Retrieval strategies for hybrid retrieval.
+
+    Defines how multiple retrieval sources are combined.
+    """
+
+    PARALLEL = "parallel"  # Query all sources simultaneously
+    CASCADING = "cascading"  # Try sources in order until enough results
+    WEB_FIRST = "web_first"  # Prioritize web search results
+    AI_FIRST = "ai_first"  # Prioritize Perplexity AI results
+    LOCAL_FIRST = "local_first"  # Prioritize local knowledge base
+
+class PerplexityModels(StrEnum):
+    """Perplexity models available through OpenRouter using Pydantic AI for AI-powered research.
+    """
+    SONAR = "perplexity/sonar"
+    SONAR_PRO = "perplexity/sonar-pro"
+    SONAR_REASONING = "perplexity/sonar-reasoning"
 
 class KnowledgeDocument(BaseModel):
     """Knowledge document model for local knowledge base.
@@ -51,7 +69,6 @@ class KnowledgeDocument(BaseModel):
     ml_frameworks: List[str] = Field(default_factory=list, description="ML frameworks")
     model_types: List[str] = Field(default_factory=list, description="Model types")
 
-
 class TavilyConfig(BaseModel):
     """Configuration for Tavily Search client.
 
@@ -69,11 +86,11 @@ class TavilyConfig(BaseModel):
     search_depth: Literal["basic", "advanced"] = Field(
         "basic", description="Search depth"
     )
-    default_topic: Literal["general", "news", "finance", "code"] = Field(
+    default_topic: str = Field(
         "general", description="Default topic"
     )
-    include_answer: bool = Field(True, description="Include AI answer")
-
+    include_answer: bool = Field(False, description="Include AI answer")
+    include_raw_content: bool = Field(False, description="Include raw content")
 
 class PerplexityConfig(BaseModel):
     """Configuration for Perplexity Sonar client.
@@ -89,12 +106,38 @@ class PerplexityConfig(BaseModel):
         default_factory=lambda: os.getenv("OPENROUTER_API_KEY"),
         description="OpenRouter API key",
     )
-    model: Literal["sonar", "sonar-pro", "sonar-reasoning"] = Field(
-        "sonar", description="Perplexity model variant"
+    api_base: str = Field(
+        "https://openrouter.ai/api/v1",
+        description="OpenRouter API base URL",
+    )
+    model: PerplexityModels = Field(
+        PerplexityModels.SONAR, description="Perplexity model variant"
     )
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="Temperature")
     max_tokens: Optional[int] = Field(None, description="Max tokens")
 
+class HybridRetrieverConfig(BaseModel):
+    """Configuration for hybrid retriever.
+
+    Attributes:
+        default_strategy: Default strategy for combining sources.
+        max_results_per_source: Maximum results from each individual source.
+        max_total_results: Maximum total results after merging.
+        enable_deduplication: Whether to deduplicate similar results.
+        similarity_threshold: Threshold for considering results as duplicates.
+    """
+
+    default_strategy: RetrievalStrategy = Field(
+        RetrievalStrategy.PARALLEL, description="Default retrieval strategy"
+    )
+    max_results_per_source: int = Field(
+        3, ge=1, le=10, description="Max results per source"
+    )
+    max_total_results: int = Field(10, ge=1, le=50, description="Max total results")
+    enable_deduplication: bool = Field(True, description="Enable result deduplication")
+    similarity_threshold: float = Field(
+        0.85, ge=0.0, le=1.0, description="Similarity threshold for deduplication"
+    )
 
 class KnowledgeBridgeConfig(BaseSettings):
     """Configuration for KnowledgeBridge.
@@ -103,13 +146,12 @@ class KnowledgeBridgeConfig(BaseSettings):
     instance with all settings.
 
     Attributes:
-        tavily: Tavily configuration.
-        perplexity: Perplexity configuration.
+        tavily: Tavily configuration (built on demand via property).
+        perplexity: Perplexity configuration (built on demand via property).
         default_strategy: Default retrieval strategy.
         max_results_per_source: Max results from each source.
         max_total_results: Max total results.
         enable_local_kb: Enable local knowledge base.
-        enable_synthesis: Enable result synthesis by default.
     """
 
     model_config = SettingsConfigDict(
@@ -123,24 +165,40 @@ class KnowledgeBridgeConfig(BaseSettings):
         validation_alias=AliasChoices("TAVILY_API_KEY"),
         description="Tavily API key",
     )
+    tavily_search_depth: Literal["basic", "advanced"] = Field(
+        "basic", validation_alias=AliasChoices("TAVILY_SEARCH_DEPTH"),
+        description="Tavily search depth"
+    )
+    tavily_default_topic: str = Field(
+        "general", validation_alias=AliasChoices("TAVILY_DEFAULT_TOPIC"),
+        description="Tavily default topic"
+    )
+    tavily_include_answer: bool = Field(
+        False, validation_alias=AliasChoices("TAVILY_INCLUDE_ANSWER"),
+        description="Include AI answer"
+    )
+
     openrouter_api_key: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("OPENROUTER_API_KEY"),
         description="OpenRouter API key",
     )
-    perplexity_model: Literal["sonar", "sonar-pro", "sonar-reasoning"] = Field(
-        "sonar",
+    perplexity_model: PerplexityModels = Field(
+        PerplexityModels.SONAR,
         validation_alias=AliasChoices("PERPLEXITY_MODEL"),
         description="Perplexity model variant",
     )
+    perplexity_temperature: float = Field(
+        0.7, validation_alias=AliasChoices("PERPLEXITY_TEMPERATURE"),
+        description="Perplexity temperature"
+    )
+    perplexity_max_tokens: Optional[int] = Field(
+        None, validation_alias=AliasChoices("PERPLEXITY_MAX_TOKENS"),
+        description="Perplexity max tokens"
+    )
 
-    tavily: TavilyConfig = Field(default_factory=TavilyConfig)
-    perplexity: PerplexityConfig = Field(default_factory=PerplexityConfig)
-
-    default_strategy: Literal[
-        "parallel", "cascading", "web_first", "ai_first", "local_first"
-    ] = Field(
-        "parallel",
+    default_strategy: RetrievalStrategy = Field(
+        RetrievalStrategy.PARALLEL,
         validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_STRATEGY"),
         description="Default retrieval strategy",
     )
@@ -155,40 +213,58 @@ class KnowledgeBridgeConfig(BaseSettings):
         validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB"),
         description="Enable local KB",
     )
-    enable_synthesis: bool = Field(True, description="Enable synthesis by default")
+    enable_deduplication: bool = Field(
+        True,
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_ENABLE_DEDUPLICATION"),
+        description="Enable result deduplication"
+    )
+    similarity_threshold: float = Field(
+        0.85,
+        validation_alias=AliasChoices("KNOWLEDGE_BRIDGE_SIMILARITY_THRESHOLD"),
+        ge=0.0, le=1.0,
+        description="Similarity threshold for deduplication"
+    )
 
-    def __init__(self, **values: Any):
-        super().__init__(**values)
-        if "tavily" not in values:
-            self.tavily = TavilyConfig(
-                api_key=self.tavily_api_key or self.tavily.api_key,
+    # Private caches for lazily-built sub-configs
+    _tavily: Optional[TavilyConfig] = None
+    _perplexity: Optional[PerplexityConfig] = None
+    _hybrid_retriever: Optional[HybridRetrieverConfig] = None
+
+    @property
+    def tavily(self) -> TavilyConfig:
+        """Build and cache TavilyConfig on first access."""
+        if self._tavily is None:
+            self._tavily = TavilyConfig(
+                api_key=self.tavily_api_key,
+                search_depth=self.tavily_search_depth,
+                default_topic=self.tavily_default_topic,
+                include_answer=self.tavily_include_answer,
             )
-        else:
-            if self.tavily.api_key is None and self.tavily_api_key is not None:
-                self.tavily = self.tavily.model_copy(update={"api_key": self.tavily_api_key})
+        return self._tavily
 
-        if "perplexity" not in values:
-            self.perplexity = PerplexityConfig(
-                api_key=self.openrouter_api_key or self.perplexity.api_key,
+    @property
+    def perplexity(self) -> PerplexityConfig:
+        """Build and cache PerplexityConfig on first access."""
+        if self._perplexity is None:
+            self._perplexity = PerplexityConfig(
+                api_key=self.openrouter_api_key,
                 model=self.perplexity_model,
+                temperature=self.perplexity_temperature,
+                max_tokens=self.perplexity_max_tokens,
             )
-        else:
-            update_dict = {}
-            if self.perplexity.api_key is None and self.openrouter_api_key is not None:
-                update_dict["api_key"] = self.openrouter_api_key
-            if self.perplexity.model == "sonar" and self.perplexity_model != "sonar":
-                update_dict["model"] = self.perplexity_model
-            if update_dict:
-                self.perplexity = self.perplexity.model_copy(update=update_dict)
+        return self._perplexity
 
-    @classmethod
-    def from_env(cls) -> "KnowledgeBridgeConfig":
-        """Create configuration from environment variables.
-
-        Returns:
-            KnowledgeBridgeConfig instance.
-        """
-        return cls()
+    @property
+    def hybrid_retriever(self):
+        if self._hybrid_retriever is None:
+            self._hybrid_retriever = HybridRetrieverConfig(
+                default_strategy=self.default_strategy,
+                max_results_per_source=self.max_results_per_source,
+                max_total_results=self.max_total_results,
+                enable_deduplication=self.enable_deduplication,
+                similarity_threshold=self.similarity_threshold,
+            )
+        return self._hybrid_retriever
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary.
@@ -196,7 +272,10 @@ class KnowledgeBridgeConfig(BaseSettings):
         Returns:
             Dictionary representation of configuration.
         """
-        return self.model_dump()
+        data = self.model_dump()
+        data["tavily"] = self.tavily.model_dump()
+        data["perplexity"] = self.perplexity.model_dump()
+        return data
 
 
 # Global configuration instance

@@ -5,9 +5,8 @@ Revises: 003_add_dspy_cache
 Create Date: 2026-04-23 19:28:16.095542
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '7a2ff7d0c32d'

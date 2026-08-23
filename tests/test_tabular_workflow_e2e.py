@@ -6,7 +6,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 
 from deepfix_sdk import DeepFixClient
-from deepfix_sdk.data.datasets import TabularDataset
+from deepfix_sdk.tabular.dataset import TabularDataset
 from deepfix_core.models import APIResponse
 
 
@@ -21,14 +21,14 @@ def setup_env():
 class TestTabularWorkflowE2E:
     """End-to-end tests for the tabular workflow, reproducing the tutorial."""
 
-    def test_tabular_diagnosis_workflow(self, api_url: str, check_response: callable):
+    def test_tabular_diagnosis_workflow(self, api_url: str,deepfix_timeout: int, check_response: callable):
         """
         Test the full diagnosis workflow for a tabular dataset.
         Reproduces logic from tutorials/tabular.ipynb.
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=120)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Load and Prepare Data
@@ -86,8 +86,13 @@ class TestTabularWorkflowE2E:
         print("8. Verifying response...")
         assert check_response(response)
 
+        # Save diagnosis to a file for local debugging of the agent
+        with open(f"{dataset_name}.txt", "w", encoding="utf-8") as f:
+            f.write(response.get_results_as_text())
+        print(f"9. Saved diagnosis to {dataset_name}.txt")
+
     def test_tabular_diagnosis_without_model(
-        self, api_url: str, check_response: callable
+        self, api_url: str,deepfix_timeout: int, check_response: callable
     ):
         """
         Test the diagnosis workflow without providing a fitted model.
@@ -95,7 +100,7 @@ class TestTabularWorkflowE2E:
         """
         # 1. Initialize Client
         print("1. Initializing client...")
-        client = DeepFixClient(api_url=api_url, timeout=120)
+        client = DeepFixClient(api_url=api_url, timeout=deepfix_timeout)
         print("2. Client initialized.")
 
         # 2. Load and Prepare Data
@@ -142,3 +147,8 @@ class TestTabularWorkflowE2E:
         # 4. Verify Response
         print("6. Verifying response...")
         assert check_response(response)
+
+        # Save diagnosis to a file for local debugging of the agent
+        with open(f"{dataset_name}.txt", "w", encoding="utf-8") as f:
+            f.write(response.get_results_as_text())
+        print("7. Saved diagnosis to {dataset_name}.txt")

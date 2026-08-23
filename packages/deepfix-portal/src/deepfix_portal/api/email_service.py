@@ -5,11 +5,10 @@ Email service for sending verification and password reset emails
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
-from urllib.parse import urlparse
-
-from .config import settings
 
 import aiosmtplib
+
+from .config import settings
 
 
 async def send_verification_email(

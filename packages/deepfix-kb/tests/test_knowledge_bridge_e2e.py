@@ -34,6 +34,7 @@ from deepfix_kb.retrieval import (
 )
 from deepfix_kb.tools import create_knowledge_tools
 
+
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -99,7 +100,6 @@ class TestKnowledgeBridgeConfig:
         assert config.max_results_per_source == 3
         assert config.max_total_results == 10
         assert config.enable_local_kb is False
-        assert config.enable_synthesis is True
 
     def test_tavily_config_defaults(self):
         """Test Tavily configuration defaults."""
@@ -123,7 +123,7 @@ class TestKnowledgeBridgeConfig:
         monkeypatch.setenv("KNOWLEDGE_BRIDGE_STRATEGY", "cascading")
         monkeypatch.setenv("KNOWLEDGE_BRIDGE_ENABLE_LOCAL_KB", "true")
 
-        config = KnowledgeBridgeConfig.from_env()
+        config = KnowledgeBridgeConfig()
 
         assert config.perplexity.model == "sonar-pro"
         assert config.default_strategy == "cascading"
@@ -248,7 +248,7 @@ class TestHybridRetriever:
         tavily, perplexity = mock_retrievers
         hybrid = HybridRetriever(tavily=tavily, perplexity=perplexity)
 
-        results = await hybrid.retrieve(
+        await hybrid.retrieve(
             "test query",
             sources=["web"],
         )
@@ -340,9 +340,9 @@ class TestKnowledgeBridgeIntegration:
 
 
 # ============================================================================
-# DSPy Tools Tests
+# Tools Tests
 # ============================================================================
-class TestDSPyTools:
+class TestTools:
     """Tests for DSPy tool wrappers."""
 
     def test_create_knowledge_tools(self):
@@ -352,10 +352,10 @@ class TestDSPyTools:
             openrouter_api_key="test-key",
         )
 
-        tools = create_knowledge_tools(bridge, include_hybrid=True)
+        tools = create_knowledge_tools(bridge, use_hybrid=True)
 
-        # Should have 4 tools: web_search, research, knowledge_lookup, hybrid_search
-        assert len(tools) == 4
+        # Should have 1 tool: hybrid_search
+        assert len(tools) == 1
 
     def test_create_tools_without_hybrid(self):
         """Test tool creation without hybrid tool."""
@@ -364,7 +364,7 @@ class TestDSPyTools:
             openrouter_api_key="test-key",
         )
 
-        tools = create_knowledge_tools(bridge, include_hybrid=False)
+        tools = create_knowledge_tools(bridge, use_hybrid=False)
 
         # Should have 3 tools
         assert len(tools) == 3

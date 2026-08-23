@@ -1,12 +1,12 @@
 """DSPy tool definitions for agent consumption."""
 
-from .dspy_tools import (
+from .schemas import ToolInput, ToolOutput
+from .tools import (
     KnowledgeLookupTool,
     ResearchTool,
     WebSearchTool,
     create_knowledge_tools,
 )
-from .schemas import ToolInput, ToolOutput
 
 __all__ = [
     "WebSearchTool",

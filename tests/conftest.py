@@ -15,18 +15,7 @@ try:
 except Exception:
     pass
 
-# Import DeepchecksConfig without loading the full deepchecks.py module
-try:
-    from deepfix_core.models import APIResponse
-    from deepfix_sdk.config import DeepchecksConfig
-except ImportError:
-    # Try alternate import path
-    import os
-
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-    from deepfix_core.models import APIResponse
-    from deepfix_sdk.config import DeepchecksConfig
-
+from deepfix_core.models import APIResponse, DeepchecksConfig
 
 @pytest.fixture
 def minimal_deepchecks_config() -> DeepchecksConfig:
@@ -50,6 +39,20 @@ def api_url():
     if url is None:
         raise ValueError("DEEPFIX_TEST_API_URL is not set")
     return url
+
+
+@pytest.fixture
+def api_fix_url():
+    """Fixture providing the DeepFix Fix API URL for tests."""
+    url = os.getenv("DEEPFIX_TEST_FIX_API_URL")
+    if url is None:
+        raise ValueError("DEEPFIX_TEST_FIX_API_URL is not set")
+    return url
+
+
+@pytest.fixture
+def deepfix_timeout():
+    return 300
 
 
 @pytest.fixture
@@ -89,3 +92,21 @@ def check_response():
         return True
 
     return check
+
+
+@pytest.fixture
+def check_fix_response():
+
+    def check(response):
+        assert isinstance(response, APIResponse)
+        assert response.summary is not None
+        assert (
+            response.fix_session_result is not None
+        ), "Response must include fix_session_result"
+        assert (
+            len(response.fix_session_result.iterations) > 0
+        ), "At least one iteration must be run"
+        return True
+
+    return check
+

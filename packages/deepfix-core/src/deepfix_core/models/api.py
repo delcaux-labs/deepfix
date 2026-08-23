@@ -19,6 +19,7 @@ from .artifacts import (
     ModelCheckpointArtifacts,
     TrainingArtifacts,
 )
+from .fixes import FinalFixReport
 
 
 class AnalysisJobStatus(StrEnum):
@@ -38,6 +39,8 @@ class APIResponse(BaseModel):
         additional_outputs: Dictionary of additional outputs from agents.
         error_messages: Optional dictionary mapping agent names to error messages
             if they failed.
+        job_id: Optional unique identifier for the fix job if triggered.
+        fix_report: Optional result of the autonomous fix session.
     """
 
     agent_results: Dict[str, AgentResult] = Field(
@@ -53,6 +56,12 @@ class APIResponse(BaseModel):
     dataset_name: Optional[str] = Field(
         default=None, description="Name of the dataset analyzed"
     )
+    job_id: Optional[str] = Field(
+        default=None, description="Unique identifier for the fix job"
+    )
+    fix_report: Optional[FinalFixReport] = Field(
+        default=None, description="Result of the autonomous fix session if executed"
+    )
 
     def get_results_as_dataframe(self) -> pd.DataFrame:
         """Convert all agent results to a single pandas DataFrame.
@@ -60,7 +69,9 @@ class APIResponse(BaseModel):
         Returns:
             DataFrame containing all findings and recommendations from all agents.
         """
-        dfs = [result.to_dataframe() for result in self.agent_results.values()]
+        dfs = [result.to_dataframe() for result in self.agent_results.values() if hasattr(result, "to_dataframe")]
+        if not dfs:
+            return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)
 
     def get_results_as_text(self) -> str:
@@ -71,6 +82,11 @@ class APIResponse(BaseModel):
             and agent-specific analysis.
         """
         df = self.get_results_as_dataframe()
+        if df.empty or "agent_name" not in df.columns:
+            if self.fix_report is not None:
+                status = "Success" if self.fix_report.success else "Failed"
+                return f"Autonomous Fix Session Result:\nStatus: {status}\nApplied Fixes: {len(self.fix_report.applied_fixes)}"
+            return "No analysis results found."
         summary = "=" * 80
         summary += "\nSUMMARY STATISTICS"
         summary += "\n" + "=" * 80
@@ -131,7 +147,9 @@ class APIResponse(BaseModel):
 
         df = self.get_results_as_dataframe()
 
-        if "agent_name" not in df.columns:
+        if df.empty or "agent_name" not in df.columns:
+            if self.fix_session_result is not None:
+                return f"Autonomous Fix Session Result:\nStatus: {self.fix_session_result.stop_reason}\nTotal Iterations: {len(self.fix_session_result.iterations)}"
             raise ValueError(
                 f"No analysis results found. Error messages: {self.error_messages}"
             )
@@ -408,3 +426,54 @@ class APIRequest(BaseModel):
     dataset_name: Optional[str] = Field(default=None, description="Name of the dataset")
     model_name: Optional[str] = Field(default=None, description="Name of the model")
     language: str = Field(default="english", description="Language of the analysis")
+
+
+class AutonomousFixRequest(APIRequest):
+    """Request model for the autonomous fix loop endpoint.
+
+    Attributes:
+        baseline_run_id: MLflow run ID of the baseline model run.
+        model_class: Full module path or name of the model class.
+        dataset_load_code: Python code snippet used to load dataset.
+        experiment_name: MLflow experiment name for fix iterations.
+        mlflow_experiment_id: MLflow experiment ID.
+        hf_dataset_dir: Directory path for Hugging Face dataset.
+        hf_dataset_name: Name of Hugging Face dataset.
+        dataset_name: Name of dataset logged in MLflow.
+        dataset_digest: Digest of dataset.
+        dataset_uri: URI of dataset.
+        label_column: Name of label/target column.
+    """
+
+    baseline_run_id: str = Field(
+        description="MLflow run ID of the baseline model run"
+    )
+    model_class: str = Field(description="Model class name or path")
+    dataset_load_code: Optional[str] = Field(
+        default=None, description="Python code to load the dataset"
+    )
+    experiment_name: str = Field(
+        default="deepfix-autonomous", description="MLflow experiment name"
+    )
+    mlflow_experiment_id: str = Field(
+        default="0", description="MLflow experiment ID"
+    )
+    hf_dataset_dir: Optional[str] = Field(
+        default=None, description="Directory path for Hugging Face dataset"
+    )
+    hf_dataset_name: Optional[str] = Field(
+        default=None, description="Name of Hugging Face dataset"
+    )
+    dataset_name: str = Field(
+        default="deepfix_dataset", description="Name of the dataset"
+    )
+    dataset_digest: Optional[str] = Field(
+        default=None, description="Digest of dataset"
+    )
+    dataset_uri: Optional[str] = Field(
+        default=None, description="URI of dataset"
+    )
+    label_column: Optional[str] = Field(
+        default=None, description="Name of label column"
+    )
+

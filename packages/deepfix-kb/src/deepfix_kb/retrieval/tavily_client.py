@@ -3,37 +3,15 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, List, Literal, Optional
 
-from pydantic import BaseModel, Field
 from tavily import AsyncTavilyClient
 
+from ..config import TavilyConfig
 from .base import BaseRetriever, RetrievalResult
 
 logger = logging.getLogger(__name__)
 
-
-class TavilySearchConfig(BaseModel):
-    """Configuration for Tavily Search client.
-
-    Attributes:
-        api_key: Tavily API key (loaded from env if not provided).
-        search_depth: Search depth - "basic" for fast, "advanced" for comprehensive.
-        default_topic: Default topic filter for searches.
-        include_answer: Whether to include AI-generated answer summary.
-        include_raw_content: Whether to include raw HTML content.
-    """
-
-    api_key: Optional[str] = Field(None, description="Tavily API key")
-    search_depth: Literal["basic", "advanced"] = Field(
-        "basic", description="Search depth: 'basic' or 'advanced'"
-    )
-    default_topic: Literal["general", "news", "finance", "code"] = Field(
-        "general", description="Default topic filter"
-    )
-    include_answer: bool = Field(True, description="Include AI-generated answer")
-    include_raw_content: bool = Field(False, description="Include raw HTML content")
 
 
 class TavilySearchRetriever(BaseRetriever):
@@ -60,35 +38,26 @@ class TavilySearchRetriever(BaseRetriever):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        search_depth: Literal["basic", "advanced"] = "basic",
-        default_topic: Literal["general", "news", "finance", "code"] = "general",
-        include_answer: bool = True,
+        config: TavilyConfig,
     ):
         """Initialize Tavily Search client.
 
         Args:
-            api_key: Tavily API key. If not provided, loads from TAVILY_API_KEY env var.
-            search_depth: Default search depth for queries.
-            default_topic: Default topic filter for searches.
-            include_answer: Whether to include AI-generated answer summaries.
+            config: TavilySearchConfig instance.
         """
-        self._api_key = api_key or os.getenv("TAVILY_API_KEY")
+        self._config = config
         self._client = None
-        self.search_depth = search_depth
-        self.default_topic = default_topic
-        self.include_answer = include_answer
 
     @property
     def client(self):
         """Lazy initialization of Tavily client."""
         if self._client is None:
-            if not self._api_key:
+            if not self._config.api_key:
                 raise ValueError(
                     "Tavily API key not provided. Set TAVILY_API_KEY environment "
                     "variable or pass api_key parameter."
                 )
-            self._client = AsyncTavilyClient(api_key=self._api_key)
+            self._client = AsyncTavilyClient(api_key=self._config.api_key)
         return self._client
 
     @client.setter
@@ -107,14 +76,14 @@ class TavilySearchRetriever(BaseRetriever):
     @property
     def is_available(self) -> bool:
         """Check if Tavily is properly configured."""
-        return self._api_key is not None
+        return bool(str(self._config.api_key).strip())
 
     async def retrieve(
         self,
         query: str,
         max_results: int = 5,
         search_depth: Optional[Literal["basic", "advanced"]] = None,
-        topic: Optional[Literal["general", "news", "finance", "code"]] = None,
+        topic: Optional[str] = None,
         include_domains: Optional[List[str]] = None,
         exclude_domains: Optional[List[str]] = None,
         days: Optional[int] = None,
@@ -145,11 +114,11 @@ class TavilySearchRetriever(BaseRetriever):
             # Prepare search parameters
             search_params = {
                 "query": query,
-                "search_depth": search_depth or self.search_depth,
-                "topic": topic or self.default_topic,
+                "search_depth": search_depth or self._config.search_depth,
+                "topic": topic or self._config.default_topic,
                 "max_results": max_results,
-                "include_answer": self.include_answer,
-                "include_raw_content": False,
+                "include_answer": self._config.include_answer,
+                "include_raw_content": self._config.include_raw_content,
             }
 
             # Add optional filters

@@ -6,8 +6,9 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import yaml
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel, Field, field_validator
+
 from .defaults import DataType, TaskType
 
 

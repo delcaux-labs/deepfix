@@ -2,13 +2,11 @@ import logging
 import os
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
-from omegaconf import DictConfig, OmegaConf
+from deepfix_core.models import DataType
 from platformdirs import user_data_dir
 from pydantic import BaseModel, Field, field_validator, model_validator
-
-from deepfix_core.models import DataType, DeepchecksConfig
 
 # Defaults
 logger = logging.getLogger(__name__)
@@ -69,6 +67,8 @@ def _default_mlflow_tracking_uri(data_dir: Path) -> str:
     Returns:
         File URI string pointing to the MLflow tracking directory.
     """
+    if os.getenv("MLFLOW_TRACKING_URI"):
+        return os.getenv("MLFLOW_TRACKING_URI")
     mlruns_dir = data_dir / "deepfix_mlflow"
     mlruns_dir.parent.mkdir(parents=True, exist_ok=True)
     return mlruns_dir.resolve().as_uri()
@@ -190,9 +190,9 @@ class DefaultPaths(StrEnum):
     MLFLOW_RUN_NAME = "default"
     MLFLOW_DEFAULT_ARTIFACT_ROOT = _default_mlflow_artifact_root(_BASE_DIRS["data"])
 
-    DATASETS_EXPERIMENT_NAME = "deepfix_datasets"
-    EXPERIMENT_NAME = "deepfix"
-    TRAINING_EXPERIMENT_NAME = "deepfix_training"
+    DATASETS_EXPERIMENT_NAME = "deepfix_sdk_datasets"
+    EXPERIMENT_NAME = "deepfix_sdk"
+    TRAINING_EXPERIMENT_NAME = "deepfix_sdk_training"
 
     ARTIFACTS_SQLITE_PATH = _default_sqlite_path(_BASE_DIRS["data"])
 

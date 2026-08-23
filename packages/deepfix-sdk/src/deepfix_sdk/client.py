@@ -1,33 +1,34 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Optional, Union
 
 import requests
 from deepfix_core.models import (
+    AnalysisJobStatus,
+    APIJobResponse,
     APIRequest,
     APIResponse,
-    APIJobResponse,
     ArtifactPath,
+    AutonomousFixRequest,
     DataType,
-    AnalysisJobStatus,
 )
 from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
-import time
 from tenacity import (
+    RetryError,
     Retrying,
+    retry_if_exception_type,
+    retry_if_result,
     stop_after_delay,
     wait_fixed,
-    retry_if_result,
-    retry_if_exception_type,
-    RetryError,
 )
 
 from .artifacts import ArtifactRepository, ArtifactStatus
 from .config import ArtifactConfig, MLflowConfig
-from .data.datasets import BaseDataset
+from .data.base import BaseDataset
 
 console = Console()
 
@@ -229,6 +230,210 @@ class DeepFixClient:
         request = self._create_request(dataset_name, model_name or "", language)
         return self._send_request(request)
 
+    def _prepare_huggingface_dataset(
+        self,
+        train_data: Any,
+        val_data: Any = None,
+        dataset_name: str = "dataset",
+        label: Optional[str] = None,
+    ) -> tuple[str, Optional[str], Optional[str]]:
+        """Convert train_data and val_data to Hugging Face DatasetDict, save to disk, and log to MLflow.
+
+        Args:
+            train_data: Training dataset object (e.g. TabularDataset).
+            val_data: Optional validation/test dataset object.
+            dataset_name: Name of the dataset.
+            label: Name of the target label column.
+
+        Returns:
+            tuple[str, Optional[str], Optional[str]]: (save_dir, digest, uri)
+        """
+        import mlflow.data
+        import pandas as pd
+        from datasets import Dataset, DatasetDict
+
+        def _get_df(data_obj: Any) -> pd.DataFrame:
+            if hasattr(data_obj, "to_dataframe"):
+                return data_obj.to_dataframe()
+            elif hasattr(data_obj, "get_data"):
+                return data_obj.get_data()
+            elif hasattr(data_obj, "data") and isinstance(data_obj.data, pd.DataFrame):
+                return data_obj.data
+            elif isinstance(data_obj, pd.DataFrame):
+                return data_obj
+            elif hasattr(data_obj, "dataset") and hasattr(data_obj.dataset, "data") and isinstance(data_obj.dataset.data, pd.DataFrame):
+                df = data_obj.dataset.data.copy()
+                if hasattr(data_obj.dataset, "label_name") and data_obj.dataset.label_name and data_obj.dataset.label_name not in df.columns:
+                    if hasattr(data_obj.dataset, "label_col"):
+                        df[data_obj.dataset.label_name] = data_obj.dataset.label_col
+                return df
+            else:
+                raise ValueError(f"Unsupported dataset format for Hugging Face conversion: {type(data_obj)}")
+
+        train_df = _get_df(train_data)
+        hf_train = Dataset.from_pandas(train_df)
+
+        ds_dict = {"train": hf_train}
+        if val_data is not None:
+            val_df = _get_df(val_data)
+            hf_val = Dataset.from_pandas(val_df)
+            ds_dict["validation"] = hf_val
+
+        dataset_dict = DatasetDict(ds_dict)
+
+        save_dir = os.path.abspath(f".deepfix_datasets/{dataset_name}")
+        os.makedirs(save_dir, exist_ok=True)
+        dataset_dict.save_to_disk(save_dir)
+
+        digest = None
+        uri = save_dir
+
+        try:
+            train_hf_ds = dataset_dict.get("train", next(iter(dataset_dict.values())))
+            mlflow_ds = mlflow.data.from_huggingface(
+                train_hf_ds, path=dataset_name, targets=label
+            )
+            mlflow.log_input(mlflow_ds, context="training")
+            digest = getattr(mlflow_ds, "digest", None)
+            uri = getattr(getattr(mlflow_ds, "source", None), "uri", save_dir)
+        except Exception as exc:
+            console.print(f"[dim]MLflow dataset logging skipped: {exc}[/dim]", style="dim")
+
+        return save_dir, digest, uri
+
+    def diagnose_and_fix(
+        self,
+        train_data: Any,
+        test_data: Any = None,
+        model: Any = None,
+        model_name: Optional[str] = None,
+        target_metric: str = "accuracy",
+        target_value: float = 0.90,
+        max_iterations: int = 5,
+        mlflow_experiment_id: str = "0",
+        **kwargs,
+    ) -> APIResponse:
+        """Ingest, diagnose, and run autonomous fix loop on model/dataset.
+
+        Calls /v2/analyse-and-fix endpoint, polls for completion, and returns APIResponse
+        populated with fix_session_result.
+
+        Args:
+            train_data: Training dataset object.
+            test_data (optional): Test/validation dataset object.
+            model (optional): Model instance.
+            model_name (optional): Name of the model.
+            target_metric (str): Target metric name to optimize. Defaults to "accuracy".
+            target_value (float): Target metric value threshold. Defaults to 0.90.
+            max_iterations (int): Maximum fix iterations. Defaults to 5.
+            mlflow_experiment_id (str): MLflow experiment ID. Defaults to "0".
+            **kwargs: Additional parameters (baseline_run_id, model_class, dataset_load_code, experiment_name, etc.).
+
+        Returns:
+            APIResponse: Response object containing diagnosis findings and fix_session_result.
+        """
+        assert train_data is None or isinstance(train_data, BaseDataset), (
+            "train_data must be an instance of BaseDataset"
+        )
+        assert test_data is None or isinstance(test_data, BaseDataset), (
+            "test_data must be an instance of BaseDataset"
+        )
+
+        dataset_name = kwargs.get("dataset_name")
+        if not dataset_name:
+            if isinstance(train_data, BaseDataset):
+                dataset_name = self.get_dataset_name(train_data, test_data)
+            else:
+                dataset_name = "dataset"
+
+        if isinstance(train_data, BaseDataset):
+            self.ingest(
+                train_data=train_data,
+                test_data=test_data,
+                model=model,
+                model_name=model_name,
+                batch_size=kwargs.get("batch_size", 8),
+                overwrite=True,
+            )
+
+        req = self._create_request(
+            dataset_name=dataset_name,
+            model_name=model_name or "",
+            language=kwargs.get("language", "english"),
+        )
+
+        hf_dataset_dir = None
+        dataset_digest = None
+        dataset_uri = None
+        label_column = kwargs.get("label_column") or kwargs.get("label")
+
+        if train_data is not None:
+            if not label_column:
+                if hasattr(train_data, "dataset") and hasattr(train_data.dataset, "label_name"):
+                    label_column = train_data.dataset.label_name
+                elif hasattr(train_data, "label"):
+                    label_column = train_data.label
+
+            hf_dataset_dir, dataset_digest, dataset_uri = self._prepare_huggingface_dataset(
+                train_data=train_data,
+                val_data=test_data,
+                dataset_name=dataset_name,
+                label=label_column,
+            )
+
+        model_class = kwargs.get("model_class")
+        if not model_class:
+            if model is not None:
+                model_class = getattr(model, "__class__", type(model)).__name__
+            else:
+                model_class = "ModelClass"
+
+        fix_request = AutonomousFixRequest(
+            dataset_artifacts=req.dataset_artifacts,
+            training_artifacts=req.training_artifacts,
+            deepchecks_artifacts=req.deepchecks_artifacts,
+            model_checkpoint_artifacts=req.model_checkpoint_artifacts,
+            dataset_name=req.dataset_name or dataset_name,
+            model_name=req.model_name,
+            language=req.language,
+            baseline_run_id=kwargs.get("baseline_run_id", "baseline_001"),
+            model_class=model_class,
+            dataset_load_code=kwargs.get("dataset_load_code"),
+            experiment_name=kwargs.get("experiment_name", "deepfix-autonomous"),
+            mlflow_experiment_id=mlflow_experiment_id,
+            hf_dataset_dir=hf_dataset_dir,
+            dataset_digest=dataset_digest,
+            dataset_uri=dataset_uri,
+            label_column=label_column,
+        )
+
+        base_url = self.api_url.rstrip("/")
+        if "/v2/fix" in base_url:
+            fix_url = base_url
+        elif "/v2/analyse" in base_url:
+            fix_url = base_url.replace("/v2/analyse", "/v2/fix")
+        elif "/v1/analyse" in base_url:
+            fix_url = base_url.replace("/v1/analyse", "/v2/fix")
+        else:
+            fix_url = f"{base_url}/v2/fix"
+
+        job_data = self._submit_job(fix_request, url=fix_url)
+
+        if job_data.status == AnalysisJobStatus.COMPLETED.value and job_data.result:
+            out = job_data.result
+        else:
+            out = self._poll_for_results(
+                job_data.job_id,
+                polling_interval=kwargs.get("polling_interval", 5.0),
+            )
+
+        if isinstance(out.error_messages, dict) and any(out.error_messages.values()):
+            console.print("[red]x[/red] Errors during analysis/fix", style="bold red")
+            console.print(f"Error details: {out.error_messages}")
+
+        console.print("[green]v[/green] Fix session complete!", style="bold green")
+        return out
+
     def get_result(self, job_id: str, polling_interval: float = 5.0) -> APIResponse:
         """Fetch the results of an existing analysis job by its ID.
 
@@ -293,7 +498,7 @@ class DeepFixClient:
             Exception: If data validation fails or ingestion fails.
 
         Example:
-            >>> from deepfix_sdk.data.datasets import TabularDataset
+            >>> from deepfix_sdk.tabular import TabularDataset
             >>> import pandas as pd
             >>> df = pd.read_csv("train.csv")
             >>> train_dataset = TabularDataset(
@@ -401,27 +606,29 @@ class DeepFixClient:
         console.print("[green]v[/green] Analysis complete!", style="bold green")
         return out
 
-    def _submit_job(self, request: APIRequest) -> APIJobResponse:
+    def _submit_job(self, request: APIRequest, url: Optional[str] = None) -> APIJobResponse:
         """Submit an analysis job to the server.
 
         Args:
             request (APIRequest): The analysis request.
+            url (Optional[str]): Optional custom endpoint URL.
 
         Returns:
             APIJobResponse: The response from the server containing job metadata.
         """
+        endpoint = url or self.api_url
         headers = {"Authorization": f"Bearer {os.getenv('DEEPFIX_API_KEY')}"}
 
         console.print(
-            f"[dim]Submitting analysis job to: {self.api_url}[/dim]",
+            f"[dim]Submitting analysis job to: {endpoint}[/dim]",
             style="dim",
         )
 
-        request_timeout = self.timeout if "/v1/" in self.api_url else 5.0
+        request_timeout = self.timeout if "/v1/" in endpoint else 5.0
 
         try:
             response = requests.post(
-                self.api_url,
+                endpoint,
                 json=request.model_dump(),
                 timeout=request_timeout,
                 headers=headers,
@@ -460,7 +667,9 @@ class DeepFixClient:
 
         # Determine base URL for polling (e.g., from .../api/v2/analyse to .../api)
         base_url = self.api_url.rstrip("/")
-        if "/v2/analyse" in base_url:
+        if "/v2/fix" in base_url:
+            base_url = base_url.split("/v2/fix")[0]
+        elif "/v2/analyse" in base_url:
             base_url = base_url.split("/v2/analyse")[0]
         elif "/v1/analyse" in base_url:
             base_url = base_url.split("/v1/analyse")[0]
@@ -470,7 +679,7 @@ class DeepFixClient:
                 return True
             return not job_data.is_finished
 
-        start_time = time.time()
+        time.time()
         with Live(
             Spinner("dots", text="[cyan]Analysis pending...[/cyan]", style="cyan"),
             console=console,

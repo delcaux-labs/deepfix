@@ -3,7 +3,7 @@ name = "deepfix"
 version = "0.1.0"
 description = "DeepFix is a copilot designed to provide systematic guidance for machine learning model training, and debugging."
 readme = "README.md"
-requires-python = ">=3.11.0"
+requires-python = ">=3.11"
 dependencies = [
     "deepfix-core",
     "deepfix-sdk",

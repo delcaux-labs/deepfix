@@ -3,12 +3,13 @@ SQLAlchemy database models
 """
 
 import uuid
-
 from datetime import datetime
+
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, text
 from sqlalchemy.sql import func
 
 from .database import Base
+
 
 class RequestLog(Base):
     """Request/Response log from deepfix-server.

@@ -21,7 +21,6 @@ pip install -e deepfix-core
 pip install -e deepfix-server
 ```
 
-This package depends on: `dspy`, `litserve`, `pydantic v2`, `llama-index-retrievers-bm25`, `mlflow`, `structlog`, `rich`, and `deepfix-core`.
 
 ### Configure LLM Backend
 Set the following environment variables (or pass an env file to the CLI) to configure the LLM used by the agents:
@@ -44,7 +43,6 @@ DEEPFIX_LLM_TEMPERATURE=0.4
 DEEPFIX_LLM_MAX_TOKENS=6000
 DEEPFIX_LLM_CACHE=true
 DEEPFIX_LLM_TRACK_USAGE=true
-LIT_SERVER_API_KEY=ACCESS-TOKEN-TO-BE-DEFINED
 ```
 
 ### Run the Server (CLI)
