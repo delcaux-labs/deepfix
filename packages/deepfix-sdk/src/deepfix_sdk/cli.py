@@ -381,14 +381,31 @@ def _run_fix_workflow(
 
 
 def _display_fix_results(completed_job: FixJob, staged_path: Any) -> None:
-    """Display tabular output of fix execution results."""
+    """Display prominent summary banner and tabular output of staged fix execution results."""
+    import pathlib
+
+    staged_dir = pathlib.Path(staged_path)
+    try:
+        rel_staged = staged_dir.relative_to(pathlib.Path.cwd())
+    except ValueError:
+        rel_staged = staged_dir
+
     if completed_job.status == FixJobStatus.COMPLETED:
         report = completed_job.result
-        results_table = Table(title="Autonomous Fix Results", show_header=True, header_style="bold green")
-        results_table.add_column("Metric / Property", style="cyan")
+
+        # 1. Results overview table
+        results_table = Table(
+            title="🎯 Autonomous Model Repair Summary",
+            show_header=True,
+            header_style="bold green",
+            border_style="green",
+        )
+        results_table.add_column("Property", style="cyan", no_wrap=True)
         results_table.add_column("Details", style="bold")
 
-        results_table.add_row("Final Status", "[green]COMPLETED[/green]")
+        results_table.add_row("Status", "[bold green]COMPLETED (Target Met)[/bold green]")
+        results_table.add_row("Job ID", completed_job.job_id)
+        results_table.add_row("Dataset", completed_job.dataset_name or "N/A")
         results_table.add_row("Iterations Run", f"{completed_job.iteration} / {completed_job.max_iterations}")
 
         if report:
@@ -402,15 +419,79 @@ def _display_fix_results(completed_job: FixJob, staged_path: Any) -> None:
             if report.run_id:
                 results_table.add_row("MLflow Run ID", report.run_id)
 
-        results_table.add_row("Staged Artifacts", str(staged_path.resolve()))
+        console.print("\n")
         console.print(results_table)
-        console.print(Panel(f"✅ [bold green]Model successfully repaired and staged to {staged_path}[/bold green]", border_style="green"))
+
+        # 2. Prominent Staged Artifacts Delivery Table
+        artifacts_table = Table(
+            title="📦 Staged Deliverable Artifacts",
+            show_header=True,
+            header_style="bold cyan",
+            border_style="cyan",
+        )
+        artifacts_table.add_column("Artifact", style="bold yellow")
+        artifacts_table.add_column("Relative Path", style="green")
+        artifacts_table.add_column("Description", style="dim")
+
+        train_fixed_rel = str(rel_staged / "train_fixed.py")
+        summary_md_rel = str(rel_staged / "summary_report.md")
+        metrics_json_rel = str(rel_staged / "metrics.json")
+        model_artifacts_rel = str(rel_staged / "model_artifacts")
+
+        artifacts_table.add_row(
+            "train_fixed.py",
+            train_fixed_rel,
+            "Clean, standalone, runnable Python training script incorporating fixes",
+        )
+        artifacts_table.add_row(
+            "summary_report.md",
+            summary_md_rel,
+            "Comprehensive Markdown report with defects, remediations & metric deltas",
+        )
+        artifacts_table.add_row(
+            "metrics.json",
+            metrics_json_rel,
+            "Structured machine-readable metrics before and after the fix",
+        )
+        artifacts_table.add_row(
+            "model_artifacts/",
+            model_artifacts_rel,
+            "Downloaded model checkpoint and weights (from S3 / MLflow)",
+        )
+
+        console.print("\n")
+        console.print(artifacts_table)
+
+        # 3. Prominent Banner
+        banner_text = (
+            f"🎉 [bold green]Model successfully repaired and packaged![/bold green]\n\n"
+            f"📁 Staged Output Directory: [bold]{staged_dir.resolve()}[/bold]\n"
+            f"🐍 Standalone Script:      [cyan]{train_fixed_rel}[/cyan]\n"
+            f"📊 Diagnostic Report:       [cyan]{summary_md_rel}[/cyan]\n"
+            f"📈 Metrics JSON:           [cyan]{metrics_json_rel}[/cyan]\n"
+        )
+        if report and report.s3_weights_uri:
+            banner_text += f"☁️  S3 Model Weights:       [link={report.s3_weights_uri}]{report.s3_weights_uri}[/link]\n"
+
+        console.print(Panel(banner_text.strip(), title="DeepFix Fix Delivery", border_style="bold green"))
     elif completed_job.status == FixJobStatus.CANCELLED:
-        console.print(Panel(f"🛑 [bold yellow]Fix Job '{completed_job.job_id}' was cancelled.[/bold yellow]\nStaged diagnostic outputs at {staged_path}", border_style="yellow"))
+        console.print(
+            Panel(
+                f"🛑 [bold yellow]Fix Job '{completed_job.job_id}' was cancelled.[/bold yellow]\nStaged diagnostic outputs at {rel_staged}",
+                title="Job Cancelled",
+                border_style="yellow",
+            )
+        )
         raise typer.Exit(code=130)
     else:
         err_msg = completed_job.error or "Fix job failed or could not meet threshold."
-        console.print(Panel(f"❌ [bold red]Fix Failed:[/bold red] {err_msg}\nStaged diagnostic outputs at {staged_path}", border_style="red"))
+        console.print(
+            Panel(
+                f"❌ [bold red]Fix Failed:[/bold red] {err_msg}\nStaged diagnostic outputs at {rel_staged}",
+                title="Fix Failed",
+                border_style="red",
+            )
+        )
         raise typer.Exit(code=1)
 
 

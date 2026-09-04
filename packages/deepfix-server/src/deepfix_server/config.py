@@ -109,7 +109,7 @@ class AutonomousFixConfig(BaseModel):
         description="Docker network name to connect the sandbox container to",
     )
     deepfix_server_webhook_url: str = Field(
-        default="http://host.docker.internal:4141/webhook/completion",
+        default="http://localhost:8844/webhook/completion",
         description="Webhook URL on DeepFix Server for completion notifications",
     )
 

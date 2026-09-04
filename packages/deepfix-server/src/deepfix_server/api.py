@@ -553,6 +553,7 @@ class WebhookPayload(BaseModel):
     applied_fixes: List[str] = []
     run_id: Optional[str] = None
     s3_weights_uri: Optional[str] = None
+    fixed_code: Optional[str] = None
     summary: Optional[str] = None
     iteration: Optional[int] = None
     phase: Optional[str] = None
@@ -623,6 +624,7 @@ async def webhook_completion(
         applied_fixes=payload.applied_fixes,
         run_id=payload.run_id,
         s3_weights_uri=payload.s3_weights_uri,
+        fixed_code=payload.fixed_code,
         summary=payload.summary,
     )
 
@@ -686,7 +688,7 @@ async def webhook_completion(
 
 
 def run_analyse_artifacts_api(
-    port: int = 4141,
+    port: int = 8844,
     host: str = "0.0.0.0",
     workers: int = 1,
     reload: bool = False,
@@ -697,7 +699,7 @@ def run_analyse_artifacts_api(
     """Run the artifact analysis API server using uvicorn.
 
     Args:
-        port: Port number to listen on. Defaults to 4141.
+        port: Port number to listen on. Defaults to 8844.
         host: Host address to bind to. Defaults to "0.0.0.0".
         workers: Number of worker processes. Defaults to 1.
         reload: Enable auto-reload. Defaults to False.

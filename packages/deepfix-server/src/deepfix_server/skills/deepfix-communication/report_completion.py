@@ -93,6 +93,16 @@ def main() -> None:
         default=None,
         help="Total iterations executed",
     )
+    parser.add_argument(
+        "--fixed-code",
+        default=None,
+        help="Fixed training script Python code string",
+    )
+    parser.add_argument(
+        "--script-path",
+        default=None,
+        help="Path to fixed training script file (e.g. train_fixed.py or train.py)",
+    )
 
     args = parser.parse_args()
 
@@ -107,7 +117,7 @@ def main() -> None:
     webhook_url = (
         args.webhook_url
         or os.getenv("DEEPFIX_WEBHOOK_URL")
-        or "http://host.docker.internal:4141/webhook/completion"
+        or "http://localhost:8844/webhook/completion"
     )
 
     if args.failed:
@@ -122,6 +132,14 @@ def main() -> None:
     status_str = "COMPLETED" if is_success else "FAILED"
     final_metrics = parse_metrics(args.final_metrics)
 
+    fixed_code = args.fixed_code
+    if not fixed_code and args.script_path and os.path.exists(args.script_path):
+        try:
+            with open(args.script_path, "r", encoding="utf-8") as f:
+                fixed_code = f.read()
+        except Exception as e:
+            print(f"Warning: Could not read script file {args.script_path}: {e}", file=sys.stderr)
+
     payload = {
         "job_id": job_id,
         "success": is_success,
@@ -130,6 +148,7 @@ def main() -> None:
         "applied_fixes": args.fixes,
         "run_id": args.final_run_id,
         "s3_weights_uri": args.s3_weights_uri,
+        "fixed_code": fixed_code,
         "summary": args.summary,
         "iteration": args.iteration,
     }

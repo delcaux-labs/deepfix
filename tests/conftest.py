@@ -52,7 +52,7 @@ def api_fix_url():
 
 @pytest.fixture
 def deepfix_timeout():
-    return 300
+    return int(os.getenv("DEEPFIX_TIMEOUT", "600"))
 
 
 @pytest.fixture

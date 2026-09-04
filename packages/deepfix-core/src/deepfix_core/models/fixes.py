@@ -46,6 +46,10 @@ class FinalFixReport(BaseModel):
         default=None,
         description="S3 URI where the fixed model weights are saved",
     )
+    fixed_code: Optional[str] = Field(
+        default=None,
+        description="Clean, standalone fixed Python training script content",
+    )
     summary: Optional[str] = Field(
         default=None, description="Summary description of the fixes"
     )
@@ -130,6 +134,9 @@ class FixJob(BaseModel):
     )
     result: Optional[FinalFixReport] = Field(
         default=None, description="Final fix report payload"
+    )
+    diagnosis: Optional[str] = Field(
+        default=None, description="Original diagnostic report or summary"
     )
     error: Optional[str] = Field(
         default=None, description="Error message if job failed"
