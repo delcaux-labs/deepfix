@@ -22,20 +22,13 @@ def setup_mlflow_tracing(
     logger: Optional[logging.Logger] = None,
 ):
     """Set up MLflow tracing for LLM calls."""
+    log = logger or logging.getLogger(__name__)
 
     if tracking_uri is None:
-        if logger is not None:
-            logger.warning(
-                "tracking_uri is not set, please set it in the environment variables or provide it as an argument."
-            )
-            logger.warning("Tracing will not be enabled.")
-        else:
-            logger.info(
-                "tracking_uri is not set, please set it in the environment variables or provide it as an argument."
-            )
-            logger.info("=" * 50)
-            logger.info("Tracing will not be enabled.")
-            logger.info("=" * 50)
+        log.warning(
+            "tracking_uri is not set, please set it in the environment variables or provide it as an argument."
+        )
+        log.warning("Tracing will not be enabled.")
         return
 
     if tracking_uri.startswith("http"):
@@ -43,19 +36,14 @@ def setup_mlflow_tracing(
             httpx.get(tracking_uri, timeout=2.0)
         except (httpx.RequestError, Exception):
             msg = f"Could not connect to tracking URI: {tracking_uri}"
-            if logger:
-                logger.warning(msg)
-                logger.warning("Tracing will not be enabled.")
-            else:
-                logger.info(msg)
-                logger.info("Tracing will not be enabled.")
+            log.warning(msg)
+            log.warning("Tracing will not be enabled.")
             return
 
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
     mlflow.langchain.autolog()
-    if logger is not None:
-        logger.info("LangChain/LangGraph logging setup complete.")
+    log.info("LangChain/LangGraph logging setup complete.")
     return
 
 @lru_cache(maxsize=1)

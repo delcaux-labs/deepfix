@@ -1,0 +1,32 @@
+id: "imbalanced_credit"
+name: "Imbalanced Credit Scoring Cost-Sensitive Remediation"
+description: >-
+  Financial credit default dataset with severe class imbalance (minority class < 3%)
+  causing default loss metrics to collapse to majority class prediction. The autonomous agent
+  must detect class distribution skew, implement stratified sampling, cost-sensitive class weights,
+  or focal loss/SMOTE, and optimize for minority-sensitive metric (F1-score / PR-AUC).
+dataset_name: "credit-default"
+dataset_uri: "datasets/credit_default.csv"
+model_name: "baseline_credit_gbm"
+model_uri: "models/baseline_gbm.pkl"
+target_metric: "f1_score"
+target_value: 0.85
+max_iterations: 5
+expected_defects:
+  - "CLASS_IMBALANCE"
+  - "RARE_CLASS_NEGLECT"
+  - "THRESHOLD_MISCALIBRATION"
+timeout_seconds: 300
+tags:
+  - "tabular"
+  - "imbalance"
+  - "credit"
+  - "classification"
+metadata:
+  domain: "finance"
+  task_type: "binary_classification"
+  minority_ratio: 0.028
+  recommended_remediations:
+    - "Class-weighted loss"
+    - "SMOTE / BorderlineSMOTE"
+    - "Precision-Recall threshold tuning"

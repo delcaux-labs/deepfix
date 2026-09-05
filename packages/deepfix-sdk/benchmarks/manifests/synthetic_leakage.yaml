@@ -1,0 +1,31 @@
+id: "synthetic_leakage"
+name: "Synthetic Tabular Target Leakage Remediation"
+description: >-
+  Synthetic tabular classification dataset containing subtle target-leaking features
+  (e.g., deterministic proxy columns, future timestamp leakage, ID encoded targets).
+  The agent must identify spurious high correlations with the target variable, excise leaking
+  features, verify genuine generalizability on unseen holdout splits, and achieve genuine metric goals.
+dataset_name: "synthetic-leakage"
+dataset_uri: "datasets/synthetic_leakage.parquet"
+model_name: "baseline_overfitted_tree"
+model_uri: "models/baseline_tree.pkl"
+target_metric: "roc_auc"
+target_value: 0.88
+max_iterations: 5
+expected_defects:
+  - "LEAKAGE"
+  - "TARGET_CORRELATION_LEAK"
+  - "SPURIOUS_PROXY_FEATURE"
+timeout_seconds: 300
+tags:
+  - "tabular"
+  - "leakage"
+  - "synthetic"
+  - "smoke"
+metadata:
+  domain: "synthetic"
+  task_type: "binary_classification"
+  recommended_remediations:
+    - "Target correlation filtering"
+    - "Feature importance ablation"
+    - "Holdout validation"

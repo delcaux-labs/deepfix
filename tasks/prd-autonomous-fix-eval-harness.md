@@ -25,15 +25,15 @@ The **Autonomous Fix CLI Evaluation Harness** provides an automated benchmarking
 **Description:** As an ML platform engineer, I want to define benchmark test suites in declarative YAML/JSON manifests so that I can systematically configure evaluation datasets, defects, and expected fix criteria.
 
 **Acceptance Criteria:**
-- [ ] Pydantic schema `BenchmarkManifest` and `BenchmarkTestCase` models validate test configurations (id, name, dataset_uri, model_uri, target_metric, target_value, max_iterations, expected_defects, timeout_seconds).
-- [ ] `expected_defects` is a list of diagnostic defect tags (e.g., `MULTICOLLINEARITY`, `LEAKAGE`, `CLASS_IMBALANCE`). The harness verifies addressed defects by checking `FinalFixReport.applied_fixes` against the expected set, and the judge rubric dimension "Remediation Soundness" penalizes any unaddressed expected defects.
-- [ ] Loader supports single test case files, directory-based test suites, and filtering by tags (e.g., `tag: tabular`, `tag: leakage`, `tag: smoke`).
-- [ ] Ships with canonical benchmark manifests (located in `packages/deepfix-sdk/benchmarks/manifests/`):
+- [x] Pydantic schema `BenchmarkManifest` and `BenchmarkTestCase` models validate test configurations (id, name, dataset_uri, model_uri, target_metric, target_value, max_iterations, expected_defects, timeout_seconds).
+- [x] `expected_defects` is a list of diagnostic defect tags (e.g., `MULTICOLLINEARITY`, `LEAKAGE`, `CLASS_IMBALANCE`). The harness verifies addressed defects by checking `FinalFixReport.applied_fixes` against the expected set, and the judge rubric dimension "Remediation Soundness" penalizes any unaddressed expected defects.
+- [x] Loader supports single test case files, directory-based test suites, and filtering by tags (e.g., `tag: tabular`, `tag: leakage`, `tag: smoke`).
+- [x] Ships with canonical benchmark manifests (located in `packages/deepfix-sdk/benchmarks/manifests/`):
   - `breast_cancer_multicollinearity.yaml`: Wisconsin Breast Cancer dataset with known geometric multicollinearity and small-sample validation needs.
   - `breast_cancer_dataset_only.yaml`: Wisconsin Breast Cancer dataset-only fix mode (no baseline model), focusing on dataset partitioning and preprocessing repair.
   - `synthetic_leakage.yaml`: Tabular dataset with target-leaking synthetic features.
   - `imbalanced_credit.yaml`: Severe class imbalance requiring cost-sensitive weighting or stratified sampling.
-- [ ] Typecheck and lint pass across `deepfix-sdk`.
+- [x] Typecheck and lint pass across `deepfix-sdk`.
 
 ### US-002: Autonomous Fix CLI Execution Runner & Trace Collector
 **Description:** As an evaluation engineer, I want the harness to invoke the autonomous fix CLI for each benchmark test case and harvest comprehensive traces across client and server boundaries.

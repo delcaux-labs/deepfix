@@ -1,0 +1,84 @@
+version: "1.0"
+suite_name: "deepfix_canonical_benchmarks"
+description: "Canonical benchmark suite evaluating DeepFix autonomous fix capabilities across tabular, multicollinearity, leakage, and imbalance scenarios."
+tags:
+  - "canonical"
+  - "tabular"
+  - "smoke"
+test_cases:
+  - id: "breast_cancer_multicollinearity"
+    name: "Wisconsin Breast Cancer Multicollinearity Remediation"
+    description: "Multicollinearity remediation on Wisconsin Breast Cancer dataset"
+    dataset_name: "breast-cancer"
+    dataset_uri: "datasets/breast_cancer.csv"
+    model_name: "baseline_breast_cancer_lr"
+    model_uri: "models/baseline_breast_cancer_lr.pkl"
+    target_metric: "accuracy"
+    target_value: 0.95
+    max_iterations: 5
+    expected_defects:
+      - "MULTICOLLINEARITY"
+      - "HIGH_CORRELATION"
+    timeout_seconds: 300
+    tags:
+      - "tabular"
+      - "multicollinearity"
+      - "smoke"
+
+  - id: "breast_cancer_dataset_only"
+    name: "Wisconsin Breast Cancer Dataset-Only Preprocessing Repair"
+    description: "Dataset-only preprocessing and pipeline generation"
+    dataset_name: "breast-cancer"
+    dataset_uri: "datasets/breast_cancer.csv"
+    model_name: null
+    model_uri: null
+    target_metric: "accuracy"
+    target_value: 0.92
+    max_iterations: 5
+    expected_defects:
+      - "UNSCALED_FEATURES"
+      - "PREPROCESSING_ERROR"
+    timeout_seconds: 300
+    tags:
+      - "tabular"
+      - "dataset_only"
+      - "preprocessing"
+      - "smoke"
+
+  - id: "synthetic_leakage"
+    name: "Synthetic Tabular Target Leakage Remediation"
+    description: "Target leakage detection and feature pruning"
+    dataset_name: "synthetic-leakage"
+    dataset_uri: "datasets/synthetic_leakage.parquet"
+    model_name: "baseline_overfitted_tree"
+    model_uri: "models/baseline_tree.pkl"
+    target_metric: "roc_auc"
+    target_value: 0.88
+    max_iterations: 5
+    expected_defects:
+      - "LEAKAGE"
+      - "TARGET_CORRELATION_LEAK"
+    timeout_seconds: 300
+    tags:
+      - "tabular"
+      - "leakage"
+      - "smoke"
+
+  - id: "imbalanced_credit"
+    name: "Imbalanced Credit Scoring Cost-Sensitive Remediation"
+    description: "Cost-sensitive training and minority sampling under severe class imbalance"
+    dataset_name: "credit-default"
+    dataset_uri: "datasets/credit_default.csv"
+    model_name: "baseline_credit_gbm"
+    model_uri: "models/baseline_gbm.pkl"
+    target_metric: "f1_score"
+    target_value: 0.85
+    max_iterations: 5
+    expected_defects:
+      - "CLASS_IMBALANCE"
+      - "RARE_CLASS_NEGLECT"
+    timeout_seconds: 300
+    tags:
+      - "tabular"
+      - "imbalance"
+      - "credit"

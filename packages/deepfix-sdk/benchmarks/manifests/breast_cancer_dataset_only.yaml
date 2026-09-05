@@ -1,0 +1,32 @@
+id: "breast_cancer_dataset_only"
+name: "Wisconsin Breast Cancer Dataset-Only Preprocessing Repair"
+description: >-
+  Wisconsin Breast Cancer dataset-only fix mode without a predefined baseline model.
+  Focuses on dataset hygiene, automated feature scaling, handling unstandardized continuous features,
+  partitioning train/validation/test sets with stratification, and generating a standalone baseline
+  model pipeline that meets accuracy targets.
+dataset_name: "breast-cancer"
+dataset_uri: "datasets/breast_cancer.csv"
+model_name: null
+model_uri: null
+target_metric: "accuracy"
+target_value: 0.92
+max_iterations: 5
+expected_defects:
+  - "UNSCALED_FEATURES"
+  - "PREPROCESSING_ERROR"
+  - "DATA_SPLIT_IMBALANCE"
+timeout_seconds: 300
+tags:
+  - "tabular"
+  - "dataset_only"
+  - "preprocessing"
+  - "smoke"
+metadata:
+  domain: "medical"
+  mode: "dataset_only"
+  task_type: "binary_classification"
+  recommended_remediations:
+    - "StandardScaler / RobustScaler"
+    - "Stratified train-test split"
+    - "Pipeline synthesis"
