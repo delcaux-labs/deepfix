@@ -14,7 +14,7 @@ services:
       - DEEPFIX_LLM_CACHE=${DEEPFIX_LLM_CACHE}
       - DEEPFIX_LLM_TRACK_USAGE=${DEEPFIX_LLM_TRACK_USAGE}
       - DEEPFIX_SERVER_DATABASE_URL=sqlite:///./deepfix_server.db
-      - MLFLOW_TRACKING_URI=
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXP_NAME=Deepfix-server
     restart: unless-stopped
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
@@ -22,11 +22,43 @@ services:
       - "8844:8844"
     volumes:
       - ./packages:/app/packages
+    depends_on:
+      - mlflow
     deploy:
       resources:
         limits:
           cpus: '1.00'
           memory: 512M
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.mlflow
+    image: deepfix-mlflow:latest
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow:*,localhost:*
+      - MLFLOW_SERVER_CORS_ALLOWED_ORIGINS=*
+      - MLFLOW_SERVER_DISABLE_SECURITY_MIDDLEWARE=true
+    command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_db", "--default-artifact-root", "/app/mlartifacts", "--workers", "1"]
+    volumes:
+      - ./server_data/mlflow:/app
+    depends_on:
+      deepfix-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   deepfix-db:
     image: postgres:16-alpine
@@ -34,13 +66,13 @@ services:
     environment:
       POSTGRES_USER: deepfix-admin
       POSTGRES_PASSWORD: deepfix-admin
-      POSTGRES_DB: deepfix_portal
+      POSTGRES_DB: deepfix_db
     ports:
       - "5444:5432"
     volumes:
       - ./server_data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deepfix-admin -d deepfix_portal"]
+      test: ["CMD-SHELL", "pg_isready -U deepfix-admin -d deepfix_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,4 +80,4 @@ services:
       resources:
         limits:
           cpus: '0.50'
-          memory: 512M
+          memory: 256M
