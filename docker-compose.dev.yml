@@ -1,40 +1,18 @@
 services:
 
-  deepfix-portal:
-    build:
-      context: .
-      dockerfile: ./packages/deepfix-portal/Dockerfile
-    image: deepfix-portal:latest
-    restart: unless-stopped
-    ports:
-      - "3000:5041"
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_portal
-      - DEEPFIX_SERVER_URL=http://deepfix-server:8844
-      - FRONTEND_URL=https://deepfix.delcaux.com
-    command: ["uvicorn", "deepfix_portal.api.main:app", "--host", "0.0.0.0", "--port", "5041", "--reload"]
-    volumes:
-      - ./packages/deepfix-portal/src:/app/packages/deepfix-portal/src
-    depends_on:
-      - deepfix-server
-      - deepfix-db
-
   deepfix-server:
     build:
       context: .
       dockerfile: ./packages/deepfix-server/Dockerfile
     image: deepfix-server:latest
     environment:
-      - DEEPFIX_LLM_API_KEY=
-      - DEEPFIX_LLM_BASE_URL=https://openrouter.ai/api/v1
-      - DEEPFIX_LLM_MODEL_NAME=openai/x-ai/grok-4-fast
-      - DEEPFIX_LLM_TEMPERATURE=0.7
-      - DEEPFIX_LLM_MAX_TOKENS=8000
-      - DEEPFIX_LLM_CACHE=1
-      - DEEPFIX_LLM_TRACK_USAGE=1
-      - LIT_SERVER_API_KEY=
+      - DEEPFIX_LLM_API_KEY=${DEEPFIX_LLM_API_KEY}
+      - DEEPFIX_LLM_BASE_URL=${DEEPFIX_LLM_BASE_URL}
+      - DEEPFIX_LLM_MODEL_NAME=${DEEPFIX_LLM_MODEL_NAME}
+      - DEEPFIX_LLM_TEMPERATURE=${DEEPFIX_LLM_TEMPERATURE}
+      - DEEPFIX_LLM_MAX_TOKENS=${DEEPFIX_LLM_MAX_TOKENS}
+      - DEEPFIX_LLM_CACHE=${DEEPFIX_LLM_CACHE}
+      - DEEPFIX_LLM_TRACK_USAGE=${DEEPFIX_LLM_TRACK_USAGE}
       - DEEPFIX_SERVER_DATABASE_URL=sqlite:///./deepfix_server.db
       - MLFLOW_TRACKING_URI=
       - MLFLOW_EXP_NAME=Deepfix-server
@@ -42,23 +20,8 @@ services:
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
     ports:
       - "8844:8844"
-    develop:
-      watch:
-        - action: sync
-          path: ./packages/deepfix-server/src
-          target: /app/packages/deepfix-server/src
-        - action: sync
-          path: ./packages/deepfix-core/src
-          target: /app/packages/deepfix-core/src
-        - action: sync
-          path: ./packages/deepfix-kb/src
-          target: /app/packages/deepfix-kb/src
-        - action: rebuild
-          path: ./packages/deepfix-server/pyproject.toml
-        - action: rebuild
-          path: ./packages/deepfix-core/pyproject.toml
-        - action: rebuild
-          path: ./packages/deepfix-kb/pyproject.toml
+    volumes:
+      - ./packages:/app/packages
 
   deepfix-db:
     image: postgres:16-alpine
