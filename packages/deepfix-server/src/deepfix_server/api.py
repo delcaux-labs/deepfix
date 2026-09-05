@@ -26,7 +26,11 @@ from .database import Base, get_db, get_engine, init_database
 from .engine import DiagnosticSystem
 from .logging import get_logger, setup_mlflow_tracing
 from .models import AgentContext, AnalysisJob, FixJobRecord
-from .openhands_executor import OpenHandsExecutor
+
+try:
+    from .openhands_executor import OpenHandsExecutor
+except ImportError:
+    OpenHandsExecutor = None
 
 LOGGER = get_logger(__name__)
 

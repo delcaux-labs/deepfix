@@ -20,6 +20,11 @@ dependencies = [
     "deepfix-core",
     "deepfix-kb",
     "pydantic-settings>=2.11.0",
+    "agno[os]>=3.0.6",
+]
+
+[project.optional-dependencies]
+openhands = [
     "openhands-sdk",
     "openhands-tools",
     "openhands-workspace",
