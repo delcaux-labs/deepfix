@@ -1,4 +1,7 @@
-FROM ghcr.io/mlflow/mlflow:v3.6.0
+FROM ghcr.io/mlflow/mlflow:v3.15.0
 
+RUN pip install --no-cache-dir --upgrade pip
+
+RUN pip install --no-cache-dir mlflow
 # Install the Postgres driver needed by SQLAlchemy
 RUN pip install --no-cache-dir psycopg2-binary
