@@ -16,7 +16,6 @@ from deepfix_core.models import (
     APIRequest,
     APIResponse,
     ArtifactPath,
-    AutonomousFixRequest,
     DataType,
     FixJob,
     FixJobRequest,

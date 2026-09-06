@@ -10,7 +10,6 @@ from .api import (
     APIJobResponse,
     APIRequest,
     APIResponse,
-    AutonomousFixRequest,
     AgentContext,
 )
 from .artifacts import (
@@ -33,12 +32,6 @@ from .artifacts import (
     VisionStatistics,
 )
 from .defaults import DataType, TaskType
-from .fixes import (
-    FinalFixReport,
-    FixJob,
-    FixJobRequest,
-    FixJobStatus,
-)
 
 __all__ = [
     "Artifacts",
@@ -58,7 +51,6 @@ __all__ = [
     "AgentContext",
     "APIResponse",
     "APIJobResponse",
-    "AutonomousFixRequest",
     "DataType",
     "DeepchecksParsedResult",
     "DeepchecksCheckResult",
@@ -71,8 +63,4 @@ __all__ = [
     "TabularStatistics",
     "NLPStatistics",
     "IRStatistics",
-    "FinalFixReport",
-    "FixJob",
-    "FixJobRequest",
-    "FixJobStatus",
 ]
