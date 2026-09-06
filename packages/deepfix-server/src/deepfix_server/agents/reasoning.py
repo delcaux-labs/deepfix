@@ -6,7 +6,6 @@ import asyncio
 import json
 import traceback
 from typing import Any, Dict, List, Optional
-
 from agno.agent import Agent
 from agno.models.base import Model
 from agno.workflow import Parallel, Step, StepInput, StepOutput, Workflow
@@ -20,28 +19,9 @@ from .prompts import (
     CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
     CROSS_ARTIFACT_SYSTEM_PROMPT,
 )
-from .schemas import AgentResult, CrossArtifactReasoningResult, CrossArtifactReasoningInput, SynthesisJudgeInput
+from .schemas import AgentResult, CrossArtifactReasoningResult, CrossArtifactReasoningInput, SynthesisJudgeInput, ReasoningWorkflowInput
 
 LOGGER = get_logger(__name__)
-
-
-def serialize_previous_analyses(previous_analyses: Dict[str, AgentResult]) -> str:
-    """Serialize previous agent analyses into a readable JSON string."""
-    analyses_dict = {}
-    for name, ar in previous_analyses.items():
-        if name == "CrossArtifactReasoningAgent":
-            continue
-        entry: dict = {}
-        if ar.analysis is not None:
-            entry["analysis"] = [a.model_dump() for a in ar.analysis]
-        if ar.error_message is not None:
-            entry["error"] = ar.error_message
-        if ar.analyzed_artifacts:
-            entry["analyzed_artifacts"] = ar.analyzed_artifacts
-        analyses_dict[name] = entry
-
-    return json.dumps(analyses_dict, indent=2, default=str)
-
 
 SEVERITY_WEIGHTS = {
     Severity.HIGH: 3,
@@ -156,7 +136,6 @@ def create_cross_artifact_synthesis_judge(
         use_json_mode=True
     )
 
-
 class CrossArtifactReasoningWorkflow(Workflow):
     """Agno Workflow orchestrating multi-chain reasoning (Parallel) and synthesis judge (Sequential)."""
 
@@ -184,10 +163,7 @@ class CrossArtifactReasoningWorkflow(Workflow):
         self.reasoning_chain_step_names = [f"ReasoningChain_{i}" for i in range(self.num_chains)]
 
         self._previous_analyses: Dict[str, AgentResult] = {}
-        #self._retrieved_knowledge: Optional[str] = None
-        #self._user_message: str = ""
-        #self._reasoning_chains_results: Dict[str, CrossArtifactReasoningResult] = {}
-
+       
         chain_steps = [
             Step(
                 name=name,
@@ -220,34 +196,23 @@ class CrossArtifactReasoningWorkflow(Workflow):
             description=description,
             steps=steps,
             telemetry=telemetry,
+            input_schema=ReasoningWorkflowInput,
             **kwargs,
         )
 
     async def _step_prepare_prompt(self, step_input: StepInput) -> StepOutput:
         """Serialize analyses, prefetch knowledge, and build user prompt."""
-        raw_input = step_input.input
-        raw_analyses = raw_input.get("previous_analyses", {}) if isinstance(raw_input, dict) else {}
-        output_language = raw_input.get("output_language", self.output_language) if isinstance(raw_input, dict) else self.output_language
-
-        previous_analyses = {}
-        for k, v in raw_analyses.items():
-            if isinstance(v, dict):
-                try:
-                    previous_analyses[k] = AgentResult.model_validate(v)
-                except Exception:
-                    previous_analyses[k] = v
-            else:
-                previous_analyses[k] = v
-
-        analyses_json = serialize_previous_analyses(previous_analyses)
+        content = step_input.input
+        assert isinstance(content, ReasoningWorkflowInput), f"Input must be ReasoningWorkflowInput, got {type(content)}"
+        
         retrieved_knowledge = await prefetch_knowledge(
-            previous_analyses, self.knowledge_bridge
+            content.previous_analyses, self.knowledge_bridge
         )
        
         cross_artifact_reasoning_input = CrossArtifactReasoningInput(
-            artifact_analysis_results=list(previous_analyses.values()),
+            artifact_analysis_results=list(content.previous_analyses.values()),
             retrieved_knowledge=retrieved_knowledge,
-            output_language=output_language
+            output_language=content.output_language
         )
 
         return StepOutput(
@@ -311,9 +276,9 @@ class CrossArtifactReasoningWorkflow(Workflow):
             LOGGER.info("Only 1 reasoning chain succeeded; bypassing synthesis step.")
             return StepOutput(step_name="SynthesisJudge", content=candidates[0])
 
-        run_output = await self.synthesis_judge.arun(SynthesisJudgeInput(
+        run_output: CrossArtifactReasoningResult = await self.synthesis_judge.arun(SynthesisJudgeInput(
             runs=candidates,
-            output_language=step_input.input['output_language']
+            output_language=step_input.input.output_language
         ))
         return StepOutput(step_name="SynthesisJudge", content=run_output.content)
 
@@ -326,23 +291,7 @@ class CrossArtifactReasoningWorkflow(Workflow):
                 analyzed_artifacts.extend(ar.analyzed_artifacts)
 
         res = step_input.get_step_content("SynthesisJudge")
-        if not isinstance(res, CrossArtifactReasoningResult):
-            res = step_input.get_step_content("SynthesisJudge")
-
-        if not isinstance(res, CrossArtifactReasoningResult):
-            LOGGER.error(
-                "Expected CrossArtifactReasoningResult from SynthesisJudge, got %s: %s",
-                type(res).__name__,
-                res,
-            )
-            return StepOutput(
-                step_name="FormatAgentResult",
-                content=AgentResult(
-                    agent_name="CrossArtifactReasoningAgent",
-                    error_message=f"Synthesis failed: {res}",
-                    analyzed_artifacts=list(set(analyzed_artifacts)),
-                ),
-            )
+        
         retrieved_knowledge = step_input.get_step_content("PrepareReasoningPrompt").retrieved_knowledge
         agent_result = AgentResult(
             agent_name="CrossArtifactReasoningAgent",
@@ -352,38 +301,6 @@ class CrossArtifactReasoningWorkflow(Workflow):
             additional_outputs={"summary": res.summary},
         )
         return StepOutput(step_name="FormatAgentResult", content=agent_result)
-
-    async def arun_reasoning(
-        self,
-        previous_analyses: Dict[str, AgentResult],
-        output_language: str = "english",
-    ) -> AgentResult:
-        """Execute reasoning directly returning AgentResult."""
-                
-        try:
-            serialized_analyses = {}
-            for k, v in previous_analyses.items():
-                serialized_analyses[k] = v.model_dump(mode="json")
-
-            run_output = await self.arun(
-                input={
-                    "previous_analyses": serialized_analyses,
-                    "output_language": output_language,
-                }
-            )
-            if isinstance(run_output.content, AgentResult):
-                return run_output.content
-            return AgentResult(
-                agent_name="CrossArtifactReasoningAgent",
-                error_message=f"Reasoning workflow output: {run_output.content}",
-            )
-        except Exception as e:
-            LOGGER.error("Error in CrossArtifactReasoningWorkflow: %s", traceback.format_exc())
-            return AgentResult(
-                agent_name="CrossArtifactReasoningAgent",
-                error_message=str(e),
-            )
-
 
 def create_cross_artifact_reasoning_workflow(
     model: Optional[Model] = None,

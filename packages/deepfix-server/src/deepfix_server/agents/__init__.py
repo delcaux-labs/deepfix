@@ -21,7 +21,6 @@ from .reasoning import (
     prefetch_knowledge,
 )
 from .schemas import (
-    AgentContext,
     AgentResult,
     ArtifactAnalysisResult,
     CrossArtifactReasoningResult,
@@ -30,7 +29,6 @@ from .workflow import AnalysisWorkflow
 
 __all__ = [
     "AnalysisWorkflow",
-    "AgentContext",
     "AgentResult",
     "ArtifactAnalysisResult",
     "CrossArtifactReasoningResult",

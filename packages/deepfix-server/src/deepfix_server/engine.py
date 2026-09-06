@@ -5,8 +5,8 @@ from typing import Optional
 
 import mlflow
 from deepfix_kb import KnowledgeBridge
+from deepfix_core.models import AgentContext, AgentResult
 
-from .agents.schemas import AgentContext, AgentResult
 from .agents.workflow import AnalysisWorkflow
 from .config import LLMConfig
 from .logging import get_logger
@@ -60,7 +60,8 @@ class DiagnosticSystem:
                 f"Starting Agno AnalysisWorkflow for dataset '{context.dataset_name}' "
                 f"with {len(context.artifacts)} artifacts..."
             )
-            return await self.workflow.run_analysis(context)
+            assert isinstance(context,AgentContext), f"Workflow input is not an AgentContext: type={type(context).__name__}"
+            return await self.workflow.arun(context)
 
         except Exception as e:
             LOGGER.error(f"Error in {self.agent_name}:\n {traceback.format_exc()}")

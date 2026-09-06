@@ -11,6 +11,7 @@ from .api import (
     APIRequest,
     APIResponse,
     AutonomousFixRequest,
+    AgentContext,
 )
 from .artifacts import (
     ArtifactPath,
@@ -54,6 +55,7 @@ __all__ = [
     "Finding",
     "Recommendation",
     "APIRequest",
+    "AgentContext",
     "APIResponse",
     "APIJobResponse",
     "AutonomousFixRequest",

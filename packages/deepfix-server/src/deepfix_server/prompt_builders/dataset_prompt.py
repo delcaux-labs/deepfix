@@ -12,16 +12,22 @@ from .base import BasePromptBuilder
 class DatasetPromptBuilder(BasePromptBuilder):
     """Builds prompts for dataset artifact analysis."""
 
-    def can_build(self, artifact: Artifacts) -> bool:
-        """Check if this builder can handle TrainingArtifacts."""
-        return isinstance(artifact, DatasetArtifacts)
+    def can_build(self, artifact: Any) -> bool:
+        """Check if this builder can handle DatasetArtifacts."""
+        if isinstance(artifact, DatasetArtifacts):
+            return True
+        if isinstance(artifact, dict) and ("train_statistics" in artifact or "task_type" in artifact):
+            return True
+        return False
 
     def build_prompt(
         self,
-        artifact: DatasetArtifacts,
+        artifact: Any,
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """Build structured prompt from TrainingArtifacts."""
+        """Build structured prompt from DatasetArtifacts."""
+        if isinstance(artifact, dict):
+            artifact = DatasetArtifacts.from_dict(artifact)
         prompt_parts = []
         prompt_parts.append(f"\nDataset name: {artifact.dataset_name}")
         if artifact.train_statistics:

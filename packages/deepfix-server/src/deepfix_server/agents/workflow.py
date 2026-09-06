@@ -14,6 +14,7 @@ from deepfix_core.models import (
     DeepchecksArtifacts,
     ModelCheckpointArtifacts,
     TrainingArtifacts,
+    AgentContext
 )
 from deepfix_kb import KnowledgeBridge
 
@@ -34,7 +35,7 @@ from .reasoning import (
     create_cross_artifact_reasoning_workflow,
     create_cross_artifact_synthesis_judge,
 )
-from .schemas import AgentContext
+from .schemas import ReasoningWorkflowInput
 
 LOGGER = get_logger(__name__)
 
@@ -110,6 +111,8 @@ class AnalysisWorkflow(Workflow):
         super().__init__(
             name=name,
             description=description,
+            id='analysisworkflow',
+            input_schema=AgentContext,
             steps=[
                 Step(name="ResolveContext", executor=self._step_resolve_context),
                 Parallel(
@@ -201,33 +204,23 @@ class AnalysisWorkflow(Workflow):
     async def _step_cross_artifact_reasoning(self, step_input: StepInput) -> StepOutput:
         """Execute CrossArtifactReasoning synthesis over aggregated analyzer results."""
         reasoner_name = self.reasoner.name or "CrossArtifactReasoningAgent"
-        cross_artifact_result = await self.reasoning_workflow.arun_reasoning(
-            previous_analyses=self._current_context.agent_results,
-            output_language=self._current_context.language,
+        result = await self.reasoning_workflow.arun(
+            ReasoningWorkflowInput(
+                previous_analyses=self._current_context.agent_results,
+                output_language=self._current_context.language,
+            )
         )
+        cross_artifact_result = result.content
         self._summary = cross_artifact_result.additional_outputs.get("summary", None)
         self._current_context.agent_results[reasoner_name] = cross_artifact_result
+        
         res = Result(
             context=self._current_context,
             summary=self._summary,
-        )
+            ).to_api_response()
+        
         return StepOutput(
             step_name="CrossArtifactReasoning",
             content=res,
         )
 
-    @mlflow.trace(name="AnalysisWorkflow.run_analysis")
-    async def run_analysis(self, context: AgentContext) -> Result:
-        """Convenience method to execute analysis directly returning Result.
-
-        Args:
-            context: AgentContext containing ML artifacts.
-
-        Returns:
-            Result with aggregated findings and synthesis summary.
-        """
-        run_output = await self.arun(input=context,
-                                    #background=True
-                                    )
-        assert isinstance(run_output.content, Result), f"Workflow output is not a Result: type={type(run_output.content)}"
-        return run_output.content
