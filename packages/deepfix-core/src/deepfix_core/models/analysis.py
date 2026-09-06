@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ============================================================================
@@ -81,6 +81,26 @@ class Analysis(BaseModel):
     recommendations: Recommendation = Field(
         default=..., description="Recommendation based on the findings"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "finding" in data and "findings" not in data:
+                data["findings"] = data["finding"]
+            if "recommendation" in data and "recommendations" not in data:
+                data["recommendations"] = data["recommendation"]
+        return data
+
+    @property
+    def finding(self) -> Finding:
+        """Alias for findings."""
+        return self.findings
+
+    @property
+    def recommendation(self) -> Recommendation:
+        """Alias for recommendations."""
+        return self.recommendations
 
     @field_validator("findings", mode="before")
     @classmethod

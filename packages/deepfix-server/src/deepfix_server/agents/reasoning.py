@@ -111,29 +111,6 @@ async def prefetch_knowledge(
     return retrieved
 
 
-def build_cross_artifact_prompt(
-    previous_analyses_json: str,
-    knowledge_context: List[str],
-    output_language: str,
-) -> str:
-    """Construct the prompt for cross-artifact reasoning synthesis."""
-    sections = [
-        "You are analyzing findings from multiple Machine Learning system analysis agents.",
-        "Synthesize their individual findings into holistic insights and actionable recommendations.\n",
-        f"## Previous Analyses\n\n{previous_analyses_json}\n",
-    ]
-
-    if knowledge_context:
-        kb_text = "\n".join(f"- {item}" for item in knowledge_context)
-        sections.append(f"## Retrieved ML Domain Knowledge\n\n{kb_text}\n")
-
-    sections.append(f"Output language: {output_language}\n")
-    sections.append(
-        "Produce a consolidated analysis with cross-artifact insights, clear root causes, and a summary."
-    )
-
-    return "\n".join(sections)
-
 
 def _resolve_model(
     model: Optional[Model] = None, llm_config: Optional[LLMConfig] = None
@@ -204,18 +181,19 @@ class CrossArtifactReasoningWorkflow(Workflow):
         self.knowledge_bridge = knowledge_bridge
         self.output_language = output_language
         self.num_chains = max(1, num_chains)
+        self.reasoning_chain_step_names = [f"ReasoningChain_{i}" for i in range(self.num_chains)]
 
         self._previous_analyses: Dict[str, AgentResult] = {}
-        self._retrieved_knowledge: Optional[str] = None
-        self._user_message: str = ""
-        self._reasoning_chains_results: Dict[str, CrossArtifactReasoningResult] = {}
+        #self._retrieved_knowledge: Optional[str] = None
+        #self._user_message: str = ""
+        #self._reasoning_chains_results: Dict[str, CrossArtifactReasoningResult] = {}
 
         chain_steps = [
             Step(
-                name=f"ReasoningChain_{i + 1}",
-                executor=self._make_chain_executor(i + 1),
+                name=name,
+                executor=self._make_chain_executor(name),
             )
-            for i in range(self.num_chains)
+            for name in self.reasoning_chain_step_names
         ]
 
         steps = [
@@ -251,24 +229,24 @@ class CrossArtifactReasoningWorkflow(Workflow):
         raw_analyses = raw_input.get("previous_analyses", {}) if isinstance(raw_input, dict) else {}
         output_language = raw_input.get("output_language", self.output_language) if isinstance(raw_input, dict) else self.output_language
 
-        self._previous_analyses = {}
+        previous_analyses = {}
         for k, v in raw_analyses.items():
             if isinstance(v, dict):
                 try:
-                    self._previous_analyses[k] = AgentResult.model_validate(v)
+                    previous_analyses[k] = AgentResult.model_validate(v)
                 except Exception:
-                    self._previous_analyses[k] = v
+                    previous_analyses[k] = v
             else:
-                self._previous_analyses[k] = v
+                previous_analyses[k] = v
 
-        analyses_json = serialize_previous_analyses(self._previous_analyses)
-        self._retrieved_knowledge = await prefetch_knowledge(
-            self._previous_analyses, self.knowledge_bridge
+        analyses_json = serialize_previous_analyses(previous_analyses)
+        retrieved_knowledge = await prefetch_knowledge(
+            previous_analyses, self.knowledge_bridge
         )
        
         cross_artifact_reasoning_input = CrossArtifactReasoningInput(
-            artifact_analysis_results=self._previous_analyses,
-            retrieved_knowledge=self._retrieved_knowledge,
+            artifact_analysis_results=list(previous_analyses.values()),
+            retrieved_knowledge=retrieved_knowledge,
             output_language=output_language
         )
 
@@ -276,14 +254,13 @@ class CrossArtifactReasoningWorkflow(Workflow):
             step_name="PrepareReasoningPrompt", content=cross_artifact_reasoning_input
         )
 
-    def _make_chain_executor(self, chain_index: int):
+    def _make_chain_executor(self, chain_name: str):
         chain_agent = create_cross_artifact_reasoner(model=self.reasoner.model)
 
         async def _run_chain(step_input: StepInput) -> StepOutput:
-            LOGGER.debug("Starting reasoning chain #%d", chain_index)
-            step_name=f"ReasoningChain_{chain_index}"
+            LOGGER.debug("Starting reasoning chain #%s", chain_name)
             try:
-                run_output = await chain_agent.arun(step_input.input)
+                run_output = await chain_agent.arun(step_input.get_step_content('PrepareReasoningPrompt'))
                 content = run_output.content
                 if isinstance(content, dict):
                     try:
@@ -295,16 +272,16 @@ class CrossArtifactReasoningWorkflow(Workflow):
                     LOGGER.error(msg)
                     raise ValueError(msg)
 
-                LOGGER.debug("Reasoning chain #%d completed successfully", chain_index)                
-                self._reasoning_chains_results[step_name] = content
+                LOGGER.debug("Reasoning chain #%s completed successfully", chain_name)                
+                #self._reasoning_chains_results[chain_name] = content
 
                 return StepOutput(
-                    step_name=step_name, content=content
+                    step_name=chain_name, content=content
                 )
             except Exception as e:
-                LOGGER.warning("Reasoning chain #%d failed: %s", chain_index, e)
+                LOGGER.warning("Reasoning chain #%s failed: %s", chain_name, e)
                 return StepOutput(
-                    step_name=step_name,
+                    step_name=chain_name,
                     content=None,
                     error=str(e),
                     success=False,
@@ -317,11 +294,12 @@ class CrossArtifactReasoningWorkflow(Workflow):
         candidates: List[CrossArtifactReasoningResult] = []
         errors: List[str] = []
 
-        for step_name, candidate in self._reasoning_chains_results.items():
+        for step_name in self.reasoning_chain_step_names:
+            candidate = step_input.get_step_content(step_name)
             if isinstance(candidate, CrossArtifactReasoningResult):
                 candidates.append(candidate)
             else:
-                errors.append(f"{step_name} failed")
+                errors.append(f"{step_name} failed. Expected CrossArtifactReasoningResult, got {type(candidate)}")
 
         if not candidates:
             err_msg = "; ".join(errors) if errors else "no valid candidates produced"
@@ -335,18 +313,19 @@ class CrossArtifactReasoningWorkflow(Workflow):
 
         run_output = await self.synthesis_judge.arun(SynthesisJudgeInput(
             runs=candidates,
-            output_language=self.output_language
+            output_language=step_input.input['output_language']
         ))
         return StepOutput(step_name="SynthesisJudge", content=run_output.content)
 
     def _step_format_result(self, step_input: StepInput) -> StepOutput:
         """Package final synthesized analysis and metadata into AgentResult."""
         analyzed_artifacts: list[str] = []
-        for ar in self._previous_analyses.values():
+        agent_results: list[AgentResult] = step_input.get_step_content("PrepareReasoningPrompt").artifact_analysis_results
+        for ar in agent_results:
             if ar.analyzed_artifacts:
                 analyzed_artifacts.extend(ar.analyzed_artifacts)
 
-        res = step_input.previous_step_content
+        res = step_input.get_step_content("SynthesisJudge")
         if not isinstance(res, CrossArtifactReasoningResult):
             res = step_input.get_step_content("SynthesisJudge")
 
@@ -364,12 +343,12 @@ class CrossArtifactReasoningWorkflow(Workflow):
                     analyzed_artifacts=list(set(analyzed_artifacts)),
                 ),
             )
-
+        retrieved_knowledge = step_input.get_step_content("PrepareReasoningPrompt").retrieved_knowledge
         agent_result = AgentResult(
             agent_name="CrossArtifactReasoningAgent",
             analysis=res.analysis,
             analyzed_artifacts=list(set(analyzed_artifacts)),
-            retrieved_knowledge=self._retrieved_knowledge,
+            retrieved_knowledge=retrieved_knowledge,
             additional_outputs={"summary": res.summary},
         )
         return StepOutput(step_name="FormatAgentResult", content=agent_result)
@@ -380,17 +359,11 @@ class CrossArtifactReasoningWorkflow(Workflow):
         output_language: str = "english",
     ) -> AgentResult:
         """Execute reasoning directly returning AgentResult."""
-        self.output_language = output_language
-
-        self._reasoning_chains_results.clear()
-        
+                
         try:
             serialized_analyses = {}
             for k, v in previous_analyses.items():
-                if hasattr(v, "model_dump"):
-                    serialized_analyses[k] = v.model_dump(mode="json")
-                else:
-                    serialized_analyses[k] = v
+                serialized_analyses[k] = v.model_dump(mode="json")
 
             run_output = await self.arun(
                 input={

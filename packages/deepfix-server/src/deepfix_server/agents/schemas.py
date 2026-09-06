@@ -98,7 +98,7 @@ class CrossArtifactReasoningInput(BaseModel):
 
     artifact_analysis_results: List[AgentResult] = Field(
         description="List of previous results from agents that analyzed artifacts",
-        default_factory=list,
+        default_factory=[],
     )
     retrieved_knowledge: Optional[List[str]] = Field(
         default=None, description="External knowledge relevant to the analysis"
