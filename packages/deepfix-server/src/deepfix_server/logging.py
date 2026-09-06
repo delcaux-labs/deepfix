@@ -42,8 +42,8 @@ def setup_mlflow_tracing(
 
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
-    mlflow.langchain.autolog()
-    log.info("LangChain/LangGraph logging setup complete.")
+    mlflow.agno.autolog()
+    log.info("Agno logging setup complete.")
     return
 
 @lru_cache(maxsize=1)

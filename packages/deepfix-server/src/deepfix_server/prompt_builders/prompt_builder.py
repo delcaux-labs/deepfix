@@ -32,11 +32,11 @@ class PromptBuilder:
             config: Optional configuration for the PromptBuilder
             config_path: Optional path to configuration file
         """
-        self.logger = get_logger(self.__class__.__name__)
+        
         self.prompt_builders = self._initialize_prompt_builders()
         self.config: Optional[PromptConfig] = config or PromptConfig()
-
-        self.logger.info("PromptBuilder initialized successfully")
+        #self.logger = get_logger(self.__class__.__name__)
+        #self.logger.debug("PromptBuilder initialized successfully")
 
     def build_prompt(
         self,

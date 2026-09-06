@@ -1,4 +1,3 @@
-
 from typing import Any, Dict, List, Optional
 
 from deepfix_core.models import (
@@ -79,6 +78,7 @@ class AgentContext(BaseModel):
         else:
             raise ValueError(f"Invalid artifact type: {type(artifact)}")
 
+
 class ArtifactAnalysisResult(BaseModel):
     """Result from artifact analysis.
 
@@ -87,8 +87,24 @@ class ArtifactAnalysisResult(BaseModel):
         analysis: List of analysis results.
     """
 
-    summary: Optional[str] = Field(default=..., description="Summary of the analysis")
-    analysis: List[Analysis] = Field(default=[], description="List of Analysis elements")
+    summary: Optional[str] = Field(default=None, description="Summary of the analysis")
+    analysis: List[Analysis] = Field(
+        default=[], description="List of Analysis elements"
+    )
+
+
+class CrossArtifactReasoningInput(BaseModel):
+    """Structured output for the cross-artifact reasoning agent."""
+
+    artifact_analysis_results: List[AgentResult] = Field(
+        description="List of previous results from agents that analyzed artifacts",
+        default_factory=list,
+    )
+    retrieved_knowledge: Optional[List[str]] = Field(
+        default=None, description="External knowledge relevant to the analysis"
+    )
+    output_language: str = Field(default="english", description="Language of the analysis")
+
 
 class CrossArtifactReasoningResult(BaseModel):
     """Structured output for the cross-artifact reasoning agent."""
@@ -101,3 +117,12 @@ class CrossArtifactReasoningResult(BaseModel):
         description="Summary of the cross-artifact reasoning and analysis",
         default="",
     )
+
+
+class SynthesisJudgeInput(BaseModel):
+    """Structured input for the synthesis judge agent."""
+    runs: List[CrossArtifactReasoningResult] = Field(
+        description="Runs from cross-artifact reasoning agent",
+        default_factory=list,
+    )
+    output_language: str = Field(default="english", description="Language of the analysis")

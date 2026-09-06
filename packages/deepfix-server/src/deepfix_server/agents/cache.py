@@ -73,7 +73,9 @@ class DatabaseCache:
         LOGGER.info("Initialized LLM database cache")
 
     @staticmethod
-    def cache_key(request: Dict[str, Any], ignored_args: Optional[list[str]] = None) -> str:
+    def cache_key(
+        request: Dict[str, Any], ignored_args: Optional[list[str]] = None
+    ) -> str:
         """Generate a cache key from a request dictionary.
 
         Uses SHA256 hash of messages + model name, ignoring specified args.

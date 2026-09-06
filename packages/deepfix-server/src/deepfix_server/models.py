@@ -78,7 +78,7 @@ class Result(BaseModel):
     """
 
     context: AgentContext = Field(default=..., description="Context of the analysis")
-    summary: Optional[str] = Field(default=..., description="Summary of the analysis")
+    summary: Optional[str] = Field(default=None, description="Summary of the analysis")
     additional_outputs: Dict[str, Any] = Field(
         default={}, description="Additional outputs from the agent"
     )

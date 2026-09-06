@@ -1,7 +1,3 @@
-import os
-import sys
-from typing import Optional
-
 import typer
 from rich import box
 from rich.console import Console
@@ -62,20 +58,10 @@ def version() -> None:
 def launch(
     port: int = typer.Option(8844, "-port", help="Port to run DeepFix server on"),
     host: str = typer.Option("0.0.0.0", "-host", help="Host to bind DeepFix server to"),
-    env_file: Optional[str] = typer.Option(
-        None, "-e", "--env-file", help="Environment file to load"
-    ),
     workers: int = typer.Option(1, "-workers", help="Number of worker processes"),
     reload: bool = typer.Option(False, "--reload", help="Enable auto-reload"),
 ) -> None:
     """Launch DeepFix server."""
-
-    if env_file is not None:
-        from dotenv import load_dotenv
-        if not os.path.exists(env_file):
-            typer.echo(f"❌ Environment file {env_file} not found", err=True)
-            sys.exit(1)
-        load_dotenv(env_file)
 
     typer.echo(f"🚀 Starting DeepFix server on {host}:{port}")
     display_settings()
@@ -85,6 +71,7 @@ def launch(
         host=host,
         workers=workers,
         reload=reload,
+        reload_dirs=["packages"] if reload else None,
     )
 
 

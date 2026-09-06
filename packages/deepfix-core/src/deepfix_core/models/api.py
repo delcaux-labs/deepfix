@@ -63,6 +63,9 @@ class APIResponse(BaseModel):
     fix_report: Optional[FinalFixReport] = Field(
         default=None, description="Result of the autonomous fix session if executed"
     )
+    fix_session_result: Optional[Any] = Field(
+        default=None, description="Legacy alias for fix_report"
+    )
 
     def get_results_as_dataframe(self) -> pd.DataFrame:
         """Convert all agent results to a single pandas DataFrame.
@@ -87,6 +90,8 @@ class APIResponse(BaseModel):
             if self.fix_report is not None:
                 status = "Success" if self.fix_report.success else "Failed"
                 return f"Autonomous Fix Session Result:\nStatus: {status}\nApplied Fixes: {len(self.fix_report.applied_fixes)}"
+            if self.summary:
+                return f"DEEPFIX ANALYSIS RESULT\n\nSummary:\n{self.summary}"
             return "No analysis results found."
         summary = "=" * 80
         summary += "\nSUMMARY STATISTICS"
@@ -149,8 +154,13 @@ class APIResponse(BaseModel):
         df = self.get_results_as_dataframe()
 
         if df.empty or "agent_name" not in df.columns:
+            if self.fix_report is not None:
+                status = "Success" if self.fix_report.success else "Failed"
+                return f"Autonomous Fix Session Result:\nStatus: {status}\nApplied Fixes: {len(self.fix_report.applied_fixes)}"
             if self.fix_session_result is not None:
-                return f"Autonomous Fix Session Result:\nStatus: {self.fix_session_result.stop_reason}\nTotal Iterations: {len(self.fix_session_result.iterations)}"
+                return f"Autonomous Fix Session Result:\nStatus: {getattr(self.fix_session_result, 'stop_reason', 'Finished')}"
+            if self.summary:
+                return f"DEEPFIX ANALYSIS RESULT\n\nSummary:\n{self.summary}"
             raise ValueError(
                 f"No analysis results found. Error messages: {self.error_messages}"
             )

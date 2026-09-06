@@ -526,6 +526,7 @@ def diagnose(
     dataset_name: str = typer.Option(..., "--dataset", "-d", help="Name of the dataset"),
     model_name: Optional[str] = typer.Option(None, "--model", "-m", help="Name of the model"),
     fix: bool = typer.Option(False, "--fix", help="Trigger autonomous fix loop"),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help="Stream diagnostic summary in real-time"),
     api_url: str = typer.Option("http://localhost:4141", "--api-url", help="DeepFix API URL"),
     target_metric: str = typer.Option("accuracy", "--target-metric", help="Target metric name"),
     target_value: float = typer.Option(0.90, "--target-value", help="Target metric value"),
@@ -552,8 +553,31 @@ def diagnose(
 
         client = DeepFixClient(api_url=api_url)
         typer.echo(f"🔍 Diagnosing dataset: {dataset_name}...")
-        response = client.diagnose(dataset_name=dataset_name, model_name=model_name)
-        typer.echo(response.to_text())
+
+        if stream and sys.stdout.isatty():
+            def _on_chunk(token: str):
+                sys.stdout.write(token)
+                sys.stdout.flush()
+
+            response = client.diagnose(
+                dataset_name=dataset_name,
+                model_name=model_name,
+                stream=True,
+                on_chunk=_on_chunk,
+            )
+            # Output formatted response if no streaming tokens were emitted
+            if not response.summary:
+                typer.echo(response.to_text())
+            else:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+        else:
+            response = client.diagnose(
+                dataset_name=dataset_name,
+                model_name=model_name,
+                stream=False,
+            )
+            typer.echo(response.to_text())
 
 
 @app.command(name="cancel")

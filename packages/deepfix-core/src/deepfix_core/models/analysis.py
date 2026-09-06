@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ============================================================================
@@ -81,6 +81,24 @@ class Analysis(BaseModel):
     recommendations: Recommendation = Field(
         default=..., description="Recommendation based on the findings"
     )
+
+    @field_validator("findings", mode="before")
+    @classmethod
+    def _coerce_finding(cls, v: Any) -> Any:
+        if isinstance(v, list):
+            if len(v) > 0:
+                return v[0]
+            raise ValueError("findings list cannot be empty")
+        return v
+
+    @field_validator("recommendations", mode="before")
+    @classmethod
+    def _coerce_recommendation(cls, v: Any) -> Any:
+        if isinstance(v, list):
+            if len(v) > 0:
+                return v[0]
+            raise ValueError("recommendations list cannot be empty")
+        return v
 
 
 class AgentResult(BaseModel):

@@ -251,4 +251,3 @@ Your goal is to evaluate, consolidate, and synthesize these candidate analyses i
 
 5. **Summary**:
    - Produce a concise, executive-level synthesis summary capturing the core findings and overall system assessment."""
-

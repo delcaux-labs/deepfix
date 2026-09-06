@@ -7,20 +7,22 @@ import json
 import traceback
 from typing import Any, Dict, List, Optional
 
+from agno.agent import Agent
+from agno.models.base import Model
+from agno.workflow import Parallel, Step, StepInput, StepOutput, Workflow
 from deepfix_core.models import Severity
 from deepfix_kb import KnowledgeBridge
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
 
+from ..config import LLMConfig, settings
 from ..logging import get_logger
+from .models import create_agno_model
 from .prompts import (
     CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
     CROSS_ARTIFACT_SYSTEM_PROMPT,
 )
-from .schemas import AgentResult, CrossArtifactReasoningResult
+from .schemas import AgentResult, CrossArtifactReasoningResult, CrossArtifactReasoningInput, SynthesisJudgeInput
 
 LOGGER = get_logger(__name__)
-
 
 
 def serialize_previous_analyses(previous_analyses: Dict[str, AgentResult]) -> str:
@@ -41,7 +43,6 @@ def serialize_previous_analyses(previous_analyses: Dict[str, AgentResult]) -> st
     return json.dumps(analyses_dict, indent=2, default=str)
 
 
-
 SEVERITY_WEIGHTS = {
     Severity.HIGH: 3,
     "high": 3,
@@ -50,6 +51,39 @@ SEVERITY_WEIGHTS = {
     Severity.LOW: 1,
     "low": 1,
 }
+
+
+def _get_prioritized_queries(
+    previous_analyses: Dict[str, AgentResult],
+    max_queries: int = 6,
+) -> List[str]:
+    """Extract and sort unique finding descriptions by severity and confidence."""
+    prioritized: List[tuple[int, float, str]] = []
+    for ar in previous_analyses.values():
+        if not ar.analysis:
+            continue
+        for analysis in ar.analysis:
+            finding = analysis.findings
+            if finding and finding.description:
+                weight = (
+                    SEVERITY_WEIGHTS.get(finding.severity, 0) if finding.severity else 0
+                )
+                confidence = (
+                    finding.confidence if finding.confidence is not None else 0.0
+                )
+                prioritized.append((weight, confidence, finding.description))
+
+    # Sort descending by severity weight, then confidence score
+    prioritized.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+    seen: set[str] = set()
+    queries: List[str] = []
+    for _, _, desc in prioritized:
+        if desc not in seen:
+            seen.add(desc)
+            queries.append(desc)
+
+    return queries[:max_queries]
 
 
 async def prefetch_knowledge(
@@ -61,31 +95,13 @@ async def prefetch_knowledge(
     if not knowledge_bridge or not knowledge_bridge.has_available_sources:
         return []
 
-    prioritized_findings: List[tuple[int, float, str]] = []
-    for ar in previous_analyses.values():
-        if ar.analysis:
-            for analysis in ar.analysis:
-                finding = analysis.findings
-                if finding and finding.description:
-                    weight = SEVERITY_WEIGHTS.get(finding.severity, 0) if finding.severity else 0
-                    confidence = finding.confidence if finding.confidence is not None else 0.0
-                    prioritized_findings.append((weight, confidence, finding.description))
-
-    # Sort descending by severity weight, then by confidence score
-    prioritized_findings.sort(key=lambda x: (x[0], x[1]), reverse=True)
-
-    # Deduplicate queries while preserving priority order
-    seen: set[str] = set()
-    queries: List[str] = []
-    for _, _, desc in prioritized_findings:
-        if desc not in seen:
-            seen.add(desc)
-            queries.append(desc)
-
+    queries = _get_prioritized_queries(previous_analyses, max_queries)
     retrieved: List[str] = []
-    for query in queries[:max_queries]:  # Limit to top findings to avoid excessive lookups
+    for query in queries:
         try:
-            response = await knowledge_bridge.query(query, synthesize=False, max_results=2)
+            response = await knowledge_bridge.query(
+                query, synthesize=False, max_results=2
+            )
             if response and response.results:
                 for r in response.results:
                     retrieved.append(f"[{r.source_type}] {r.content}")
@@ -112,146 +128,318 @@ def build_cross_artifact_prompt(
         sections.append(f"## Retrieved ML Domain Knowledge\n\n{kb_text}\n")
 
     sections.append(f"Output language: {output_language}\n")
-    sections.append("Produce a consolidated analysis with cross-artifact insights, clear root causes, and a summary.")
+    sections.append(
+        "Produce a consolidated analysis with cross-artifact insights, clear root causes, and a summary."
+    )
 
     return "\n".join(sections)
 
 
-async def _run_single_reasoning_chain(
-    structured_llm: Any,
-    messages: List[Any],
-    chain_index: int,
-) -> CrossArtifactReasoningResult:
-    """Execute a single reasoning chain invocation."""
-    LOGGER.debug("Starting reasoning chain #%d", chain_index)
-    result = await structured_llm.ainvoke(messages)
-    LOGGER.debug("Completed reasoning chain #%d", chain_index)
-    return result
+def _resolve_model(
+    model: Optional[Model] = None, llm_config: Optional[LLMConfig] = None
+) -> Optional[Model]:
+    if model is not None:
+        return model
+    try:
+        if llm_config is not None:
+            return create_agno_model(llm_config)
+        return create_agno_model(settings.get_llm_config())
+    except Exception as exc:
+        LOGGER.warning("Could not resolve Agno model in reasoning: %s", exc)
+        return None
 
 
-async def _synthesize_candidate_analyses(
-    candidates: List[CrossArtifactReasoningResult],
-    structured_llm: Any,
-    output_language: str,
-) -> CrossArtifactReasoningResult:
-    """Synthesize multiple candidate reasoning outputs into a single consolidated result."""
-    formatted_candidates = []
-    for idx, c in enumerate(candidates, 1):
-        analysis_data = [a.model_dump() for a in c.analysis] if c.analysis else []
-        formatted_candidates.append(
-            f"### Candidate Chain #{idx}\n"
-            f"Summary:\n{c.summary}\n\n"
-            f"Findings & Recommendations:\n{json.dumps(analysis_data, indent=2, default=str)}\n"
-        )
-
-    prompt_body = (
-        "Below are candidate analyses independently produced by multiple reasoning chains analyzing the same ML system.\n"
-        "Consolidate and synthesize them into a single, cohesive, highly reliable final analysis with calibrated severities and confidences.\n\n"
-        + "\n\n".join(formatted_candidates)
-        + f"\n\nOutput language: {output_language}\n"
+def create_cross_artifact_reasoner(
+    model: Optional[Model] = None, llm_config: Optional[LLMConfig] = None
+) -> Agent:
+    """Create a CrossArtifactReasoningAgent Agno agent."""
+    return Agent(
+        id="cross_artifact_reasoning_agent",
+        name="CrossArtifactReasoningAgent",
+        model=_resolve_model(model, llm_config),
+        description="Synthesizes findings across multiple ML artifacts into cohesive root-cause analyses and prioritized recommendations.",
+        instructions=CROSS_ARTIFACT_SYSTEM_PROMPT,
+        input_schema=CrossArtifactReasoningInput,
+        output_schema=CrossArtifactReasoningResult,
+        use_json_mode=True
     )
 
-    synthesis_messages = [
-        SystemMessage(content=CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT),
-        HumanMessage(content=prompt_body),
-    ]
 
-    LOGGER.info("Synthesizing %d candidate analyses with LLM judge...", len(candidates))
-    synthesized: CrossArtifactReasoningResult = await structured_llm.ainvoke(synthesis_messages)
-    return synthesized
+def create_cross_artifact_synthesis_judge(
+    model: Optional[Model] = None, llm_config: Optional[LLMConfig] = None
+) -> Agent:
+    """Create an Agno agent that judges and consolidates multiple reasoning chains."""
+    return Agent(
+        name="CrossArtifactSynthesisJudge",
+        model=_resolve_model(model, llm_config),
+        description="Judges and synthesizes multiple candidate reasoning chain outputs into a single consolidated, calibrated analysis.",
+        instructions=CROSS_ARTIFACT_SYNTHESIS_SYSTEM_PROMPT,
+        output_schema=CrossArtifactReasoningResult,
+        input_schema=SynthesisJudgeInput,
+        use_json_mode=True
+    )
 
 
-async def run_cross_artifact_reasoning(
-    previous_analyses: Dict[str, AgentResult],
-    llm: BaseChatModel,
-    knowledge_bridge: Optional[KnowledgeBridge] = None,
-    output_language: str = "english",
-    num_chains: int = 3,
-) -> AgentResult:
-    """Execute cross-artifact reasoning synthesis given prior agent analyses with multi-chain comparison.
+class CrossArtifactReasoningWorkflow(Workflow):
+    """Agno Workflow orchestrating multi-chain reasoning (Parallel) and synthesis judge (Sequential)."""
 
-    Args:
-        previous_analyses: Results collected from analyzer agents.
-        llm: Configured LangChain BaseChatModel.
-        knowledge_bridge: Optional KnowledgeBridge for domain context.
-        output_language: Target language for output.
-        num_chains: Number of parallel reasoning chains to run and compare (default 3).
-
-    Returns:
-        AgentResult with synthesized findings, recommendations, and summary.
-    """
-    agent_name = "CrossArtifactReasoningAgent"
-    try:
-        LOGGER.info("Running %s synthesis with %d chains...", agent_name, num_chains)
-
-        # 1. Serialize analyses
-        analyses_json = serialize_previous_analyses(previous_analyses)
-
-        # 2. Pre-fetch relevant knowledge
-        retrieved_knowledge = await prefetch_knowledge(previous_analyses, knowledge_bridge)
-
-        # 3. Construct user prompt
-        user_message = build_cross_artifact_prompt(
-            previous_analyses_json=analyses_json,
-            knowledge_context=retrieved_knowledge,
-            output_language=output_language,
+    def __init__(
+        self,
+        reasoner: Agent,
+        synthesis_judge: Optional[Agent] = None,
+        knowledge_bridge: Optional[KnowledgeBridge] = None,
+        output_language: str = "english",
+        num_chains: int = 3,
+        name: str = "CrossArtifactReasoningWorkflow",
+        description: Optional[str] = (
+            "Runs parallel candidate reasoning chains and synthesizes consolidated findings."
+        ),
+        telemetry: bool = False,
+        **kwargs: Any,
+    ):
+        self.reasoner = reasoner
+        self.synthesis_judge = synthesis_judge or create_cross_artifact_synthesis_judge(
+            model=reasoner.model
         )
+        self.knowledge_bridge = knowledge_bridge
+        self.output_language = output_language
+        self.num_chains = max(1, num_chains)
 
-        # 4. Invoke LLM with structured output across multiple chains
-        structured_llm = llm.with_structured_output(CrossArtifactReasoningResult)
-        messages = [
-            SystemMessage(content=CROSS_ARTIFACT_SYSTEM_PROMPT),
-            HumanMessage(content=user_message),
+        self._previous_analyses: Dict[str, AgentResult] = {}
+        self._retrieved_knowledge: Optional[str] = None
+        self._user_message: str = ""
+        self._reasoning_chains_results: Dict[str, CrossArtifactReasoningResult] = {}
+
+        chain_steps = [
+            Step(
+                name=f"ReasoningChain_{i + 1}",
+                executor=self._make_chain_executor(i + 1),
+            )
+            for i in range(self.num_chains)
         ]
 
-        if num_chains <= 1:
-            result: CrossArtifactReasoningResult = await structured_llm.ainvoke(messages)
-        else:
-            tasks = [
-                _run_single_reasoning_chain(structured_llm, messages, i + 1)
-                for i in range(num_chains)
-            ]
-            raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        steps = [
+            Step(
+                name="PrepareReasoningPrompt",
+                executor=self._step_prepare_prompt,
+            ),
+            Parallel(
+                *chain_steps,
+                name="ParallelReasoningChains",
+            ),
+            Step(
+                name="SynthesisJudge",
+                executor=self._step_synthesis_judge,
+            ),
+            Step(
+                name="FormatAgentResult",
+                executor=self._step_format_result,
+            ),
+        ]
 
-            candidates: List[CrossArtifactReasoningResult] = []
-            for i, res in enumerate(raw_results, 1):
-                if isinstance(res, CrossArtifactReasoningResult):
-                    candidates.append(res)
-                elif isinstance(res, Exception):
-                    LOGGER.warning("Reasoning chain #%d failed: %s", i, res)
+        super().__init__(
+            name=name,
+            description=description,
+            steps=steps,
+            telemetry=telemetry,
+            **kwargs,
+        )
 
-            if not candidates:
-                first_err = next((r for r in raw_results if isinstance(r, Exception)), None)
-                raise RuntimeError(
-                    f"All {num_chains} reasoning chains failed. Last error: {first_err}"
-                )
+    async def _step_prepare_prompt(self, step_input: StepInput) -> StepOutput:
+        """Serialize analyses, prefetch knowledge, and build user prompt."""
+        raw_input = step_input.input
+        raw_analyses = raw_input.get("previous_analyses", {}) if isinstance(raw_input, dict) else {}
+        output_language = raw_input.get("output_language", self.output_language) if isinstance(raw_input, dict) else self.output_language
 
-            if len(candidates) == 1:
-                LOGGER.info("Only 1 reasoning chain succeeded; bypassing synthesis step.")
-                result = candidates[0]
+        self._previous_analyses = {}
+        for k, v in raw_analyses.items():
+            if isinstance(v, dict):
+                try:
+                    self._previous_analyses[k] = AgentResult.model_validate(v)
+                except Exception:
+                    self._previous_analyses[k] = v
             else:
-                result = await _synthesize_candidate_analyses(
-                    candidates, structured_llm, output_language
+                self._previous_analyses[k] = v
+
+        analyses_json = serialize_previous_analyses(self._previous_analyses)
+        self._retrieved_knowledge = await prefetch_knowledge(
+            self._previous_analyses, self.knowledge_bridge
+        )
+       
+        cross_artifact_reasoning_input = CrossArtifactReasoningInput(
+            artifact_analysis_results=self._previous_analyses,
+            retrieved_knowledge=self._retrieved_knowledge,
+            output_language=output_language
+        )
+
+        return StepOutput(
+            step_name="PrepareReasoningPrompt", content=cross_artifact_reasoning_input
+        )
+
+    def _make_chain_executor(self, chain_index: int):
+        chain_agent = create_cross_artifact_reasoner(model=self.reasoner.model)
+
+        async def _run_chain(step_input: StepInput) -> StepOutput:
+            LOGGER.debug("Starting reasoning chain #%d", chain_index)
+            step_name=f"ReasoningChain_{chain_index}"
+            try:
+                run_output = await chain_agent.arun(step_input.input)
+                content = run_output.content
+                if isinstance(content, dict):
+                    try:
+                        content = CrossArtifactReasoningResult.model_validate(content)
+                    except Exception:
+                        pass
+                if not isinstance(content, CrossArtifactReasoningResult):
+                    msg = f"Unexpected content type from reasoning agent: {type(content)}"
+                    LOGGER.error(msg)
+                    raise ValueError(msg)
+
+                LOGGER.debug("Reasoning chain #%d completed successfully", chain_index)                
+                self._reasoning_chains_results[step_name] = content
+
+                return StepOutput(
+                    step_name=step_name, content=content
+                )
+            except Exception as e:
+                LOGGER.warning("Reasoning chain #%d failed: %s", chain_index, e)
+                return StepOutput(
+                    step_name=step_name,
+                    content=None,
+                    error=str(e),
+                    success=False,
                 )
 
-        # 5. Collect metadata
-        analyzed_artifacts: list = []
-        for ar in previous_analyses.values():
+        return _run_chain
+
+    async def _step_synthesis_judge(self, step_input: StepInput) -> StepOutput:
+        """Synthesize candidate analyses using the judge agent."""
+        candidates: List[CrossArtifactReasoningResult] = []
+        errors: List[str] = []
+
+        for step_name, candidate in self._reasoning_chains_results.items():
+            if isinstance(candidate, CrossArtifactReasoningResult):
+                candidates.append(candidate)
+            else:
+                errors.append(f"{step_name} failed")
+
+        if not candidates:
+            err_msg = "; ".join(errors) if errors else "no valid candidates produced"
+            raise RuntimeError(
+                f"All {self.num_chains} reasoning chains failed ({err_msg})."
+            )
+
+        if len(candidates) == 1:
+            LOGGER.info("Only 1 reasoning chain succeeded; bypassing synthesis step.")
+            return StepOutput(step_name="SynthesisJudge", content=candidates[0])
+
+        run_output = await self.synthesis_judge.arun(SynthesisJudgeInput(
+            runs=candidates,
+            output_language=self.output_language
+        ))
+        return StepOutput(step_name="SynthesisJudge", content=run_output.content)
+
+    def _step_format_result(self, step_input: StepInput) -> StepOutput:
+        """Package final synthesized analysis and metadata into AgentResult."""
+        analyzed_artifacts: list[str] = []
+        for ar in self._previous_analyses.values():
             if ar.analyzed_artifacts:
                 analyzed_artifacts.extend(ar.analyzed_artifacts)
 
-        return AgentResult(
-            agent_name=agent_name,
-            analysis=result.analysis,
+        res = step_input.previous_step_content
+        if not isinstance(res, CrossArtifactReasoningResult):
+            res = step_input.get_step_content("SynthesisJudge")
+
+        if not isinstance(res, CrossArtifactReasoningResult):
+            LOGGER.error(
+                "Expected CrossArtifactReasoningResult from SynthesisJudge, got %s: %s",
+                type(res).__name__,
+                res,
+            )
+            return StepOutput(
+                step_name="FormatAgentResult",
+                content=AgentResult(
+                    agent_name="CrossArtifactReasoningAgent",
+                    error_message=f"Synthesis failed: {res}",
+                    analyzed_artifacts=list(set(analyzed_artifacts)),
+                ),
+            )
+
+        agent_result = AgentResult(
+            agent_name="CrossArtifactReasoningAgent",
+            analysis=res.analysis,
             analyzed_artifacts=list(set(analyzed_artifacts)),
-            retrieved_knowledge=retrieved_knowledge,
-            additional_outputs={"summary": result.summary},
+            retrieved_knowledge=self._retrieved_knowledge,
+            additional_outputs={"summary": res.summary},
         )
+        return StepOutput(step_name="FormatAgentResult", content=agent_result)
 
-    except Exception as e:
-        LOGGER.error("Error in %s: %s", agent_name, traceback.format_exc())
-        return AgentResult(
-            agent_name=agent_name,
-            error_message=str(e),
-        )
+    async def arun_reasoning(
+        self,
+        previous_analyses: Dict[str, AgentResult],
+        output_language: str = "english",
+    ) -> AgentResult:
+        """Execute reasoning directly returning AgentResult."""
+        self.output_language = output_language
 
+        self._reasoning_chains_results.clear()
+        
+        try:
+            serialized_analyses = {}
+            for k, v in previous_analyses.items():
+                if hasattr(v, "model_dump"):
+                    serialized_analyses[k] = v.model_dump(mode="json")
+                else:
+                    serialized_analyses[k] = v
+
+            run_output = await self.arun(
+                input={
+                    "previous_analyses": serialized_analyses,
+                    "output_language": output_language,
+                }
+            )
+            if isinstance(run_output.content, AgentResult):
+                return run_output.content
+            return AgentResult(
+                agent_name="CrossArtifactReasoningAgent",
+                error_message=f"Reasoning workflow output: {run_output.content}",
+            )
+        except Exception as e:
+            LOGGER.error("Error in CrossArtifactReasoningWorkflow: %s", traceback.format_exc())
+            return AgentResult(
+                agent_name="CrossArtifactReasoningAgent",
+                error_message=str(e),
+            )
+
+
+def create_cross_artifact_reasoning_workflow(
+    model: Optional[Model] = None,
+    llm_config: Optional[LLMConfig] = None,
+    reasoner: Optional[Agent] = None,
+    synthesis_judge: Optional[Agent] = None,
+    knowledge_bridge: Optional[KnowledgeBridge] = None,
+    output_language: str = "english",
+    num_chains: int = 3,
+    name: str = "CrossArtifactReasoningWorkflow",
+    description: Optional[str] = (
+        "Runs parallel candidate reasoning chains and synthesizes consolidated findings."
+    ),
+    **kwargs: Any,
+) -> CrossArtifactReasoningWorkflow:
+    """Create and return a CrossArtifactReasoningWorkflow instance."""
+    resolved_reasoner = reasoner or create_cross_artifact_reasoner(
+        model=model, llm_config=llm_config
+    )
+    resolved_judge = synthesis_judge or create_cross_artifact_synthesis_judge(
+        model=model, llm_config=llm_config
+    )
+    return CrossArtifactReasoningWorkflow(
+        reasoner=resolved_reasoner,
+        synthesis_judge=resolved_judge,
+        knowledge_bridge=knowledge_bridge,
+        output_language=output_language,
+        num_chains=num_chains,
+        name=name,
+        description=description,
+        **kwargs,
+    )
