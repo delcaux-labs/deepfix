@@ -70,6 +70,7 @@ def create_agent_os(
         db=db,
         workflows=workflows,
         telemetry=False,
+        tracing=True
     )
     return agent_os
 

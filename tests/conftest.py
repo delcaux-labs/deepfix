@@ -42,15 +42,6 @@ def api_url():
 
 
 @pytest.fixture
-def api_fix_url():
-    """Fixture providing the DeepFix Fix API URL for tests."""
-    url = os.getenv("DEEPFIX_TEST_FIX_API_URL")
-    if url is None:
-        raise ValueError("DEEPFIX_TEST_FIX_API_URL is not set")
-    return url
-
-
-@pytest.fixture
 def deepfix_timeout():
     return int(os.getenv("DEEPFIX_TIMEOUT", "600"))
 
@@ -93,20 +84,4 @@ def check_response():
 
     return check
 
-
-@pytest.fixture
-def check_fix_response():
-
-    def check(response):
-        assert isinstance(response, APIResponse)
-        assert response.summary is not None
-        assert (
-            response.fix_session_result is not None
-        ), "Response must include fix_session_result"
-        assert (
-            len(response.fix_session_result.iterations) > 0
-        ), "At least one iteration must be run"
-        return True
-
-    return check
 

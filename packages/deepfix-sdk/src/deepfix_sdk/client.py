@@ -3,11 +3,11 @@ import concurrent.futures
 import json
 import os
 import pathlib
+import urllib.parse
 import time
 from typing import Any, Callable, Optional, Union
 
 import requests
-from agno.client import AgentOSClient
 from deepfix_core.models import (
     AgentResult,
     Analysis,
@@ -98,19 +98,7 @@ class DeepFixClient:
         self.api_url = api_url
         self.timeout = timeout
 
-        self._analyze_endpoint = self.api_url
         self._artifact_repo: Optional[ArtifactRepository] = None
-        self._agent_os_client: Optional[AgentOSClient] = None
-
-    @property
-    def agent_os_client(self) -> AgentOSClient:
-        """Get or initialize the Agno AgentOSClient instance."""
-        if self._agent_os_client is None:
-            self._agent_os_client = AgentOSClient(
-                base_url=self.api_url,
-                timeout=float(self.timeout),
-            )
-        return self._agent_os_client
 
     def _get_auth_headers(self) -> dict[str, str]:
         """Construct authorization headers if DEEPFIX_API_KEY is configured."""
@@ -410,28 +398,73 @@ class DeepFixClient:
         stream: bool = False,
         on_chunk: Optional[Callable[[str], None]] = None,
     ) -> APIResponse:
-        """Execute diagnosis via Agno AgentOSClient workflow execution with REST fallback."""
+        """Execute diagnosis via Agno workflow execution with REST fallback."""
         
         #headers = self._get_auth_headers()
+        workflow_id = "analysisworkflow"
+        url = urllib.parse.urljoin(self.api_url, f"/workflows/{workflow_id}/runs")
 
-        try:
-            async def run():
-                return await self.agent_os_client.run_workflow(
-                    workflow_id="analysisworkflow",
-                    message=request.to_agent_context().model_dump_json(),
-                    #headers=headers,
-                )
+        payload = {
+            "message": request.to_agent_context().model_dump_json(),
+            "stream": "false",
+            "background": "true",
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
 
-            wf_output = _run_async(run())
-            content = wf_output.content if hasattr(wf_output, "content") else wf_output
-            if isinstance(content, APIResponse):
-                return content
-            if isinstance(content, str):
-                return APIResponse.model_validate_json(content)
-            return APIResponse.model_validate(content)
+        response = requests.post(url, data=payload, headers=headers)
+        response.raise_for_status()
+        out = response.json()
 
-        except Exception as agno_err:
-            raise agno_err
+        run_id = out["run_id"]
+        session_id = out["session_id"]
+        status = out["status"]
+
+        run_url = urllib.parse.urljoin(self.api_url, f"/workflows/{workflow_id}/runs/{run_id}")        
+
+        start = time.time()
+        current_status = (status or "PENDING").upper()
+        spinner = Spinner("dots")
+
+        def _render_spinner():
+            elapsed = int(time.time() - start)
+            mins, secs = divmod(elapsed, 60)
+            time_str = f"{mins:02d}:{secs:02d}" if mins else f"{secs}s"
+            spinner.update(
+                text=f"[cyan]Running diagnosis workflow... [bold]{current_status}[/bold] ({time_str})[/cyan]"
+            )
+            return spinner
+
+        with Live(get_renderable=_render_spinner, console=console, refresh_per_second=10, transient=True):
+            while True:
+                r = requests.get(run_url, params={"session_id": session_id})
+                r.raise_for_status()
+                out = r.json()
+
+                status = (out.get("status") or "").upper()
+                if status:
+                    current_status = status
+
+                if status in ("COMPLETED", "SUCCESS"):
+                    content = out.get("content")
+                    if isinstance(content, APIResponse):
+                        return content
+                    if isinstance(content, str):
+                        return APIResponse.model_validate_json(content)
+                    if isinstance(content, dict):
+                        return APIResponse.model_validate(content)
+                    raise ValueError(f"Unexpected content format: {type(content)}")
+
+                if status in ("ERROR", "FAILED"):
+                    raise RuntimeError(f"Workflow failed: {out.get('content') or out}")
+
+                if time.time() - start > self.timeout:
+                    raise TimeoutError(f"Workflow timed out after {self.timeout} seconds")
+
+                time.sleep(5)  # Adjust polling interval as needed   
+             
+        raise RuntimeError("Workflow did not complete")        
 
     def _get_data_type(
         self, train_data: BaseDataset, test_data: Optional[BaseDataset] = None
