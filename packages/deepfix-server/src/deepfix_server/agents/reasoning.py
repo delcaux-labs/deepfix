@@ -162,7 +162,6 @@ class CrossArtifactReasoningWorkflow(Workflow):
         self.num_chains = max(1, num_chains)
         self.reasoning_chain_step_names = [f"ReasoningChain_{i}" for i in range(self.num_chains)]
 
-        self._previous_analyses: Dict[str, AgentResult] = {}
        
         chain_steps = [
             Step(
@@ -238,7 +237,6 @@ class CrossArtifactReasoningWorkflow(Workflow):
                     raise ValueError(msg)
 
                 LOGGER.debug("Reasoning chain #%s completed successfully", chain_name)                
-                #self._reasoning_chains_results[chain_name] = content
 
                 return StepOutput(
                     step_name=chain_name, content=content
@@ -290,8 +288,7 @@ class CrossArtifactReasoningWorkflow(Workflow):
             if ar.analyzed_artifacts:
                 analyzed_artifacts.extend(ar.analyzed_artifacts)
 
-        res = step_input.get_step_content("SynthesisJudge")
-        
+        res = step_input.get_step_content("SynthesisJudge") 
         retrieved_knowledge = step_input.get_step_content("PrepareReasoningPrompt").retrieved_knowledge
         agent_result = AgentResult(
             agent_name="CrossArtifactReasoningAgent",

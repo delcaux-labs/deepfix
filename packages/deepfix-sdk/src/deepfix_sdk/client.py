@@ -278,7 +278,6 @@ class DeepFixClient:
         request = self._create_request(dataset_name, model_name or "", language)
         return self._run_diagnosis(request, stream=stream, on_chunk=on_chunk)
 
-
     def _load_artifacts(self, dataset_name: str, model_name: str) -> dict:
         from .pipelines import ArtifactLoadingPipeline
 
@@ -405,7 +404,6 @@ class DeepFixClient:
         )
         return request
 
-    
     def _run_diagnosis(
         self,
         request: APIRequest,

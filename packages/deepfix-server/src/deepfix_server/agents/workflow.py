@@ -105,8 +105,12 @@ class AnalysisWorkflow(Workflow):
             knowledge_bridge=knowledge_bridge,
             num_chains=num_chains,
         )
-        self._current_context: Optional[AgentContext] = None
-        self._summary: Optional[str] = None
+
+        self._analyzers={"DatasetArtifactsAnalyzer":self._step_dataset_analyzer,
+                    "TrainingArtifactsAnalyzer":self._step_training_analyzer,
+                    "ModelCheckpointArtifactsAnalyzer":self._step_checkpoint_analyzer,
+                    "DeepchecksArtifactsAnalyzer":self._step_deepchecks_analyzer,
+                }
 
         super().__init__(
             name=name,
@@ -116,22 +120,7 @@ class AnalysisWorkflow(Workflow):
             steps=[
                 Step(name="ResolveContext", executor=self._step_resolve_context),
                 Parallel(
-                    Step(
-                        name="DatasetArtifactsAnalyzer",
-                        executor=self._step_dataset_analyzer,
-                    ),
-                    Step(
-                        name="TrainingArtifactsAnalyzer",
-                        executor=self._step_training_analyzer,
-                    ),
-                    Step(
-                        name="ModelCheckpointArtifactsAnalyzer",
-                        executor=self._step_checkpoint_analyzer,
-                    ),
-                    Step(
-                        name="DeepchecksArtifactsAnalyzer",
-                        executor=self._step_deepchecks_analyzer,
-                    ),
+                    *[Step(name=name, executor=executor) for name, executor in self._analyzers.items()],
                     name="ArtifactAnalyzers",
                 ),
                 Step(
@@ -160,29 +149,26 @@ class AnalysisWorkflow(Workflow):
             raise TypeError(
                 f"AnalysisWorkflow only accepts AgentContext, got {type(raw_input).__name__}"
             )
-        self._current_context = raw_input
-        return StepOutput(step_name="ResolveContext", content=self._current_context)
+        return StepOutput(step_name="ResolveContext", content=raw_input)
 
     async def _analyzer_step_executor(self,step_input: StepInput, step_name:str, artifacts_attr: str, agent: Agent) -> StepOutput:
-            if self._current_context is None:
-                return StepOutput(step_name=step_name, content=None)
-            artifacts = getattr(self._current_context, artifacts_attr, None)
+            current_context = step_input.get_step_content("ResolveContext")
+            artifacts = getattr(current_context, artifacts_attr, None)
             if artifacts is None:
                 LOGGER.info(f"{step_name} skipped: {artifacts_attr} is None")
                 return StepOutput(step_name=step_name, content=None)
             name = agent.name or step_name
             try:
-                res = await run_artifact_analyzer(
+                res: AgentResult = await run_artifact_analyzer(
                     agent=agent,
                     artifacts=artifacts,
-                    output_language=self._current_context.language,
+                    output_language=current_context.language,
                     prompt_builder=self.prompt_builder,
-                    dataset_name=self._current_context.dataset_name,
+                    dataset_name=current_context.dataset_name,
                 )
             except Exception as e:
                 LOGGER.error(f"Error executing analyzer '{name}': {e}")
                 res = AgentResult(agent_name=name, error_message=str(e))
-            self._current_context.agent_results[name] = res
             return StepOutput(step_name=step_name, content=res)
 
     async def _step_dataset_analyzer(self, step_input: StepInput) -> StepOutput:
@@ -204,20 +190,38 @@ class AnalysisWorkflow(Workflow):
     async def _step_cross_artifact_reasoning(self, step_input: StepInput) -> StepOutput:
         """Execute CrossArtifactReasoning synthesis over aggregated analyzer results."""
         reasoner_name = self.reasoner.name or "CrossArtifactReasoningAgent"
+        
+        artifact_analyzers_result = {}
+
+        for step_name in self._analyzers.keys():
+            content = step_input.get_step_content(step_name)
+            if content is None:
+                continue
+            artifact_analyzers_result[step_name] = content
+
+        current_context = step_input.get_step_content("ResolveContext")
+        current_context.agent_results.update(
+            **artifact_analyzers_result
+        )
+
         result = await self.reasoning_workflow.arun(
             ReasoningWorkflowInput(
-                previous_analyses=self._current_context.agent_results,
-                output_language=self._current_context.language,
+                previous_analyses=artifact_analyzers_result,
+                output_language=current_context.language,
             )
         )
         cross_artifact_result = result.content
-        self._summary = cross_artifact_result.additional_outputs.get("summary", None)
-        self._current_context.agent_results[reasoner_name] = cross_artifact_result
-        
+        summary = (
+            cross_artifact_result.additional_outputs.get("summary", None)
+            if cross_artifact_result and hasattr(cross_artifact_result, "additional_outputs") and cross_artifact_result.additional_outputs
+            else None
+        )
+        current_context.agent_results[reasoner_name] = cross_artifact_result
+
         res = Result(
-            context=self._current_context,
-            summary=self._summary,
-            ).to_api_response()
+            context=current_context,
+            summary=summary,
+        ).to_api_response()
         
         return StepOutput(
             step_name="CrossArtifactReasoning",
