@@ -61,20 +61,6 @@ services:
       timeout: 5s
       retries: 5
 
-  rustfs:
-    image: rustfs/rustfs:latest
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      - RUSTFS_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
-      - RUSTFS_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
-      - RUSTFS_VOLUMES=/data
-      - RUSTFS_CONSOLE_ENABLE=true
-    volumes:
-      - rustfs-data:/data
-
   mlflow:
     build:
       context: .
