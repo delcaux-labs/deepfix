@@ -16,11 +16,9 @@ services:
       - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXP_NAME=Deepfix-server
-      - OPENHANDS_SUPPRESS_BANNER=1
     restart: unless-stopped
     depends_on:
       - mlflow
-      - rustfs
     volumes:
       - ./packages:/app/packages
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
