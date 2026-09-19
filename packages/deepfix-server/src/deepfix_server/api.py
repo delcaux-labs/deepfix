@@ -1,32 +1,15 @@
-import asyncio
-import json
-import traceback
-from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import List, Optional
 
 import uvicorn
 from agno.db.sqlite import SqliteDb
 from agno.os import AgentOS
-from deepfix_core.models import (
-    AnalysisJobStatus,
-    APIJobResponse,
-    APIRequest,
-    APIResponse,
-    DatasetArtifacts,
-    AgentContext
-)
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from agno.tools import Toolkit
+from fastapi import FastAPI
 
 from .agents.workflow import AnalysisWorkflow
 from .config import LLMConfig, settings
-from .database import Base, get_db, get_engine, init_database
-from .engine import DiagnosticSystem
-from .logging import get_logger, setup_mlflow_tracing
-from .models import AnalysisJob
-
+from .logging import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -50,17 +33,15 @@ async def health_check():
 
 def create_agent_os(
     llm_config: Optional[LLMConfig] = None,
-    knowledge_bridge: Optional[Any] = None,
+    tools: Optional[List[Toolkit]] = None,
     base_app: Optional[FastAPI] = None,
 ) -> AgentOS:
     """Create and configure an AgentOS instance with registered agents and workflows."""
-   
+
     config = llm_config or settings.get_llm_config()
     db = SqliteDb(db_url=settings.database_url)
 
-    analysis_workflow = AnalysisWorkflow(
-        llm_config=config, knowledge_bridge=knowledge_bridge
-    )
+    analysis_workflow = AnalysisWorkflow(llm_config=config, tools=tools)
 
     workflows = [analysis_workflow]
 
@@ -70,7 +51,7 @@ def create_agent_os(
         db=db,
         workflows=workflows,
         telemetry=False,
-        tracing=True
+        tracing=True,
     )
     return agent_os
 
@@ -105,6 +86,7 @@ def run_analyse_artifacts_api(
         reload_excludes=reload_excludes,
         log_level="info",
     )
+
 
 # Initialize and mount Agno AgentOS on the base FastAPI application
 agent_os = create_agent_os(base_app=app)

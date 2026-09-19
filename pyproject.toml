@@ -38,7 +38,7 @@ deepfix-server = { workspace = true }
 deepfix-portal = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/deepfix-core","packages/deepfix-sdk","packages/deepfix-server","packages/deepfix-portal","packages/deepfix-kb"]
+members = ["packages/deepfix-core", "packages/deepfix-sdk", "packages/deepfix-server", "packages/deepfix-portal"]
 
 [[tool.uv.index]]
 name = "testpypi"

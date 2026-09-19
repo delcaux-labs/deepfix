@@ -21,6 +21,7 @@ python s3-weights-storage/push_weights_to_s3.py \
 import os
 import boto3
 
+
 def upload_weights(local_path: str, s3_bucket: str, job_id: str) -> str:
     filename = os.path.basename(local_path)
     s3_key = f"{job_id}/weights/{filename}"

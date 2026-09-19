@@ -13,6 +13,7 @@ app = typer.Typer(
     add_completion=False,
 )
 
+
 def display_settings():
     """Display current settings in a beautiful way using rich."""
     console = Console()
@@ -25,8 +26,16 @@ def display_settings():
     llm_table.add_row("Base URL", settings.llm_base_url or "[dim]Default[/dim]")
     llm_table.add_row("Temperature", str(settings.llm_temperature))
     llm_table.add_row("Max Tokens", str(settings.llm_max_tokens))
-    llm_table.add_row("Cache", "[green]Enabled[/green]" if settings.llm_cache else "[yellow]Disabled[/yellow]")
-    llm_table.add_row("Track Usage", "[green]Enabled[/green]" if settings.llm_track_usage else "[yellow]Disabled[/yellow]")
+    llm_table.add_row(
+        "Cache",
+        "[green]Enabled[/green]" if settings.llm_cache else "[yellow]Disabled[/yellow]",
+    )
+    llm_table.add_row(
+        "Track Usage",
+        "[green]Enabled[/green]"
+        if settings.llm_track_usage
+        else "[yellow]Disabled[/yellow]",
+    )
 
     # Mask API key if present
     api_key_display = "[red]Missing[/red]"
@@ -39,12 +48,48 @@ def display_settings():
     db_table.add_column("Property", style="bold green", width=20)
     db_table.add_column("Value")
     db_table.add_row("URL", settings.database_url)
-    db_table.add_row("Echo", "[green]On[/green]" if settings.database_echo else "[dim]Off[/dim]")
+    db_table.add_row(
+        "Echo", "[green]On[/green]" if settings.database_echo else "[dim]Off[/dim]"
+    )
     db_table.add_row("Job TTL", f"{settings.job_ttl_hours} hours")
 
+    # Search Settings Table
+    search_table = Table(show_header=False, box=box.SIMPLE_HEAD)
+    search_table.add_column("Property", style="bold magenta", width=20)
+    active_provider = settings.search_provider or (
+        "tavily" if settings.tavily_api_key else "duckduckgo"
+    )
+    search_table.add_row("Provider", active_provider)
+    tavily_key_display = "[dim]None[/dim]"
+    if settings.tavily_api_key:
+        tavily_key_display = f"{settings.tavily_api_key[:4]}..."
+    search_table.add_row("Tavily Key", tavily_key_display)
+
     console.print("\n")
-    console.print(Panel(llm_table, title="[bold cyan]LLM Configuration[/]", border_style="cyan", padding=(1, 2)))
-    console.print(Panel(db_table, title="[bold green]Database Configuration[/]", border_style="green", padding=(1, 2)))
+    console.print(
+        Panel(
+            llm_table,
+            title="[bold cyan]LLM Configuration[/]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
+    console.print(
+        Panel(
+            db_table,
+            title="[bold green]Database Configuration[/]",
+            border_style="green",
+            padding=(1, 2),
+        )
+    )
+    console.print(
+        Panel(
+            search_table,
+            title="[bold magenta]Search Tools Configuration[/]",
+            border_style="magenta",
+            padding=(1, 2),
+        )
+    )
     console.print("\n")
 
 

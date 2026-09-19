@@ -138,7 +138,10 @@ def main() -> None:
             with open(args.script_path, "r", encoding="utf-8") as f:
                 fixed_code = f.read()
         except Exception as e:
-            print(f"Warning: Could not read script file {args.script_path}: {e}", file=sys.stderr)
+            print(
+                f"Warning: Could not read script file {args.script_path}: {e}",
+                file=sys.stderr,
+            )
 
     payload = {
         "job_id": job_id,

@@ -34,10 +34,7 @@ from deepfix_sdk.data import TabularDataset
 # Load tabular dataset from CSV or DataFrame
 df = pd.read_csv("data.csv")
 dataset = TabularDataset(
-    dataset=df,
-    dataset_name="my_dataset",
-    label="target",
-    cat_features=["category_col"]
+    dataset=df, dataset_name="my_dataset", label="target", cat_features=["category_col"]
 )
 ```
 
@@ -50,7 +47,7 @@ diagnosis = client.get_diagnosis(
     train_data=train_dataset,
     test_data=test_dataset,
     model=trained_model,
-    model_name="candidate_model"
+    model_name="candidate_model",
 )
 print(diagnosis.to_text())
 ```

@@ -2,7 +2,6 @@ import json
 from typing import Any, Dict, Optional
 
 from deepfix_core.models import (
-    Artifacts,
     DatasetArtifacts,
 )
 
@@ -16,7 +15,9 @@ class DatasetPromptBuilder(BasePromptBuilder):
         """Check if this builder can handle DatasetArtifacts."""
         if isinstance(artifact, DatasetArtifacts):
             return True
-        if isinstance(artifact, dict) and ("train_statistics" in artifact or "task_type" in artifact):
+        if isinstance(artifact, dict) and (
+            "train_statistics" in artifact or "task_type" in artifact
+        ):
             return True
         return False
 

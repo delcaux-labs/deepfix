@@ -1,53 +1,43 @@
 services:
 
-
-  # ===================
-  # DeepFix Portal (Unified)
-  # ===================
-  deepfix-portal:
-    build:
-      context: .
-      dockerfile: ./packages/deepfix-portal/Dockerfile
-    image: deepfix-portal:latest
-    restart: unless-stopped
-    networks:
-      - deepfix-network
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_portal
-      - FRONTEND_URL=https://${HOST}
-      - DEEPFIX_SERVER_URL=http://deepfix-server:8844
-    depends_on:
-      - tunnel
-      - deepfix-server
-      - deepfix-db
-    deploy:
-      resources:
-        limits:
-          cpus: '2.50'
-
-  # ===================
-  # DeepFix Server (Analysis Engine)
-  # ===================
   deepfix-server:
     build:
       context: .
       dockerfile: ./packages/deepfix-server/Dockerfile
     image: deepfix-server:latest
-    env_file:
-      - .env
+    environment:
+      - DEEPFIX_LLM_API_KEY=${DEEPFIX_LLM_API_KEY}
+      - DEEPFIX_LLM_BASE_URL=${DEEPFIX_LLM_BASE_URL}
+      - DEEPFIX_LLM_MODEL_NAME=${DEEPFIX_LLM_MODEL_NAME}
+      - DEEPFIX_LLM_TEMPERATURE=${DEEPFIX_LLM_TEMPERATURE:-0.7}
+      - DEEPFIX_LLM_MAX_TOKENS=${DEEPFIX_LLM_MAX_TOKENS:-8000}
+      - DEEPFIX_LLM_CACHE=${DEEPFIX_LLM_CACHE:-1}
+      - DEEPFIX_LLM_TRACK_USAGE=${DEEPFIX_LLM_TRACK_USAGE:-1}
+      - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXP_NAME=Deepfix-server
+      - OPENHANDS_SUPPRESS_BANNER=1
     restart: unless-stopped
-    networks:
-      - deepfix-network
-    deploy:
-      resources:
-        limits:
-          cpus: '2.00'
-
-  # ===================
-  # Database
-  # ===================
+    depends_on:
+      - mlflow
+    volumes:
+      - ./packages:/app/packages
+    command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
+    ports:
+      - "8844:8844"
+    develop:
+      watch:
+        - action: sync
+          path: ./packages/deepfix-server/src
+          target: /app/packages/deepfix-server/src
+        - action: sync
+          path: ./packages/deepfix-core/src
+          target: /app/packages/deepfix-core/src
+        - action: rebuild
+          path: ./packages/deepfix-server/pyproject.toml
+        - action: rebuild
+          path: ./packages/deepfix-core/pyproject.toml
+  
   deepfix-db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -58,22 +48,34 @@ services:
     ports:
       - "5444:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - deepfix-network
+      - ./server_data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U deepfix-admin -d deepfix_portal"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# ===================
-# Networks
-# ===================
-networks:
-  deepfix-network:
-    driver: bridge
-    name: deepfix-network
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_SERVER_ALLOWED_HOSTS="mlflow:*,localhost:*"
+      - MLFLOW_SERVER_CORS_ALLOWED_ORIGINS="*"
+      - MLFLOW_SERVER_DISABLE_SECURITY_MIDDLEWARE=true
+    volumes:
+      - ./server_data/mlflow:/app
+    depends_on:
+      - deepfix-db
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_portal
+
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  rustfs-data:

@@ -14,9 +14,12 @@ dependencies = [
     "rich>=14.1.0",
     "typer",
     "deepfix-core",
-    "deepfix-kb",
     "pydantic-settings>=2.11.0",
-    "agno[os]>=3.0.6",
+    "agno[os,openai]>=3.0.6",
+    "duckduckgo-search>=8.1.1",
+    "tavily-python>=0.7.27",
+    "ddgs>=9.16.0",
+    "lancedb>=0.38.0",
 ]
 
 [project.optional-dependencies]
@@ -48,7 +51,6 @@ line-ending = "auto"
 
 [tool.uv.sources]
 deepfix-core = {workspace = true}
-deepfix-kb = {workspace = true}
 
 [project.scripts]
 deepfix-server = "deepfix_server.cli:main"

@@ -1,13 +1,8 @@
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from deepfix_core.models import (
     AgentResult,
     Analysis,
-    Artifacts,
-    DatasetArtifacts,
-    DeepchecksArtifacts,
-    ModelCheckpointArtifacts,
-    TrainingArtifacts,
 )
 from pydantic import BaseModel, Field
 
@@ -25,10 +20,14 @@ class ArtifactAnalysisResult(BaseModel):
         default=[], description="List of Analysis elements"
     )
 
+
 class ReasoningWorkflowInput(BaseModel):
     """Input for the reasoning workflow"""
+
     previous_analyses: Dict[str, AgentResult] = Field(default_factory=dict)
-    output_language: str = Field("english", description="Output language for the analysis")
+    output_language: str = Field(
+        "english", description="Output language for the analysis"
+    )
 
 
 class CrossArtifactReasoningInput(BaseModel):
@@ -41,7 +40,9 @@ class CrossArtifactReasoningInput(BaseModel):
     retrieved_knowledge: Optional[List[str]] = Field(
         default=None, description="External knowledge relevant to the analysis"
     )
-    output_language: str = Field(default="english", description="Language of the analysis")
+    output_language: str = Field(
+        default="english", description="Language of the analysis"
+    )
 
 
 class CrossArtifactReasoningResult(BaseModel):
@@ -59,8 +60,11 @@ class CrossArtifactReasoningResult(BaseModel):
 
 class SynthesisJudgeInput(BaseModel):
     """Structured input for the synthesis judge agent."""
+
     runs: List[CrossArtifactReasoningResult] = Field(
         description="Runs from cross-artifact reasoning agent",
         default_factory=list,
     )
-    output_language: str = Field(default="english", description="Language of the analysis")
+    output_language: str = Field(
+        default="english", description="Language of the analysis"
+    )

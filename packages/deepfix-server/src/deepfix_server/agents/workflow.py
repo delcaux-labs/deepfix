@@ -1,22 +1,13 @@
-import asyncio
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 
-import mlflow
 from agno.agent import Agent
 from agno.db.base import AsyncBaseDb, BaseDb
 from agno.models.base import Model
+from agno.tools import Toolkit
 from agno.workflow import Parallel, Step, StepInput, StepOutput, Workflow
 from agno.workflow.types import WorkflowExecutionInput
-from deepfix_core.models import (
-    AgentResult,
-    DatasetArtifacts,
-    DeepchecksArtifacts,
-    ModelCheckpointArtifacts,
-    TrainingArtifacts,
-    AgentContext
-)
-from deepfix_kb import KnowledgeBridge
+from deepfix_core.models import AgentContext, AgentResult
 
 from deepfix_server.config import LLMConfig
 from deepfix_server.logging import get_logger
@@ -47,7 +38,7 @@ class AnalysisWorkflow(Workflow):
         self,
         model: Optional[Model] = None,
         llm_config: Optional[LLMConfig] = None,
-        knowledge_bridge: Optional[KnowledgeBridge] = None,
+        tools: Optional[List[Toolkit]] = None,
         num_chains: int = 3,
         prompt_builder: Optional[PromptBuilder] = None,
         name: str = "AnalysisWorkflow",
@@ -63,7 +54,7 @@ class AnalysisWorkflow(Workflow):
         Args:
             model: Optional Agno model instance.
             llm_config: Optional LLM configuration.
-            knowledge_bridge: Optional KnowledgeBridge instance for domain knowledge retrieval.
+            tools: Optional search/domain tools for the reasoning agent.
             num_chains: Number of reasoning chains for cross-artifact synthesis.
             prompt_builder: Optional custom prompt builder instance.
             name: Name of the workflow.
@@ -74,7 +65,7 @@ class AnalysisWorkflow(Workflow):
         """
         self.llm_config = llm_config
         self.model = model
-        self.knowledge_bridge = knowledge_bridge
+        self.tools = tools
         self.num_chains = num_chains
         self.prompt_builder = prompt_builder
 
@@ -92,7 +83,7 @@ class AnalysisWorkflow(Workflow):
             model=model, llm_config=llm_config
         )
         self.reasoner: Agent = create_cross_artifact_reasoner(
-            model=model, llm_config=llm_config
+            model=model, llm_config=llm_config, tools=tools
         )
         synthesis_judge: Agent = create_cross_artifact_synthesis_judge(
             model=model, llm_config=llm_config
@@ -102,25 +93,29 @@ class AnalysisWorkflow(Workflow):
             llm_config=llm_config,
             reasoner=self.reasoner,
             synthesis_judge=synthesis_judge,
-            knowledge_bridge=knowledge_bridge,
+            tools=tools,
             num_chains=num_chains,
         )
 
-        self._analyzers={"DatasetArtifactsAnalyzer":self._step_dataset_analyzer,
-                    "TrainingArtifactsAnalyzer":self._step_training_analyzer,
-                    "ModelCheckpointArtifactsAnalyzer":self._step_checkpoint_analyzer,
-                    "DeepchecksArtifactsAnalyzer":self._step_deepchecks_analyzer,
-                }
+        self._analyzers = {
+            "DatasetArtifactsAnalyzer": self._step_dataset_analyzer,
+            "TrainingArtifactsAnalyzer": self._step_training_analyzer,
+            "ModelCheckpointArtifactsAnalyzer": self._step_checkpoint_analyzer,
+            "DeepchecksArtifactsAnalyzer": self._step_deepchecks_analyzer,
+        }
 
         super().__init__(
             name=name,
             description=description,
-            id='analysisworkflow',
+            id="analysisworkflow",
             input_schema=AgentContext,
             steps=[
                 Step(name="ResolveContext", executor=self._step_resolve_context),
                 Parallel(
-                    *[Step(name=name, executor=executor) for name, executor in self._analyzers.items()],
+                    *[
+                        Step(name=name, executor=executor)
+                        for name, executor in self._analyzers.items()
+                    ],
                     name="ArtifactAnalyzers",
                 ),
                 Step(
@@ -138,7 +133,7 @@ class AnalysisWorkflow(Workflow):
         raw_input = step_input.input
         if isinstance(raw_input, WorkflowExecutionInput):
             raw_input = getattr(raw_input, "input", raw_input)
-        
+
         if isinstance(raw_input, str):
             data = json.loads(raw_input)
             raw_input = data.get("context", data)
@@ -151,46 +146,68 @@ class AnalysisWorkflow(Workflow):
             )
         return StepOutput(step_name="ResolveContext", content=raw_input)
 
-    async def _analyzer_step_executor(self,step_input: StepInput, step_name:str, artifacts_attr: str, agent: Agent) -> StepOutput:
-            current_context = step_input.get_step_content("ResolveContext")
-            artifacts = getattr(current_context, artifacts_attr, None)
-            if artifacts is None:
-                LOGGER.info(f"{step_name} skipped: {artifacts_attr} is None")
-                return StepOutput(step_name=step_name, content=None)
-            name = agent.name or step_name
-            try:
-                res: AgentResult = await run_artifact_analyzer(
-                    agent=agent,
-                    artifacts=artifacts,
-                    output_language=current_context.language,
-                    prompt_builder=self.prompt_builder,
-                    dataset_name=current_context.dataset_name,
-                )
-            except Exception as e:
-                LOGGER.error(f"Error executing analyzer '{name}': {e}")
-                res = AgentResult(agent_name=name, error_message=str(e))
-            return StepOutput(step_name=step_name, content=res)
+    async def _analyzer_step_executor(
+        self, step_input: StepInput, step_name: str, artifacts_attr: str, agent: Agent
+    ) -> StepOutput:
+        current_context = step_input.get_step_content("ResolveContext")
+        artifacts = getattr(current_context, artifacts_attr, None)
+        if artifacts is None:
+            LOGGER.info(f"{step_name} skipped: {artifacts_attr} is None")
+            return StepOutput(step_name=step_name, content=None)
+        name = agent.name or step_name
+        try:
+            res: AgentResult = await run_artifact_analyzer(
+                agent=agent,
+                artifacts=artifacts,
+                output_language=current_context.language,
+                prompt_builder=self.prompt_builder,
+                dataset_name=current_context.dataset_name,
+            )
+        except Exception as e:
+            LOGGER.error(f"Error executing analyzer '{name}': {e}")
+            res = AgentResult(agent_name=name, error_message=str(e))
+        return StepOutput(step_name=step_name, content=res)
 
     async def _step_dataset_analyzer(self, step_input: StepInput) -> StepOutput:
         """Execute DatasetArtifactsAnalyzer if dataset_artifacts are present."""
-        return await self._analyzer_step_executor(step_input, step_name="DatasetArtifactsAnalyzer", artifacts_attr="dataset_artifacts", agent=self.dataset_analyzer)
+        return await self._analyzer_step_executor(
+            step_input,
+            step_name="DatasetArtifactsAnalyzer",
+            artifacts_attr="dataset_artifacts",
+            agent=self.dataset_analyzer,
+        )
 
     async def _step_training_analyzer(self, step_input: StepInput) -> StepOutput:
         """Execute TrainingArtifactsAnalyzer if training_artifacts are present."""
-        return await self._analyzer_step_executor(step_input, step_name="TrainingArtifactsAnalyzer", artifacts_attr="training_artifacts", agent=self.training_analyzer)
+        return await self._analyzer_step_executor(
+            step_input,
+            step_name="TrainingArtifactsAnalyzer",
+            artifacts_attr="training_artifacts",
+            agent=self.training_analyzer,
+        )
 
     async def _step_checkpoint_analyzer(self, step_input: StepInput) -> StepOutput:
         """Execute ModelCheckpointArtifactsAnalyzer if model_checkpoint_artifacts are present."""
-        return await self._analyzer_step_executor(step_input, step_name="ModelCheckpointArtifactsAnalyzer", artifacts_attr="model_checkpoint_artifacts", agent=self.checkpoint_analyzer)
+        return await self._analyzer_step_executor(
+            step_input,
+            step_name="ModelCheckpointArtifactsAnalyzer",
+            artifacts_attr="model_checkpoint_artifacts",
+            agent=self.checkpoint_analyzer,
+        )
 
     async def _step_deepchecks_analyzer(self, step_input: StepInput) -> StepOutput:
         """Execute DeepchecksArtifactsAnalyzer if deepchecks_artifacts are present."""
-        return await self._analyzer_step_executor(step_input, step_name="DeepchecksArtifactsAnalyzer", artifacts_attr="deepchecks_artifacts", agent=self.deepchecks_analyzer)
+        return await self._analyzer_step_executor(
+            step_input,
+            step_name="DeepchecksArtifactsAnalyzer",
+            artifacts_attr="deepchecks_artifacts",
+            agent=self.deepchecks_analyzer,
+        )
 
     async def _step_cross_artifact_reasoning(self, step_input: StepInput) -> StepOutput:
         """Execute CrossArtifactReasoning synthesis over aggregated analyzer results."""
         reasoner_name = self.reasoner.name or "CrossArtifactReasoningAgent"
-        
+
         artifact_analyzers_result = {}
 
         for step_name in self._analyzers.keys():
@@ -200,9 +217,7 @@ class AnalysisWorkflow(Workflow):
             artifact_analyzers_result[step_name] = content
 
         current_context = step_input.get_step_content("ResolveContext")
-        current_context.agent_results.update(
-            **artifact_analyzers_result
-        )
+        current_context.agent_results.update(**artifact_analyzers_result)
 
         result = await self.reasoning_workflow.arun(
             ReasoningWorkflowInput(
@@ -213,7 +228,9 @@ class AnalysisWorkflow(Workflow):
         cross_artifact_result = result.content
         summary = (
             cross_artifact_result.additional_outputs.get("summary", None)
-            if cross_artifact_result and hasattr(cross_artifact_result, "additional_outputs") and cross_artifact_result.additional_outputs
+            if cross_artifact_result
+            and hasattr(cross_artifact_result, "additional_outputs")
+            and cross_artifact_result.additional_outputs
             else None
         )
         current_context.agent_results[reasoner_name] = cross_artifact_result
@@ -222,9 +239,8 @@ class AnalysisWorkflow(Workflow):
             context=current_context,
             summary=summary,
         ).to_api_response()
-        
+
         return StepOutput(
             step_name="CrossArtifactReasoning",
             content=res,
         )
-

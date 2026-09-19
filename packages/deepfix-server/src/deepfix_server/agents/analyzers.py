@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import traceback
 from typing import Optional
-import json
+
 from agno.agent import Agent
 from agno.models.base import Model
 from deepfix_core.models import AgentResult, Artifacts
@@ -33,6 +34,7 @@ def _resolve_model(
         if llm_config is not None:
             return create_agno_model(llm_config)
         from ..config import settings
+
         return create_agno_model(settings.get_llm_config())
     except Exception as exc:
         LOGGER.warning("Could not resolve Agno model: %s", exc)
@@ -50,7 +52,7 @@ def create_dataset_analyzer(
         description="Analyzes dataset artifacts, data distributions, and feature properties.",
         instructions=DATASET_SYSTEM_PROMPT,
         output_schema=ArtifactAnalysisResult,
-        use_json_mode=True
+        use_json_mode=True,
     )
 
 
@@ -65,7 +67,7 @@ def create_training_analyzer(
         description="Analyzes model training dynamics, loss curves, and optimization parameters.",
         instructions=TRAINING_SYSTEM_PROMPT,
         output_schema=ArtifactAnalysisResult,
-        use_json_mode=True
+        use_json_mode=True,
     )
 
 
@@ -80,7 +82,7 @@ def create_checkpoint_analyzer(
         description="Analyzes model checkpoints, weights, and architecture properties.",
         instructions=CHECKPOINT_SYSTEM_PROMPT,
         output_schema=ArtifactAnalysisResult,
-        use_json_mode=True
+        use_json_mode=True,
     )
 
 
@@ -95,7 +97,7 @@ def create_deepchecks_analyzer(
         description="Analyzes Deepchecks data validation test suites and integrity checks.",
         instructions=DEEPCHECKS_SYSTEM_PROMPT,
         output_schema=ArtifactAnalysisResult,
-        use_json_mode=True
+        use_json_mode=True,
     )
 
 
@@ -139,14 +141,16 @@ async def run_artifact_analyzer(
         content = run_output.content
         if isinstance(content, str):
             content = json.loads(content)
-        
+
         if isinstance(content, dict):
             content = ArtifactAnalysisResult.model_validate(content)
-        
+
         if isinstance(content, ArtifactAnalysisResult):
             analysis = content.analysis
         else:
-            msg = f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
+            msg = (
+                f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
+            )
             LOGGER.error(msg)
             raise ValueError(msg)
 

@@ -19,8 +19,6 @@ from .artifacts import (
     ModelCheckpointArtifacts,
     TrainingArtifacts,
 )
-from .fixes import FinalFixReport
-
 
 class AnalysisJobStatus(StrEnum):
     PENDING = "PENDING"
@@ -41,7 +39,6 @@ class APIResponse(BaseModel):
         error_messages: Optional dictionary mapping agent names to error messages
             if they failed.
         job_id: Optional unique identifier for the fix job if triggered.
-        fix_report: Optional result of the autonomous fix session.
     """
 
     agent_results: Dict[str, AgentResult] = Field(
@@ -60,12 +57,7 @@ class APIResponse(BaseModel):
     job_id: Optional[str] = Field(
         default=None, description="Unique identifier for the fix job"
     )
-    fix_report: Optional[FinalFixReport] = Field(
-        default=None, description="Result of the autonomous fix session if executed"
-    )
-    fix_session_result: Optional[Any] = Field(
-        default=None, description="Legacy alias for fix_report"
-    )
+    
 
     def get_results_as_dataframe(self) -> pd.DataFrame:
         """Convert all agent results to a single pandas DataFrame.
@@ -87,9 +79,6 @@ class APIResponse(BaseModel):
         """
         df = self.get_results_as_dataframe()
         if df.empty or "agent_name" not in df.columns:
-            if self.fix_report is not None:
-                status = "Success" if self.fix_report.success else "Failed"
-                return f"Autonomous Fix Session Result:\nStatus: {status}\nApplied Fixes: {len(self.fix_report.applied_fixes)}"
             if self.summary:
                 return f"DEEPFIX ANALYSIS RESULT\n\nSummary:\n{self.summary}"
             return "No analysis results found."
@@ -154,11 +143,6 @@ class APIResponse(BaseModel):
         df = self.get_results_as_dataframe()
 
         if df.empty or "agent_name" not in df.columns:
-            if self.fix_report is not None:
-                status = "Success" if self.fix_report.success else "Failed"
-                return f"Autonomous Fix Session Result:\nStatus: {status}\nApplied Fixes: {len(self.fix_report.applied_fixes)}"
-            if self.fix_session_result is not None:
-                return f"Autonomous Fix Session Result:\nStatus: {getattr(self.fix_session_result, 'stop_reason', 'Finished')}"
             if self.summary:
                 return f"DEEPFIX ANALYSIS RESULT\n\nSummary:\n{self.summary}"
             raise ValueError(
@@ -516,54 +500,4 @@ class AgentContext(APIRequest):
             self.model_checkpoint_artifacts = artifact
         else:
             raise ValueError(f"Invalid artifact type: {type(artifact)}")
-
-
-class AutonomousFixRequest(APIRequest):
-    """Request model for the autonomous fix loop endpoint.
-
-    Attributes:
-        baseline_run_id: MLflow run ID of the baseline model run.
-        model_class: Full module path or name of the model class.
-        dataset_load_code: Python code snippet used to load dataset.
-        experiment_name: MLflow experiment name for fix iterations.
-        mlflow_experiment_id: MLflow experiment ID.
-        hf_dataset_dir: Directory path for Hugging Face dataset.
-        hf_dataset_name: Name of Hugging Face dataset.
-        dataset_name: Name of dataset logged in MLflow.
-        dataset_digest: Digest of dataset.
-        dataset_uri: URI of dataset.
-        label_column: Name of label/target column.
-    """
-
-    baseline_run_id: str = Field(
-        description="MLflow run ID of the baseline model run"
-    )
-    model_class: str = Field(description="Model class name or path")
-    dataset_load_code: Optional[str] = Field(
-        default=None, description="Python code to load the dataset"
-    )
-    experiment_name: str = Field(
-        default="deepfix-autonomous", description="MLflow experiment name"
-    )
-    mlflow_experiment_id: str = Field(
-        default="0", description="MLflow experiment ID"
-    )
-    hf_dataset_dir: Optional[str] = Field(
-        default=None, description="Directory path for Hugging Face dataset"
-    )
-    hf_dataset_name: Optional[str] = Field(
-        default=None, description="Name of Hugging Face dataset"
-    )
-    dataset_name: str = Field(
-        default="deepfix_dataset", description="Name of the dataset"
-    )
-    dataset_digest: Optional[str] = Field(
-        default=None, description="Digest of dataset"
-    )
-    dataset_uri: Optional[str] = Field(
-        default=None, description="URI of dataset"
-    )
-    label_column: Optional[str] = Field(
-        default=None, description="Name of label column"
-    )
 

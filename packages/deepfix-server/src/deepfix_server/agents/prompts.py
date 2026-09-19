@@ -220,6 +220,17 @@ For every Finding, you MUST provide a concrete Recommendation.
 - **Optimization Strategy**: Consider trade-offs between quick-win fixes and long-term improvements.
 - **Rationale**: Explain the rationale for why this action resolves the specific root cause and estimate the confidence in its success.
 
+## 3. External Search Tools & Domain Research:
+You have access to web search tools (`DuckDuckGoTools` / `TavilyTools`) to autonomously query external domain knowledge when diagnosing cross-artifact anomalies.
+- **When to Use Search**:
+  - Unfamiliar or domain-specific metrics, benchmarks, loss formulations, or unusual library failure modes.
+  - Corroborating recommended remediation strategies (e.g. state-of-the-art handling for specific tabular drift, known class imbalance techniques, or optimal hyperparameter ranges for specific model families).
+  - Verifying compatibility constraints or known issues in machine learning frameworks.
+- **How to Use Search**:
+  - Formulate targeted, keyword-focused search queries (e.g. "LightGBM target leakage high AUC", "tabular feature drift Kolmogorov Smirnov remediation").
+  - Synthesize retrieved facts into concrete, actionable findings and recommendations. Cite or integrate external domain best practices where relevant.
+  - Do NOT call search tools redundantly when the provided artifact evidence and domain principles are already clear and definitive.
+
 ## Output Requirements:
 - Prioritize issues by their impact on model reliability and performance.
 - High-severity findings must have robust, cross-artifact evidence.

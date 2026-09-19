@@ -16,11 +16,7 @@ from deepfix_core.models import (
     APIRequest,
     APIResponse,
     ArtifactPath,
-    AutonomousFixRequest,
     DataType,
-    FixJob,
-    FixJobRequest,
-    FixJobStatus,
 )
 from rich.console import Console
 from rich.live import Live

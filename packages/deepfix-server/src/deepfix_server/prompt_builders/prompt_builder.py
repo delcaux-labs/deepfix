@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 from deepfix_core.models import Artifacts
 
 from ..config import PromptConfig
-from ..logging import get_logger
 from .base import BasePromptBuilder
 from .checkpoint_prompt import CheckpointPromptBuilder
 from .dataset_prompt import DatasetPromptBuilder
@@ -32,11 +31,11 @@ class PromptBuilder:
             config: Optional configuration for the PromptBuilder
             config_path: Optional path to configuration file
         """
-        
+
         self.prompt_builders = self._initialize_prompt_builders()
         self.config: Optional[PromptConfig] = config or PromptConfig()
-        #self.logger = get_logger(self.__class__.__name__)
-        #self.logger.debug("PromptBuilder initialized successfully")
+        # self.logger = get_logger(self.__class__.__name__)
+        # self.logger.debug("PromptBuilder initialized successfully")
 
     def build_prompt(
         self,
