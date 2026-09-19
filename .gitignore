@@ -88,6 +88,10 @@ cover/
 
 node_modules/
 
+.deepfix
+*.db-shm
+*.db-wal
+.tmp_lancedb
 
 # Translations
 *.mo
