@@ -244,8 +244,8 @@ class DeepchecksParsedResult(BaseModel):
             Dictionary representation of the parsed result.
         """
         dumped_dict = self.model_dump()
-        if exclude_images:
-            dumped_dict.pop("display_images")
+        if exclude_images and "result" in dumped_dict and isinstance(dumped_dict["result"], dict):
+            dumped_dict["result"].pop("display_images", None)
         return dumped_dict
 
     @classmethod
@@ -326,7 +326,7 @@ class DeepchecksArtifacts(Artifacts):
     )
     config: Optional[DeepchecksConfig] = Field(default=None, description="Config of the artifact")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, exclude_images: bool = False) -> Dict[str, Any]:
         """Convert Deepchecks artifacts to a dictionary.
 
         Returns:
@@ -334,7 +334,7 @@ class DeepchecksArtifacts(Artifacts):
         """
         dumped_dict = self.model_dump()
         dumped_dict["results"] = {
-            k: [r.to_dict() for r in v] for k, v in self.results.items()
+            k: [r.to_dict(exclude_images=exclude_images) for r in v] for k, v in self.results.items()
         }
         dumped_dict["config"] = self.config.to_dict() if self.config else None
         return dumped_dict
@@ -871,7 +871,7 @@ class IRStatistics(BaseDatasetStatistics):
     Composite of NLP and Tabular statistics, plus IR-specific metrics.
     """
 
-    num_samples: int = Field(..., description="Total number of samples")
+    num_samples: int = Field(default=0, description="Total number of samples")
     num_queries: Optional[int] = Field(
         default=None, description="Total number of unique queries"
     )
@@ -899,15 +899,20 @@ class IRStatistics(BaseDatasetStatistics):
         return {k: v for k, v in dumped_dict.items() if v is not None}
 
     @classmethod
-    def from_dict(cls, d: dict) -> "IRStatistics":
-        """Create IRStatistics from a dictionary."""
-        if "nlp_statistics" in d and d["nlp_statistics"]:
-            d["nlp_statistics"] = NLPStatistics.from_dict(d["nlp_statistics"])
-        if "tabular_statistics" in d and d["tabular_statistics"]:
-            d["tabular_statistics"] = TabularStatistics.from_dict(
-                d["tabular_statistics"]
+    def from_dict(cls, d: Any) -> "IRStatistics":
+        """Create IRStatistics from a dictionary or return existing instance."""
+        if isinstance(d, cls):
+            return d
+        if not isinstance(d, dict):
+            return cls(num_samples=0)
+        d_copy = dict(d)
+        if "nlp_statistics" in d_copy and d_copy["nlp_statistics"]:
+            d_copy["nlp_statistics"] = NLPStatistics.from_dict(d_copy["nlp_statistics"])
+        if "tabular_statistics" in d_copy and d_copy["tabular_statistics"]:
+            d_copy["tabular_statistics"] = TabularStatistics.from_dict(
+                d_copy["tabular_statistics"]
             )
-        return cls(**d)
+        return cls(**d_copy)
 
 
 ## Dataset
@@ -923,13 +928,25 @@ class DatasetArtifacts(Artifacts):
     """
 
     dataset_name: str = Field(..., description="Name of the dataset")
-    train_statistics: BaseDatasetStatistics = Field(
-        ..., description="Train statistics of the dataset"
-    )
+    train_statistics: Union[
+        IRStatistics,
+        VisionStatistics,
+        TabularStatistics,
+        NLPStatistics,
+        BaseDatasetStatistics,
+        Dict[str, Any],
+    ] = Field(..., description="Train statistics of the dataset")
     task_type: TaskType = Field(..., description="Task type of the dataset")
-    test_statistics: Optional[BaseDatasetStatistics] = Field(
-        default=None, description="Test statistics of the dataset"
-    )
+    test_statistics: Optional[
+        Union[
+            IRStatistics,
+            VisionStatistics,
+            TabularStatistics,
+            NLPStatistics,
+            BaseDatasetStatistics,
+            Dict[str, Any],
+        ]
+    ] = Field(default=None, description="Test statistics of the dataset")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert dataset artifacts to a dictionary.
@@ -969,7 +986,9 @@ class DatasetArtifacts(Artifacts):
         task_type = TaskType(d["task_type"])
         d["task_type"] = task_type
 
-        def load_statistics(d: dict) -> BaseDatasetStatistics:
+        def load_statistics(d: Any) -> BaseDatasetStatistics:
+            if isinstance(d, BaseDatasetStatistics):
+                return d
             if task_type in [
                 TaskType.OBJECT_DETECTION,
                 TaskType.IMAGE_CLASSIFICATION,

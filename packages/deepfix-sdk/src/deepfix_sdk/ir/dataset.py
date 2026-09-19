@@ -1,10 +1,20 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
-
+import io
+import json
+import os
+from urllib.parse import urlparse
+import tiktoken
+try:
+    import boto3
+except ImportError:
+    boto3 = None
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import TruncatedSVD
 from deepfix_core.models import DataType
-
+from tqdm import tqdm
 from ..data.base import BaseDataset
 from ..logging import get_logger
 from ..nlp.dataset import NLPDataset
@@ -30,6 +40,8 @@ class InformationRetrievalDataset(BaseDataset):
         topics: pd.DataFrame,
         qrels: pd.DataFrame,
         corpus_iter: Callable[[], Iterable[Dict[str, Any]]],
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ):
         """
         Args:
@@ -57,8 +69,11 @@ class InformationRetrievalDataset(BaseDataset):
         # Classes are strictly binary relevance "0" and "1"
         self.model_classes = ["0", "1"]
         self.fp_probabilities = [1.0, 0.0]
+        self.enable_embedding_pca = enable_embedding_pca
+        self.embedding_pca_components = embedding_pca_components
 
         self.tokenizer = None
+        self.retrievals: Optional[pd.DataFrame] = None
 
     # ------------------------------------------------------------------
     # pt.datasets.Dataset interface
@@ -192,10 +207,14 @@ class InformationRetrievalDataset(BaseDataset):
 
     @property
     def metadata(self) -> pd.DataFrame:
+        if self._metadata is None:
+            self.dataset # triggers metadata calculation
         return self._metadata
 
     @property
     def categorical_metadata(self) -> list[str]:
+        if self._categorical_metadata is None:
+            self.dataset # triggers metadata calculation
         return list(self._categorical_metadata)
 
     @property
@@ -222,6 +241,8 @@ class InformationRetrievalDataset(BaseDataset):
         cls,
         pt_dataset: Any,
         dataset_name: Optional[str] = None,
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ) -> "InformationRetrievalDataset":
         """Create from an existing PyTerrier dataset (e.g. ``pt.get_dataset(...)``).
 
@@ -242,6 +263,8 @@ class InformationRetrievalDataset(BaseDataset):
             topics=pt_dataset.get_topics(),
             qrels=pt_dataset.get_qrels(),
             corpus_iter=lambda: pt_dataset.get_corpus_iter(),
+            enable_embedding_pca=enable_embedding_pca,
+            embedding_pca_components=embedding_pca_components,
         )
 
     @classmethod
@@ -253,6 +276,8 @@ class InformationRetrievalDataset(BaseDataset):
         qrels: List[Dict[str, Any]],
         query_embeddings: Optional[Dict[str, np.ndarray]] = None,
         corpus_embeddings: Optional[Dict[str, np.ndarray]] = None,
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ) -> "InformationRetrievalDataset":
         """Backward-compatible constructor from raw dicts.
 
@@ -283,6 +308,8 @@ class InformationRetrievalDataset(BaseDataset):
             topics=topics_df,
             qrels=qrels_df,
             corpus_iter=_corpus_iter,
+            enable_embedding_pca=enable_embedding_pca,
+            embedding_pca_components=embedding_pca_components,
         )
 
     # ------------------------------------------------------------------
@@ -335,12 +362,16 @@ class InformationRetrievalDataset(BaseDataset):
             topics=self._topics,
             qrels=train_df.reset_index(drop=True),
             corpus_iter=_filtered_corpus_iter(train_docnos),
+            enable_embedding_pca=self.enable_embedding_pca,
+            embedding_pca_components=self.embedding_pca_components,
         )
         test_ds = InformationRetrievalDataset(
             dataset_name=f"{self.dataset_name}_test",
             topics=self._topics,
             qrels=test_df.reset_index(drop=True),
             corpus_iter=_filtered_corpus_iter(test_docnos),
+            enable_embedding_pca=self.enable_embedding_pca,
+            embedding_pca_components=self.embedding_pca_components,
         )
 
         return train_ds, test_ds
@@ -363,13 +394,6 @@ class InformationRetrievalDataset(BaseDataset):
     def get_tokens(
         text: str, tokenizer=None
     ) -> np.ndarray:
-        try:
-            import tiktoken
-        except ImportError:
-            raise ImportError(
-                "IR dependencies are required for this module. "
-                "Install with: pip install deepfix-sdk[ir]"
-            ) from None
         if tokenizer is None:
             tokenizer = tiktoken.get_encoding("o200k_base")
         return tokenizer.encode(text)
@@ -381,6 +405,7 @@ class InformationRetrievalDataset(BaseDataset):
     ) -> None:
 
         results_df = retrievals.copy()
+        self.retrievals = results_df
         qrels_df = self.qrels
 
         assert np.array([a for a in results_df["score"]]).shape[1] == len(
@@ -408,33 +433,53 @@ class InformationRetrievalDataset(BaseDataset):
 
         return None
 
-    def set_embeddings(self, embedder: Callable[[str], np.ndarray]) -> None:
+    def set_embeddings(
+        self,
+        embedder: Callable[[str], np.ndarray],
+        max_workers: int = 4,
+    ) -> None:
         """Compute and set embeddings for the dataset using the provided embedder.
 
-        The embedder is applied to queries and documents separately, and the
-        resulting pair embedding is the difference (query - document).
+        The embedder is applied concurrently across unique queries and documents,
+        and the resulting pair embedding is the difference (query - document).
         """
+        
         logger.info("Computing embeddings for '%s' ...", self.dataset_name)
 
-        self.dataset # ensure properties are computed
+        self.dataset  # ensure properties are computed
 
-        cache: Dict[str, np.ndarray] = {}
+        # 1. Parse all query-doc pairs
+        parsed_pairs = [self.parse_pair(text) for text in self._text_data.text]
 
-        def get_embedding(text: str) -> np.ndarray:
-            if text not in cache:
-                cache[text] = embedder(text)
-            return cache[text]
+        # 2. Collect unique non-empty texts across all queries and documents
+        unique_texts = list({text for pair in parsed_pairs for text in pair if text and text.strip()})
 
+        # 3. Embed unique texts concurrently using thread pool
+        num_workers = min(max_workers, max(1, len(unique_texts)))
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            embeddings_list = list(executor.map(embedder, unique_texts))
+
+        cache: Dict[str, np.ndarray] = dict(zip(unique_texts, embeddings_list))
+
+        # Determine embedding dimension and create zero vector fallback for empty texts
+        sample_emb = embeddings_list[0] if embeddings_list else np.zeros(1)
+        zero_emb = np.zeros(len(sample_emb))
+        cache[""] = zero_emb
+
+        # 4. Compute differences, L1 norms, and cosine similarities in memory
         embeddings = []
         l1_norm = []
         cosine_sim = []
-        for text in self._text_data.text:
-            q_text, d_text = self.parse_pair(text)
-            q_emb = get_embedding(q_text)
-            d_emb = get_embedding(d_text)
-            embeddings.append(q_emb - d_emb)
-            l1_norm.append(np.linalg.norm(q_emb - d_emb, ord=1))
-            cosine_sim.append(np.dot(q_emb, d_emb) / (np.linalg.norm(q_emb) * np.linalg.norm(d_emb)))
+        for q_text, d_text in tqdm(parsed_pairs, desc="Computing embeddings"):
+            q_emb = cache.get(q_text, zero_emb)
+            d_emb = cache.get(d_text, zero_emb)
+            diff = q_emb - d_emb
+            embeddings.append(diff)
+            l1_norm.append(np.linalg.norm(diff, ord=1))
+            norm_q = np.linalg.norm(q_emb)
+            norm_d = np.linalg.norm(d_emb)
+            denom = norm_q * norm_d
+            cosine_sim.append(float(np.dot(q_emb, d_emb) / denom) if denom > 0 else 0.0)
 
         self._l1_norm = np.array(l1_norm)
         self._cosine_sim = np.array(cosine_sim)
@@ -476,7 +521,26 @@ class InformationRetrievalDataset(BaseDataset):
             df.drop(columns=["doc_id",], inplace=True)
             cat_features.remove('doc_id')
 
-        # TODO: provide embeddings as features for tabular dataset?
+        if isinstance(self._embeddings, np.ndarray):
+            try:
+                if self.enable_embedding_pca:
+                    n_samples, n_features = self._embeddings.shape            
+                    n_components = min(self.embedding_pca_components, n_features, max(1, n_samples - 1))            
+                    svd = TruncatedSVD(n_components=n_components, random_state=42)
+                    reduced = svd.fit_transform(self._embeddings)
+                    emb_cols = [f"emb_pca_{i}" for i in range(n_components)]
+                    emb_df = pd.DataFrame(reduced, columns=emb_cols, index=df.index)
+                    df = pd.concat([df, emb_df], axis=1)
+                else:
+                    n_features = self._embeddings.shape[1]
+                    emb_cols = [f"emb_{i}" for i in range(n_features)]
+                    emb_df = pd.DataFrame(self._embeddings, columns=emb_cols, index=df.index)
+                    df = pd.concat([df, emb_df], axis=1)
+            except Exception as e:
+                logger.warning("Skipping embedding feature extraction for dataset '%s'. Error: %s", self.dataset_name, e)
+        else:
+            logger.warning("Skipping embedding feature extraction for dataset '%s'. Embeddings are not available.", self.dataset_name)
+        
 
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
@@ -500,12 +564,7 @@ class InformationRetrievalDataset(BaseDataset):
         **kwargs,
     ) -> str:
         """Push IR dataset metadata and queries/qrels to S3 bucket and return canonical S3 URI."""
-        import io
-        import json
-        import os
-
-        import boto3
-
+        
         prefix = s3_prefix.strip("/") if s3_prefix else f"datasets/{self.dataset_name}"
         s3_key = (
             f"{prefix}/{self.dataset_name}_ir.json"
@@ -549,12 +608,7 @@ class InformationRetrievalDataset(BaseDataset):
         **kwargs,
     ) -> "InformationRetrievalDataset":
         """Load IR dataset from an S3 URI (JSON format)."""
-        import io
-        import json
-        import os
-        from urllib.parse import urlparse
-
-        import boto3
+        
 
         parsed = urlparse(s3_uri)
         bucket = parsed.netloc

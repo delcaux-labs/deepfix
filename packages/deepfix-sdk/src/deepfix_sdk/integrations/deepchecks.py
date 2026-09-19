@@ -29,7 +29,7 @@ from deepfix_core.models import (
 
 from ..data.base import BaseDataset
 from ..logging import get_logger
-
+from ..ir.metrics import compute_ir_ranking_metrics
 LOGGER = get_logger(__name__)
 
 
@@ -380,6 +380,58 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
             combined_results[f"nlp_{category}"] = results
         for category, results in tabular_artifact.results.items():
             combined_results[f"tabular_{category}"] = results
+
+        # 4. Compute Learning-to-Rank (LTR) metrics if retrievals are available
+        eval_ds = test_data if test_data is not None else train_data
+        retrievals_df = getattr(eval_ds, "retrievals", None)
+
+        if retrievals_df is None and model is not None and hasattr(model, "retrieve_dataframe"):
+            try:
+                retrievals_df = model.retrieve_dataframe(eval_ds, top_k=5)
+            except Exception as e:
+                LOGGER.warning("Could not automatically retrieve rankings with model: %s", e)
+
+        if retrievals_df is not None and not retrievals_df.empty:
+            
+
+            try:
+                qrels_df = eval_ds.get_qrels() if hasattr(eval_ds, "get_qrels") else eval_ds.qrels
+                ranking_metrics = compute_ir_ranking_metrics(
+                    qrels_df=qrels_df,
+                    retrievals_df=retrievals_df,
+                    k=5,
+                )
+                ndcg = ranking_metrics.get("nDCG@5", 0.0)
+                mrr = ranking_metrics.get("MRR", 0.0)
+                p5 = ranking_metrics.get("P@5", 0.0)
+                r5 = ranking_metrics.get("R@5", 0.0)
+
+                summary_text = (
+                    f"LTR Evaluation Metrics: nDCG@5={ndcg:.4f}, MRR={mrr:.4f}, "
+                    f"P@5={p5:.4f}, R@5={r5:.4f}"
+                )
+                display_text = (
+                    f"Information Retrieval Ranking Performance:\n"
+                    f"  - nDCG@5: {ndcg:.4f}\n"
+                    f"  - MRR:    {mrr:.4f}\n"
+                    f"  - P@5:    {p5:.4f}\n"
+                    f"  - R@5:    {r5:.4f}"
+                )
+
+                ranking_result = DeepchecksParsedResult(
+                    header="Information Retrieval Ranking Performance",
+                    result=DeepchecksCheckResult(
+                        check="Ranking Performance",
+                        summary=summary_text,
+                        value=ranking_metrics,
+                        display_text=display_text,
+                    ),
+                )
+                combined_results["ir_ranking"] = [ranking_result]
+                LOGGER.info("Calculated IR ranking metrics: %s", ranking_metrics)
+            except Exception as e:
+                LOGGER.warning("Failed to calculate IR ranking metrics: %s", e, exc_info=True)
+
 
         artifact = DeepchecksArtifacts(
             dataset_name=dataset_name,

@@ -34,6 +34,7 @@ from .artifacts import ArtifactRepository, ArtifactStatus
 from .config import ArtifactConfig, MLflowConfig
 from .data.base import BaseDataset
 from .logging import get_logger
+from .settings import settings
 
 console = Console()
 LOGGER = get_logger(__name__)
@@ -98,7 +99,7 @@ class DeepFixClient:
 
     def _get_auth_headers(self) -> dict[str, str]:
         """Construct authorization headers if DEEPFIX_API_KEY is configured."""
-        api_key = os.getenv("DEEPFIX_API_KEY")
+        api_key = settings.DEEPFIX_API_KEY
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -410,6 +411,11 @@ class DeepFixClient:
         }
 
         response = requests.post(url, data=payload, headers=headers)
+        if not response.ok:
+            raise requests.HTTPError(
+                f"{response.status_code} Client Error: {response.text} for url: {response.url}",
+                response=response,
+            )
         response.raise_for_status()
         out = response.json()
 

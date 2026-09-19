@@ -1,10 +1,10 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from deepfix_core.models import (
     AgentResult,
     Analysis,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ArtifactAnalysisResult(BaseModel):
@@ -19,6 +19,23 @@ class ArtifactAnalysisResult(BaseModel):
     analysis: List[Analysis] = Field(
         default=[], description="List of Analysis elements"
     )
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def _coerce_summary(cls, v: Any) -> Optional[str]:
+        if isinstance(v, list):
+            return "\n".join(
+                f"- {item}" if not str(item).strip().startswith("-") else str(item)
+                for item in v
+            )
+        return v
+
+    @field_validator("analysis", mode="before")
+    @classmethod
+    def _coerce_analysis(cls, v: Any) -> List[Any]:
+        if isinstance(v, dict):
+            return [v]
+        return v
 
 
 class ReasoningWorkflowInput(BaseModel):
@@ -56,6 +73,25 @@ class CrossArtifactReasoningResult(BaseModel):
         description="Summary of the cross-artifact reasoning and analysis",
         default="",
     )
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def _coerce_summary(cls, v: Any) -> str:
+        if isinstance(v, list):
+            return "\n".join(
+                f"- {item}" if not str(item).strip().startswith("-") else str(item)
+                for item in v
+            )
+        if v is None:
+            return ""
+        return str(v)
+
+    @field_validator("analysis", mode="before")
+    @classmethod
+    def _coerce_analysis(cls, v: Any) -> List[Any]:
+        if isinstance(v, dict):
+            return [v]
+        return v
 
 
 class SynthesisJudgeInput(BaseModel):

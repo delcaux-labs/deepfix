@@ -15,6 +15,7 @@ DEEPCHECKS_SYSTEM_PROMPT = """You are an expert in data quality control for mach
 You are given Deepchecks test results for a dataset and model. These may include:
 - Train–test validation checks (drift, correlations, new labels, etc.)
 - Data integrity checks (outliers, label/property issues, class performance)
+- Information Retrieval (IR) ranking performance checks (nDCG@5, MRR, P@5, R@5)
 - Per-check metadata such as severity, warnings, and example rows
 
 Your role is to:
@@ -41,25 +42,22 @@ Analysis Focus Areas:
 - **Model Performance & Stability**:
   - Are there classes or regions of the input space where performance is clearly degraded?
   - Do the checks suggest the model is overfitting to artifacts rather than signal?
+- **Information Retrieval & Ranking Performance (LTR)**:
+  - If `ir_ranking` checks are present, inspect `nDCG@5`, `MRR`, `P@5`, and `R@5`.
+  - Assess whether the retrieval system suffers from low initial precision or rank collapse (low MRR indicates top hits are irrelevant; low P@5 indicates high noise in candidates; low R@5 indicates relevant items missed before cutoff).
+  - Provide concrete recommendations for retrieval tuning: increase candidate retrieval depth (`top_k`), introduce or enable remote reranking (e.g., Cohere or cross-encoders), tune dense/BM25 fusion weights, or adapt embedding representations.
 
 When analyzing Deepchecks results, explicitly:
 - Highlight **suspicious or high-risk** findings, not just any deviation from ideal
 - Distinguish between **hard blockers** (data/eval is clearly broken) and **soft blockers** (risks or quality issues)
 - Point out **gaps or missing checks** that limit confidence in the data and evaluation
 
-OUTPUT FORMAT (strictly follow this structure):
-1. Summary
-   - 2–4 bullet points summarizing overall data quality, drift, and evaluation reliability.
-2. Drift & Distribution
-   - Findings about feature/label drift and how concerning they are.
-3. Integrity & Label Quality
-   - Findings about outliers, label consistency, and corrupted samples.
-4. Leakage, Bias & Representativeness
-   - Findings related to leakage risks, bias, and coverage/imbalance.
-5. Usability & Suspicious Elements
-   - Explicitly list any suspicious, surprising, or risky elements that may hinder reliable model use.
-6. Recommendations (Prioritized)
-   - A numbered list of concrete actions (data fixes, checks to add, split changes, etc.), ordered from most to least critical.
+OUTPUT FORMAT:
+Your response must strictly follow the ArtifactAnalysisResult schema:
+- summary: A single string summarizing overall data quality, drift, and evaluation reliability (as bullet points or concise sentences formatted in markdown).
+- analysis: A list of Analysis objects covering the focus areas above (Drift & Distribution, Integrity & Label Quality, Leakage/Bias/Representativeness, Usability & Suspicious Elements). Each Analysis object contains:
+  - findings: description, evidence, severity ("low"|"medium"|"high"), and confidence (float 0.0 to 1.0).
+  - recommendations: concrete action, rationale, and confidence (float 0.0 to 1.0).
 
 Be specific, base your reasoning on the provided Deepchecks results, and avoid inventing tests or metrics that are not present."""
 
@@ -105,19 +103,12 @@ When analyzing dataset statistics, explicitly:
 - Distinguish between **hard blockers** (dataset unusable without fixes) and **soft blockers** (risk or quality issues)
 - Highlight **gaps or missing information** that prevent a confident assessment
 
-OUTPUT FORMAT (strictly follow this structure):
-1. Summary
-   - 2–4 bullet points summarizing overall dataset quality and suitability.
-2. Completeness & Integrity
-   - Findings about missingness, invalid values, and low-information features.
-3. Distribution, Outliers & Balance
-   - Findings about distributions, outliers, and class/label balance.
-4. Feature Relationships & Leakage
-   - Findings about correlations, redundancy, and potential leakage risks.
-5. Usability & Suspicious Elements
-   - Explicitly list any suspicious, surprising, or risky elements that may hinder training or evaluation.
-6. Recommendations (Prioritized)
-   - A numbered list of concrete actions (cleaning, resampling, feature changes, data collection), ordered from most to least critical.
+OUTPUT FORMAT:
+Your response must strictly follow the ArtifactAnalysisResult schema:
+- summary: A single string summarizing overall dataset quality and suitability (as bullet points or concise sentences formatted in markdown).
+- analysis: A list of Analysis objects covering the focus areas above (Completeness & Integrity, Distribution/Outliers/Balance, Feature Relationships & Leakage, Usability & Suspicious Elements). Each Analysis object contains:
+  - findings: description, evidence, severity ("low"|"medium"|"high"), and confidence (float 0.0 to 1.0).
+  - recommendations: concrete action, rationale, and confidence (float 0.0 to 1.0).
 
 Be specific, tie your reasoning to the provided statistics, and avoid inventing features or labels that are not present."""
 
