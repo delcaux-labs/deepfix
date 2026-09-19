@@ -19,11 +19,7 @@ def push_weights_to_s3(
     aws_secret_access_key: Optional[str] = None,
 ) -> str:
     """Upload model weights / checkpoint file to S3 and return the S3 URI."""
-    bucket = (
-        s3_bucket
-        or os.getenv("AWS_S3_BUCKET")
-        or os.getenv("DEEPFIX_S3_BUCKET")
-    )
+    bucket = s3_bucket or os.getenv("AWS_S3_BUCKET") or os.getenv("DEEPFIX_S3_BUCKET")
     if not bucket:
         raise ValueError(
             "S3 bucket must be specified via --s3-bucket or "

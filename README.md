@@ -91,7 +91,6 @@ This repository contains multiple packages:
 - **deepfix-core**: Core models and types
 - **deepfix-sdk**: Client SDK for interacting with DeepFix server
 - **deepfix-server**: Analysis server with agentic reasoning
-- **deepfix-kb**: Knowledge base for best practices
 
 See the [Architecture Documentation](docs/architecture/overview.md) for details.
 

@@ -46,6 +46,7 @@ def setup_mlflow_tracing(
     log.info("Agno logging setup complete.")
     return
 
+
 @lru_cache(maxsize=1)
 def setup_logging(
     level: str = "INFO",

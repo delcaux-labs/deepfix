@@ -2,9 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from deepfix_core.models import AgentResult, AnalysisJobStatus, FixJobStatus, AgentContext, APIResponse
+from deepfix_core.models import (
+    AgentContext,
+    AgentResult,
+    AnalysisJobStatus,
+    APIResponse,
+)
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Text
+from sqlalchemy import Column, DateTime, Enum, String, Text
 
 from .database import Base
 
@@ -68,12 +73,13 @@ class Result(BaseModel):
             for agent_name, agent_result in self.context.agent_results.items()
         }
 
-    def to_api_response(self,):
+    def to_api_response(
+        self,
+    ):
         return APIResponse(
-        agent_results=self.get_agent_results(),
-        summary=self.summary,
-        additional_outputs=self.additional_outputs,
-        error_messages=self.get_error_messages(),
-        dataset_name=self.context.dataset_name,
+            agent_results=self.get_agent_results(),
+            summary=self.summary,
+            additional_outputs=self.additional_outputs,
+            error_messages=self.get_error_messages(),
+            dataset_name=self.context.dataset_name,
         )
-    

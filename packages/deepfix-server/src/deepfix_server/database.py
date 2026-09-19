@@ -16,6 +16,7 @@ _SessionLocal: Optional[sessionmaker] = None
 # Base class for models
 Base = declarative_base()
 
+
 def ensure_schema_compatibility(engine: Engine) -> None:
     """Ensure SQLite tables have all columns added in newer models."""
     try:
@@ -33,7 +34,9 @@ def ensure_schema_compatibility(engine: Engine) -> None:
                 }
                 for col_name, col_type in expected_columns.items():
                     if col_name not in columns:
-                        conn.exec_driver_sql(f"ALTER TABLE fix_jobs ADD COLUMN {col_name} {col_type}")
+                        conn.exec_driver_sql(
+                            f"ALTER TABLE fix_jobs ADD COLUMN {col_name} {col_type}"
+                        )
                 conn.commit()
     except Exception:
         pass

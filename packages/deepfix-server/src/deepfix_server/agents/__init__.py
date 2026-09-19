@@ -18,7 +18,6 @@ from .reasoning import (
     create_cross_artifact_reasoner,
     create_cross_artifact_reasoning_workflow,
     create_cross_artifact_synthesis_judge,
-    prefetch_knowledge,
 )
 from .schemas import (
     AgentResult,
@@ -41,7 +40,6 @@ __all__ = [
     "create_cross_artifact_synthesis_judge",
     "create_cross_artifact_reasoning_workflow",
     "CrossArtifactReasoningWorkflow",
-    "prefetch_knowledge",
     "run_artifact_analyzer",
     "DEEPCHECKS_SYSTEM_PROMPT",
     "DATASET_SYSTEM_PROMPT",

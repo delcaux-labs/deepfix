@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from agno.models.base import Model
 from agno.models.openai import OpenAIChat
@@ -29,8 +29,12 @@ def create_agno_model(config: LLMConfig) -> Model:
     Raises:
         ValueError: If config is None or api_key is missing.
     """
-    assert isinstance(config, LLMConfig), f"Expected config to be an instance of LLMConfig, got {type(config)}"
-    assert config.api_key, "No LLM API key configured. Please provide LLM configuration."
+    assert isinstance(config, LLMConfig), (
+        f"Expected config to be an instance of LLMConfig, got {type(config)}"
+    )
+    assert config.api_key, (
+        "No LLM API key configured. Please provide LLM configuration."
+    )
 
     model_id = config.model_name
     kwargs: dict[str, Any] = {
@@ -41,7 +45,11 @@ def create_agno_model(config: LLMConfig) -> Model:
     }
     if config.base_url:
         kwargs["base_url"] = config.base_url
-        LOGGER.debug("Initializing Agno OpenAILike model %s (base_url=%s)", model_id, config.base_url)
+        LOGGER.debug(
+            "Initializing Agno OpenAILike model %s (base_url=%s)",
+            model_id,
+            config.base_url,
+        )
         return OpenAILike(**kwargs)
 
     LOGGER.debug("Initializing Agno OpenAIChat model %s", model_id)

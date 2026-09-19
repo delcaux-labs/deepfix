@@ -1,7 +1,6 @@
-import os
-from typing import Dict, List, Optional, Union
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -92,18 +91,42 @@ class Settings(BaseSettings):
 
     # LLM Settings
     llm_api_key: Optional[str] = Field(default=None, alias="DEEPFIX_LLM_API_KEY")
-    llm_base_url: Optional[str] = Field(default="https://api.tensorix.ai/v1", alias="DEEPFIX_LLM_BASE_URL")
-    llm_model_name: str = Field(default="openai/deepseek/deepseek-v4-flash-0731", alias="DEEPFIX_LLM_MODEL_NAME")
+    llm_base_url: Optional[str] = Field(
+        default="https://api.tensorix.ai/v1", alias="DEEPFIX_LLM_BASE_URL"
+    )
+    llm_model_name: str = Field(
+        default="openai/deepseek/deepseek-v4-flash-0731", alias="DEEPFIX_LLM_MODEL_NAME"
+    )
     llm_temperature: float = Field(default=0.7, alias="DEEPFIX_LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=8000, alias="DEEPFIX_LLM_MAX_TOKENS")
     llm_cache: bool = Field(default=True, alias="DEEPFIX_LLM_CACHE")
     llm_track_usage: bool = Field(default=True, alias="DEEPFIX_LLM_TRACK_USAGE")
 
     # Embedder Settings (OpenAI-compatible)
-    embedder_api_key: Optional[str] = Field(default=None, alias="DEEPFIX_EMBEDDER_API_KEY")
-    embedder_base_url: Optional[str] = Field(default=None, alias="DEEPFIX_EMBEDDER_BASE_URL")
-    embedder_model_name: str = Field(default="text-embedding-3-small", alias="DEEPFIX_EMBEDDER_MODEL_NAME")
-    embedder_dimensions: Optional[int] = Field(default=1536, alias="DEEPFIX_EMBEDDER_DIMENSIONS")
+    embedder_api_key: Optional[str] = Field(
+        default=None, alias="DEEPFIX_EMBEDDER_API_KEY"
+    )
+    embedder_base_url: Optional[str] = Field(
+        default=None, alias="DEEPFIX_EMBEDDER_BASE_URL"
+    )
+    embedder_model_name: str = Field(
+        default="text-embedding-3-small", alias="DEEPFIX_EMBEDDER_MODEL_NAME"
+    )
+    embedder_dimensions: Optional[int] = Field(
+        default=1536, alias="DEEPFIX_EMBEDDER_DIMENSIONS"
+    )
+
+    # Search Settings
+    search_provider: Optional[Literal["duckduckgo", "tavily", "none"]] = Field(
+        default=None,
+        validation_alias=AliasChoices("DEEPFIX_SEARCH_PROVIDER", "search_provider"),
+    )
+    tavily_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "TAVILY_API_KEY", "DEEPFIX_TAVILY_API_KEY", "tavily_api_key"
+        ),
+    )
 
     # Database Settings
     database_url: str = Field(
@@ -114,19 +137,29 @@ class Settings(BaseSettings):
 
     # Mlflow
     mlflow_exp_name: str = Field(default="deepfix-server", alias="MLFLOW_EXP_NAME")
-    mlflow_tracking_uri: Optional[str] = Field(default=None, alias="MLFLOW_TRACKING_URI")
+    mlflow_tracking_uri: Optional[str] = Field(
+        default=None, alias="MLFLOW_TRACKING_URI"
+    )
 
     # S3 Settings
     aws_access_key_id: Optional[str] = Field(default=None, alias="AWS_ACCESS_KEY_ID")
-    aws_secret_access_key: Optional[str] = Field(default=None, alias="AWS_SECRET_ACCESS_KEY")
+    aws_secret_access_key: Optional[str] = Field(
+        default=None, alias="AWS_SECRET_ACCESS_KEY"
+    )
     aws_default_region: str = Field(default="us-east-1", alias="AWS_DEFAULT_REGION")
     aws_endpoint_url: Optional[str] = Field(default=None, alias="AWS_ENDPOINT_URL")
     s3_bucket: Optional[str] = Field(default=None, alias="DEEPFIX_S3_BUCKET")
 
     # OTEL Settings
-    otel_exporter_otlp_endpoint: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
-    otel_exporter_otlp_headers: Optional[str] = Field(default=None, alias="OTEL_EXPORTER_OTLP_HEADERS")
-    otel_exporter_otlp_traces_protocol: str = Field(default="http/protobuf", alias="OTEL_EXPORTER_OTLP_TRACES_PROTOCOL")
+    otel_exporter_otlp_endpoint: Optional[str] = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    otel_exporter_otlp_headers: Optional[str] = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    otel_exporter_otlp_traces_protocol: str = Field(
+        default="http/protobuf", alias="OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
+    )
 
     def get_llm_config(self) -> LLMConfig:
         """Create an LLMConfig instance from current settings."""
@@ -152,4 +185,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-

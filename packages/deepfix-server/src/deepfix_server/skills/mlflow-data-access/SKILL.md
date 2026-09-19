@@ -15,9 +15,12 @@ You can download and load the dataset artifact using Python or the provided scri
 import mlflow
 from datasets import load_from_disk
 
+
 def load_dataset_from_mlflow(run_id: str, artifact_path: str = "dataset"):
     # Download the dataset artifact from MLflow
-    local_path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=artifact_path)
+    local_path = mlflow.artifacts.download_artifacts(
+        run_id=run_id, artifact_path=artifact_path
+    )
     # Load it via HuggingFace datasets
     dataset = load_from_disk(local_path)
     return dataset

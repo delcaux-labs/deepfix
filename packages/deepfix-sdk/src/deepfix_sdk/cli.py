@@ -3,7 +3,6 @@ import sys
 from typing import Any, Optional
 
 import typer
-from deepfix_core.models import FixJob, FixJobStatus
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table

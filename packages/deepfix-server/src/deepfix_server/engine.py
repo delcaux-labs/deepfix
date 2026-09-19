@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import traceback
-from typing import Optional
+from typing import List, Optional
 
 import mlflow
-from deepfix_kb import KnowledgeBridge
+from agno.tools import Toolkit
 from deepfix_core.models import AgentContext, AgentResult
 
 from .agents.workflow import AnalysisWorkflow
@@ -22,7 +22,7 @@ class DiagnosticSystem:
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
-        knowledge_bridge: Optional[KnowledgeBridge] = None,
+        tools: Optional[List[Toolkit]] = None,
         num_chains: int = 3,
         prompt_builder: Optional[PromptBuilder] = None,
     ):
@@ -30,17 +30,17 @@ class DiagnosticSystem:
 
         Args:
             config: Optional LLM configuration.
-            knowledge_bridge: Optional KnowledgeBridge instance.
+            tools: Optional search/domain tools for the reasoning agent.
             num_chains: Number of reasoning chains for cross-artifact synthesis.
             prompt_builder: Optional custom prompt builder instance.
         """
         self.llm_config = config
         self.agent_name = self.__class__.__name__
-        self.knowledge_bridge = knowledge_bridge
+        self.tools = tools
         self.num_chains = num_chains
         self.workflow = AnalysisWorkflow(
             llm_config=self.llm_config,
-            knowledge_bridge=self.knowledge_bridge,
+            tools=self.tools,
             num_chains=self.num_chains,
             prompt_builder=prompt_builder,
         )
@@ -60,7 +60,9 @@ class DiagnosticSystem:
                 f"Starting Agno AnalysisWorkflow for dataset '{context.dataset_name}' "
                 f"with {len(context.artifacts)} artifacts..."
             )
-            assert isinstance(context,AgentContext), f"Workflow input is not an AgentContext: type={type(context).__name__}"
+            assert isinstance(context, AgentContext), (
+                f"Workflow input is not an AgentContext: type={type(context).__name__}"
+            )
             return await self.workflow.arun(context)
 
         except Exception as e:

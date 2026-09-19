@@ -25,8 +25,8 @@ import sys
 sys.path.insert(0, os.path.abspath("deepfix-server/src"))
 
 from deepfix_server.skills.model_training.classification import (
-    ClassificationTrainer, 
-    ClassificationTrainerConfig
+    ClassificationTrainer,
+    ClassificationTrainerConfig,
 )
 from deepfix_server.skills.model_training.timm_models import TimmClassificationModel
 
@@ -38,15 +38,11 @@ config = ClassificationTrainerConfig(
 
 model = TimmClassificationModel(
     timm_model_name="vit_small_patch16_224.dino",
-    labels_list=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    labels_list=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
 )
 
 trainer = ClassificationTrainer(config)
-trainer.run(
-    model=model,
-    train_dataset=train_dataset,
-    val_dataset=val_dataset
-)
+trainer.run(model=model, train_dataset=train_dataset, val_dataset=val_dataset)
 ```
 
 **Note**: Be sure to prepare your `train_dataset` and `val_dataset` appropriately as PyTorch `Dataset` instances before calling `trainer.run()`.
