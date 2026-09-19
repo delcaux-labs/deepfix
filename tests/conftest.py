@@ -119,6 +119,8 @@ def ir_data(subset_queries: int = 10):
     ir_ds = InformationRetrievalDataset(
         dataset_name=name,
         topics=topics_df,
+        enable_embedding_pca=True,
+        embedding_pca_components=200,
         qrels=qrels_df,
         corpus_iter=subset_corpus_iter,
     )
