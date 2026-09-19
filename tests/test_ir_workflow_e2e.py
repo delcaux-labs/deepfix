@@ -203,7 +203,7 @@ class TestIRWorkflowE2E:
             dataset=train_data,
             load_if_exists=True,
             lancedb_index_dir=lancedb_index_dir,
-            top_k=1,
+            top_k=5,
             retrieval_mode="dense",
         )
         model.fit()

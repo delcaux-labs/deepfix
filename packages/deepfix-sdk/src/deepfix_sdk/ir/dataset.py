@@ -40,6 +40,8 @@ class InformationRetrievalDataset(BaseDataset):
         topics: pd.DataFrame,
         qrels: pd.DataFrame,
         corpus_iter: Callable[[], Iterable[Dict[str, Any]]],
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ):
         """
         Args:
@@ -67,9 +69,11 @@ class InformationRetrievalDataset(BaseDataset):
         # Classes are strictly binary relevance "0" and "1"
         self.model_classes = ["0", "1"]
         self.fp_probabilities = [1.0, 0.0]
-        self.embedding_pca_components = 20
+        self.enable_embedding_pca = enable_embedding_pca
+        self.embedding_pca_components = embedding_pca_components
 
         self.tokenizer = None
+        self.retrievals: Optional[pd.DataFrame] = None
 
     # ------------------------------------------------------------------
     # pt.datasets.Dataset interface
@@ -237,6 +241,8 @@ class InformationRetrievalDataset(BaseDataset):
         cls,
         pt_dataset: Any,
         dataset_name: Optional[str] = None,
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ) -> "InformationRetrievalDataset":
         """Create from an existing PyTerrier dataset (e.g. ``pt.get_dataset(...)``).
 
@@ -257,6 +263,8 @@ class InformationRetrievalDataset(BaseDataset):
             topics=pt_dataset.get_topics(),
             qrels=pt_dataset.get_qrels(),
             corpus_iter=lambda: pt_dataset.get_corpus_iter(),
+            enable_embedding_pca=enable_embedding_pca,
+            embedding_pca_components=embedding_pca_components,
         )
 
     @classmethod
@@ -268,6 +276,8 @@ class InformationRetrievalDataset(BaseDataset):
         qrels: List[Dict[str, Any]],
         query_embeddings: Optional[Dict[str, np.ndarray]] = None,
         corpus_embeddings: Optional[Dict[str, np.ndarray]] = None,
+        enable_embedding_pca: bool = False,
+        embedding_pca_components: int = 20,
     ) -> "InformationRetrievalDataset":
         """Backward-compatible constructor from raw dicts.
 
@@ -298,6 +308,8 @@ class InformationRetrievalDataset(BaseDataset):
             topics=topics_df,
             qrels=qrels_df,
             corpus_iter=_corpus_iter,
+            enable_embedding_pca=enable_embedding_pca,
+            embedding_pca_components=embedding_pca_components,
         )
 
     # ------------------------------------------------------------------
@@ -350,12 +362,16 @@ class InformationRetrievalDataset(BaseDataset):
             topics=self._topics,
             qrels=train_df.reset_index(drop=True),
             corpus_iter=_filtered_corpus_iter(train_docnos),
+            enable_embedding_pca=self.enable_embedding_pca,
+            embedding_pca_components=self.embedding_pca_components,
         )
         test_ds = InformationRetrievalDataset(
             dataset_name=f"{self.dataset_name}_test",
             topics=self._topics,
             qrels=test_df.reset_index(drop=True),
             corpus_iter=_filtered_corpus_iter(test_docnos),
+            enable_embedding_pca=self.enable_embedding_pca,
+            embedding_pca_components=self.embedding_pca_components,
         )
 
         return train_ds, test_ds
@@ -389,6 +405,7 @@ class InformationRetrievalDataset(BaseDataset):
     ) -> None:
 
         results_df = retrievals.copy()
+        self.retrievals = results_df
         qrels_df = self.qrels
 
         assert np.array([a for a in results_df["score"]]).shape[1] == len(
@@ -506,17 +523,23 @@ class InformationRetrievalDataset(BaseDataset):
 
         if isinstance(self._embeddings, np.ndarray):
             try:
-                n_samples, n_features = self._embeddings.shape            
-                n_components = min(self.embedding_pca_components, n_features, max(1, n_samples - 1))            
-                svd = TruncatedSVD(n_components=n_components, random_state=42)
-                reduced = svd.fit_transform(self._embeddings)
-                emb_cols = [f"emb_pca_{i}" for i in range(n_components)]
-                emb_df = pd.DataFrame(reduced, columns=emb_cols, index=df.index)
-                df = pd.concat([df, emb_df], axis=1)
+                if self.enable_embedding_pca:
+                    n_samples, n_features = self._embeddings.shape            
+                    n_components = min(self.embedding_pca_components, n_features, max(1, n_samples - 1))            
+                    svd = TruncatedSVD(n_components=n_components, random_state=42)
+                    reduced = svd.fit_transform(self._embeddings)
+                    emb_cols = [f"emb_pca_{i}" for i in range(n_components)]
+                    emb_df = pd.DataFrame(reduced, columns=emb_cols, index=df.index)
+                    df = pd.concat([df, emb_df], axis=1)
+                else:
+                    n_features = self._embeddings.shape[1]
+                    emb_cols = [f"emb_{i}" for i in range(n_features)]
+                    emb_df = pd.DataFrame(self._embeddings, columns=emb_cols, index=df.index)
+                    df = pd.concat([df, emb_df], axis=1)
             except Exception as e:
-                logger.warning("Skipping embedding PCA for dataset '%s'. Error: %s", self.dataset_name, e)
+                logger.warning("Skipping embedding feature extraction for dataset '%s'. Error: %s", self.dataset_name, e)
         else:
-            logger.warning("Skipping embedding PCA for dataset '%s'. Embeddings are not available.", self.dataset_name)
+            logger.warning("Skipping embedding feature extraction for dataset '%s'. Embeddings are not available.", self.dataset_name)
         
 
         return TabularDataset(

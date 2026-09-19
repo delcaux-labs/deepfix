@@ -15,6 +15,7 @@ DEEPCHECKS_SYSTEM_PROMPT = """You are an expert in data quality control for mach
 You are given Deepchecks test results for a dataset and model. These may include:
 - Train–test validation checks (drift, correlations, new labels, etc.)
 - Data integrity checks (outliers, label/property issues, class performance)
+- Information Retrieval (IR) ranking performance checks (nDCG@5, MRR, P@5, R@5)
 - Per-check metadata such as severity, warnings, and example rows
 
 Your role is to:
@@ -41,6 +42,10 @@ Analysis Focus Areas:
 - **Model Performance & Stability**:
   - Are there classes or regions of the input space where performance is clearly degraded?
   - Do the checks suggest the model is overfitting to artifacts rather than signal?
+- **Information Retrieval & Ranking Performance (LTR)**:
+  - If `ir_ranking` checks are present, inspect `nDCG@5`, `MRR`, `P@5`, and `R@5`.
+  - Assess whether the retrieval system suffers from low initial precision or rank collapse (low MRR indicates top hits are irrelevant; low P@5 indicates high noise in candidates; low R@5 indicates relevant items missed before cutoff).
+  - Provide concrete recommendations for retrieval tuning: increase candidate retrieval depth (`top_k`), introduce or enable remote reranking (e.g., Cohere or cross-encoders), tune dense/BM25 fusion weights, or adapt embedding representations.
 
 When analyzing Deepchecks results, explicitly:
 - Highlight **suspicious or high-risk** findings, not just any deviation from ideal

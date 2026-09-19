@@ -83,7 +83,7 @@ class RetrievalWorkflow(Workflow):
     """Event-driven RAG Workflow supporting Ingestion, Retrieval, Reranking, and Synthesis."""
 
     def __init__(
-        self, dataset: InformationRetrievalDataset, load_if_exists:bool=True, lancedb_index_dir: str = 'lancedb', top_k:int=1, language: str = 'english', retrieval_mode: str = 'hybrid', dense_weight: float = 0.5, bm25_weight: float = 0.5, enable_reranking:bool=False
+        self, dataset: InformationRetrievalDataset, load_if_exists:bool=True, lancedb_index_dir: str = 'lancedb', top_k:int=5, language: str = 'english', retrieval_mode: str = 'hybrid', dense_weight: float = 0.5, bm25_weight: float = 0.5, enable_reranking:bool=False
     ):
         super().__init__()
         self.dataset = dataset
@@ -213,8 +213,9 @@ class RetrievalWorkflow(Workflow):
             ]
             bm25_kwargs["nodes"] = nodes
 
+        retrieval_k = max(self.top_k * 4, 20) if self.enable_reranking else self.top_k
         bm25 = BM25Retriever.from_defaults(
-            similarity_top_k=self.top_k,
+            similarity_top_k=retrieval_k,
             language=self.language,
             stemmer=Stemmer.Stemmer(self.language),
             **bm25_kwargs,
@@ -229,11 +230,13 @@ class RetrievalWorkflow(Workflow):
     ) -> BaseRetriever:
         backend = self.retrieval_mode
 
+        retrieval_k = max(self.top_k * 4, 20) if self.enable_reranking else self.top_k
+
         if backend == 'dense':
-            return index.as_retriever(similarity_top_k=self.top_k)
+            return index.as_retriever(similarity_top_k=retrieval_k)
 
         elif backend == 'hybrid':
-            dense_retriever = index.as_retriever(similarity_top_k=self.top_k)
+            dense_retriever = index.as_retriever(similarity_top_k=retrieval_k)
             bm25_retriever = self._get_bm25_retriever(index)
             from llama_index.core.llms.mock import MockLLM
 
@@ -246,7 +249,7 @@ class RetrievalWorkflow(Workflow):
                 llm=getattr(self, "llm", None) or MockLLM(),
                 num_queries=1,
                 use_async=use_async,
-                similarity_top_k=self.top_k,
+                similarity_top_k=retrieval_k,
             )
 
         else:
@@ -402,7 +405,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         self,
         workflow: Optional[RetrievalWorkflow] = None,
         dataset: Optional[InformationRetrievalDataset] = None,
-        top_k: int = 1,
+        top_k: int = 5,
         retrieval_mode: str = "hybrid",
         dense_weight: float = 0.5,
         bm25_weight: float = 0.5,
