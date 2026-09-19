@@ -9,7 +9,7 @@ Run this tutorial interactively in Google Colab. The notebook includes all the c
 
 Information Retrieval (IR) and Entity Linking models match **Queries** (e.g., search terms or text mentions) against a large corpus of **Documents** or **Entities** to retrieve the most relevant candidates.
 
-Evaluating and debugging these systems is uniquely challenging because they involve analyzing query-document pairs, relevance labels, and retrieval ranks or scores. DeepFix provides native support for this workflow via the `InformationRetrievalDataset` class and the `IRLookupModel` wrapper, providing automated, detailed diagnostics for data quality, feature leakage, and retrieval performance.
+Evaluating and debugging these systems is uniquely challenging because they involve analyzing query-document pairs, relevance labels, and retrieval ranks or scores. DeepFix provides native support for this workflow via the `InformationRetrievalDataset` class and the `LlamaindexModel` wrapper, providing automated, detailed diagnostics for data quality, feature leakage, and retrieval performance.
 
 ## Prerequisites
 
@@ -22,15 +22,12 @@ Evaluating and debugging these systems is uniquely challenging because they invo
 
 ```python
 import os
-import random
 import pandas as pd
 import numpy as np
 import pyterrier as pt
-import hashlib
 
 from deepfix_sdk import DeepFixClient
-from deepfix_sdk.data.datasets import InformationRetrievalDataset
-from deepfix_sdk.models import IRLookupModel
+from deepfix_sdk.ir import InformationRetrievalDataset, LlamaindexModel
 
 # Set up your DeepFix API key
 os.environ["DEEPFIX_API_KEY"] = "..."  # Insert your API key from DeepCoach
@@ -48,105 +45,89 @@ For this tutorial, we load a subset of the **BEIR scidocs** dataset using `pyter
 
 To successfully evaluate the retrieval model, we will:
 1. Ingest queries (topics), ground-truth relevance labels (qrels), and document entities.
-2. Generate deterministic random embeddings for queries and documents.
-3. Simulate retrieval scores for a model to evaluate.
+2. Prepare an `InformationRetrievalDataset` and split it into train and test splits.
+3. Index corpus documents and generate real retrievals and embeddings using `LlamaindexModel`.
 
 ```python
-# Helper to simulate retrieval scores/ranks from ground-truth relevance labels
-def simulate_retrievals(qrels_df: pd.DataFrame, retrieval_rate: float = 0.8, seed: int = 42) -> pd.DataFrame:
-    rng = np.random.default_rng(seed)
-    n = len(qrels_df)
-
-    # Only a fraction of items are "found" by the model
-    retrieved_mask = rng.random(n) < retrieval_rate
-    df = qrels_df[retrieved_mask].copy()
-    m = len(df)
-
-    prob = rng.random(m)
-    is_relevant = df["relevance"].values == 1
-    # 80% of relevant docs get a high class-1 score, 20% get a low one
-    high_class1 = rng.random(m) > 0.2
-
-    score_class0 = np.where(
-        is_relevant,
-        np.where(high_class1, prob * 0.5, 1 - prob * 0.5),
-        1 - prob * 0.2,
-    )
-    score_class1 = np.where(
-        is_relevant,
-        np.where(high_class1, 1 - prob * 0.5, prob * 0.5),
-        prob * 0.2,
-    )
-
-    return pd.DataFrame(
-        {
-            "query_id": df["query_id"].values,
-            "doc_id": df["doc_id"].values,
-            "score": [[s0, s1] for s0, s1 in zip(score_class0, score_class1)],
-            "relevance": (score_class1 > score_class0).astype(int),
-            "rank": rng.integers(1, 101, size=m),
-        }
-    )
-
-# Helper to compute a deterministic random embedding for a given text
-def random_embedder(text: str, dim: int = 10) -> np.ndarray:
-    seed = int(hashlib.md5(text.encode()).hexdigest(), 16) % (2**32)
-    rng = np.random.default_rng(seed)
-    return rng.random(dim)
-
-# Function to load BEIR SciDocs and prepare the InformationRetrievalDataset
-def load_ir_data(subset_queries: int = 10):
+def load_ir_data(subset_queries: int = 10, lancedb_index_dir: str = "./.lancedb"):
+    """Load BEIR scidocs data using PyTerrier and prepare IR datasets with real LlamaindexModel retrievals."""
     name = "irds:beir/scidocs"
     dataset = pt.get_dataset(name)
 
-    # Get all topics and qrels, and subset to keep the run fast and light
-    all_topics = dataset.get_topics()
+    # 1. Get all topics and qrels, subset for fast execution
+    all_topics = dataset.get_topics(variant="text")
     all_qrels = dataset.get_qrels()
 
     qid_subset = all_topics["qid"].unique()[:subset_queries]
-    topics_df = all_topics[all_topics["qid"].isin(qid_subset)]
-    qrels_df = all_qrels[all_qrels["qid"].isin(qid_subset)]
+    topics_df = all_topics[all_topics["qid"].isin(qid_subset)].copy()
+    qrels_df = all_qrels[all_qrels["qid"].isin(qid_subset)].copy()
 
-    # Wrap topics, qrels and corpus in InformationRetrievalDataset
+    needed_docnos = set(qrels_df["docno"].astype(str).unique())
+    parent_corpus_iter = dataset.get_corpus_iter
+
+    def subset_corpus_iter():
+        count = 0
+        for doc in parent_corpus_iter():
+            if str(doc["docno"]) in needed_docnos:
+                yield doc
+                count += 1
+                if count >= len(needed_docnos):
+                    break
+
+    # 2. Build a single dataset, then split using stratified sampling on labels
     ir_ds = InformationRetrievalDataset(
         dataset_name=name,
         topics=topics_df,
+        enable_embedding_pca=True,
+        embedding_pca_components=200,
         qrels=qrels_df,
-        corpus_iter=dataset.get_corpus_iter,
+        corpus_iter=subset_corpus_iter,
     )
 
-    # Split into train and test splits
     train_ir_ds, test_ir_ds = ir_ds.split(train_size=0.7, random_state=42)
 
-    # Simulate predictions/retrievals on the datasets
-    train_ir_ds.set_predictions(simulate_retrievals(train_ir_ds.qrels))
-    test_ir_ds.set_predictions(simulate_retrievals(test_ir_ds.qrels))
+    # 3. Generate real retrievals and embeddings using LlamaindexModel
+    model = LlamaindexModel(
+        dataset=ir_ds,
+        load_if_exists=True,
+        lancedb_index_dir=lancedb_index_dir,
+        top_k=5,
+        retrieval_mode="dense",
+    )
+    model.fit()
+    train_ir_ds.set_predictions(model.retrieve_dataframe(train_ir_ds))
+    test_ir_ds.set_predictions(model.retrieve_dataframe(test_ir_ds))
 
-    # Set query/doc embeddings for diagnostic checks (e.g. embedding drift)
-    train_ir_ds.set_embeddings(random_embedder)
-    test_ir_ds.set_embeddings(random_embedder)
+    # 4. Set embeddings for diagnostic suites using LlamaindexModel
+    train_ir_ds.set_embeddings(model.get_embedding)
+    test_ir_ds.set_embeddings(model.get_embedding)
 
-    return train_ir_ds, test_ir_ds
+    return train_ir_ds, test_ir_ds, lancedb_index_dir
 
 # Load the train and test splits
-train_data, test_data = load_ir_data(subset_queries=10)
+train_data, test_data, lancedb_index_dir = load_ir_data(subset_queries=10)
 ```
 
-## Define Lookup Model
+## Define LlamaindexModel
 
-In Information Retrieval and Entity Linking, model predictions (relevance scores, retrieval ranks) are usually computed offline or via external retrieval engines.
-
-DeepFix provides a special `IRLookupModel` that wraps these pre-computed predictions on the fly and satisfies scikit-learn's estimator interface:
+DeepFix provides a `LlamaindexModel` wrapper that satisfies scikit-learn's estimator interface (implementing `fit`, `predict`, and `predict_proba`) over LlamaIndex retrieval workflows:
 
 ```python
-# Initialize lookup model
-model = IRLookupModel(train_dataset=train_data, test_dataset=test_data)
-model_name = "simulated_retrieval_model"
+# Initialize and fit the LlamaindexModel
+model = LlamaindexModel(
+    dataset=train_data,
+    load_if_exists=True,
+    lancedb_index_dir=lancedb_index_dir,
+    top_k=5,
+    retrieval_mode="dense",
+)
+model.fit()
+model_name = "llamaindex"
 ```
 
 ## Run Diagnostics
 
-Pass your datasets and lookup model to the client to run the automated diagnostic suites:
+Pass your datasets and model to the client to run the automated diagnostic suites:
 
 ```python
 result = client.get_diagnosis(
@@ -154,7 +135,7 @@ result = client.get_diagnosis(
     test_data=test_data,
     model=model,
     model_name=model_name,
-    language="english"
+    language="english",
 )
 
 # Print a text summary of all prioritized findings
