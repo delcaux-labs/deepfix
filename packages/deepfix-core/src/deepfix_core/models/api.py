@@ -429,10 +429,32 @@ class APIRequest(BaseModel):
                 dataset_artifacts = DatasetArtifacts.from_dict(dataset_artifacts)
             except Exception:
                 pass
+
+        deepchecks_artifacts = self.deepchecks_artifacts
+        if isinstance(deepchecks_artifacts, dict):
+            try:
+                deepchecks_artifacts = DeepchecksArtifacts.from_dict(deepchecks_artifacts)
+            except Exception:
+                pass
+
+        if isinstance(deepchecks_artifacts, DeepchecksArtifacts):
+            clean_results = {}
+            for category, parsed_list in deepchecks_artifacts.results.items():
+                clean_list = []
+                for pr in parsed_list:
+                    if getattr(pr, "result", None) and getattr(pr.result, "display_images", None):
+                        pr_copy = pr.model_copy(deep=True)
+                        pr_copy.result.display_images = None
+                        clean_list.append(pr_copy)
+                    else:
+                        clean_list.append(pr)
+                clean_results[category] = clean_list
+            deepchecks_artifacts = deepchecks_artifacts.model_copy(update={"results": clean_results})
+
         return AgentContext(
             dataset_artifacts=dataset_artifacts,
             training_artifacts=self.training_artifacts,
-            deepchecks_artifacts=self.deepchecks_artifacts,
+            deepchecks_artifacts=deepchecks_artifacts,
             model_checkpoint_artifacts=self.model_checkpoint_artifacts,
             dataset_name=self.dataset_name,
             model_name=self.model_name,

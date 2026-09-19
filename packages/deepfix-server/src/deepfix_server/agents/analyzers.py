@@ -139,25 +139,54 @@ async def run_artifact_analyzer(
         run_output = await agent.arun(user_message)
 
         content = run_output.content
+        if content is None and getattr(run_output, "reasoning_content", None):
+            LOGGER.warning(
+                "Agent %s returned None for content; attempting fallback to reasoning_content.",
+                agent_name,
+            )
+            content = run_output.reasoning_content
+
         if isinstance(content, str):
-            content = json.loads(content)
+            text = content.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            elif text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+            try:
+                content = json.loads(text)
+            except json.JSONDecodeError as err:
+                LOGGER.warning(
+                    "Could not parse JSON from string for %s: %s", agent_name, err
+                )
 
         if isinstance(content, dict):
             content = ArtifactAnalysisResult.model_validate(content)
 
         if isinstance(content, ArtifactAnalysisResult):
             analysis = content.analysis
+            summary = content.summary
         else:
-            msg = (
-                f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
-            )
+            if content is None:
+                msg = (
+                    f"Agent {agent_name} produced no response content (content is None). "
+                    "The model may have exhausted its token limit or failed to output structured content."
+                )
+            else:
+                msg = (
+                    f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
+                )
             LOGGER.error(msg)
             raise ValueError(msg)
 
+        additional_outputs = {"summary": summary} if summary else {}
         return AgentResult(
             agent_name=agent_name,
             analysis=analysis,
             analyzed_artifacts=[type(target_artifact).__name__],
+            additional_outputs=additional_outputs,
         )
     except Exception as e:
         LOGGER.error("Error in %s: %s", agent_name, traceback.format_exc())
