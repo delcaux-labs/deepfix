@@ -28,8 +28,9 @@ from deepfix_core.models import (
 )
 
 from ..data.base import BaseDataset
-from ..logging import get_logger
 from ..ir.metrics import compute_ir_ranking_metrics
+from ..logging import get_logger
+
 LOGGER = get_logger(__name__)
 
 
@@ -339,6 +340,7 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         Run both NLP and Tabular Deepchecks suites for IR data.
         """
         from ..ir.dataset import InformationRetrievalDataset
+
         assert isinstance(train_data, InformationRetrievalDataset), (
             f"Expected InformationRetrievalDataset but got {type(train_data).__name__}"
         )
@@ -348,7 +350,7 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         LOGGER.info("Running unified IR validation for %s", dataset_name)
 
         # 1. Run NLP suites (wrap as NLPDataset since IR no longer inherits from it)
-        print("== "*10, "NLP", "== "*10)
+        print("== " * 10, "NLP", "== " * 10)
         nlp_artifact = self.nlp_runner.run_suites(
             train_data=train_data.to_nlp_dataset(),
             dataset_name=f"{dataset_name}_nlp",
@@ -364,7 +366,7 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
 
         # 2. Run Tabular suites
         print("\n")
-        print("== "*10, "tabular", "== "*10)
+        print("== " * 10, "tabular", "== " * 10)
         tabular_artifact = self.tabular_runner.run_suites(
             train_data=train_data.to_tabular(),
             dataset_name=f"{dataset_name}_tabular",
@@ -385,17 +387,25 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         eval_ds = test_data if test_data is not None else train_data
         retrievals_df = getattr(eval_ds, "retrievals", None)
 
-        if retrievals_df is None and model is not None and hasattr(model, "retrieve_dataframe"):
+        if (
+            retrievals_df is None
+            and model is not None
+            and hasattr(model, "retrieve_dataframe")
+        ):
             try:
                 retrievals_df = model.retrieve_dataframe(eval_ds, top_k=5)
             except Exception as e:
-                LOGGER.warning("Could not automatically retrieve rankings with model: %s", e)
+                LOGGER.warning(
+                    "Could not automatically retrieve rankings with model: %s", e
+                )
 
         if retrievals_df is not None and not retrievals_df.empty:
-            
-
             try:
-                qrels_df = eval_ds.get_qrels() if hasattr(eval_ds, "get_qrels") else eval_ds.qrels
+                qrels_df = (
+                    eval_ds.get_qrels()
+                    if hasattr(eval_ds, "get_qrels")
+                    else eval_ds.qrels
+                )
                 ranking_metrics = compute_ir_ranking_metrics(
                     qrels_df=qrels_df,
                     retrievals_df=retrievals_df,
@@ -430,8 +440,9 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
                 combined_results["ir_ranking"] = [ranking_result]
                 LOGGER.info("Calculated IR ranking metrics: %s", ranking_metrics)
             except Exception as e:
-                LOGGER.warning("Failed to calculate IR ranking metrics: %s", e, exc_info=True)
-
+                LOGGER.warning(
+                    "Failed to calculate IR ranking metrics: %s", e, exc_info=True
+                )
 
         artifact = DeepchecksArtifacts(
             dataset_name=dataset_name,
@@ -553,10 +564,9 @@ class DeepchecksRunnerForVision(BaseDeepchecksRunner):
             random_state=self.config.random_state,
         )
 
-    def _check_inputs(
-        self, train_data: Any, test_data: Optional[Any] = None
-    ) -> None:
+    def _check_inputs(self, train_data: Any, test_data: Optional[Any] = None) -> None:
         from ..vision.dataset import VisionDataset
+
         assert isinstance(train_data, VisionDataset), (
             f"train_data must be an instance of VisionData, got {type(train_data)}"
         )
@@ -674,10 +684,9 @@ class DeepchecksRunnerForTabular(BaseDeepchecksRunner):
             model=model,
         )
 
-    def _check_inputs(
-        self, train_data: Any, test_data: Optional[Any] = None
-    ) -> None:
+    def _check_inputs(self, train_data: Any, test_data: Optional[Any] = None) -> None:
         from ..tabular.dataset import TabularDataset
+
         assert isinstance(train_data, TabularDataset), (
             f"train_data must be an instance of TabularDataset, got {type(train_data)}"
         )
@@ -796,10 +805,9 @@ class DeepchecksRunnerForNLP(BaseDeepchecksRunner):
             **kwargs,
         )
 
-    def _check_inputs(
-        self, train_data: Any, test_data: Optional[Any] = None
-    ) -> None:
+    def _check_inputs(self, train_data: Any, test_data: Optional[Any] = None) -> None:
         from ..nlp.dataset import NLPDataset
+
         assert isinstance(train_data, NLPDataset), (
             f"train_data must be an instance of NLPDataset, got {type(train_data)}"
         )

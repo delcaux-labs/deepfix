@@ -1,21 +1,10 @@
-from typing import List, Optional
-
-import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator, ClassifierMixin
-
-from .dataset import InformationRetrievalDataset
-
-import asyncio
-import concurrent.futures
-import inspect
-import threading
 from pathlib import Path
-from typing import Any
-
-
+from typing import Any, List, Optional
 
 import lancedb
+import numpy as np
+import pandas as pd
+import Stemmer
 from llama_index.core import (
     Document,
     StorageContext,
@@ -23,13 +12,8 @@ from llama_index.core import (
 )
 from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.base.embeddings.base import BaseEmbedding
-from llama_index.core.base.llms.base import BaseLLM
 from llama_index.core.indices.base import BaseIndex
-from llama_index.core.response_synthesizers.base import (
-    BaseSynthesizer,
-)
 from llama_index.core.retrievers.fusion_retriever import (
-    FUSION_MODES,
     QueryFusionRetriever,
 )
 from llama_index.core.schema import NodeWithScore
@@ -47,8 +31,9 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.vector_stores.lancedb import LanceDBVectorStore
 from pydantic import BaseModel, Field
-import Stemmer
+from sklearn.base import BaseEstimator, ClassifierMixin
 
+from ..async_utils import run_async
 from ..logging import get_logger
 from ..settings import settings
 from .dataset import InformationRetrievalDataset
@@ -83,7 +68,16 @@ class RetrievalWorkflow(Workflow):
     """Event-driven RAG Workflow supporting Ingestion, Retrieval, Reranking, and Synthesis."""
 
     def __init__(
-        self, dataset: InformationRetrievalDataset, load_if_exists:bool=True, lancedb_index_dir: str = 'lancedb', top_k:int=5, language: str = 'english', retrieval_mode: str = 'hybrid', dense_weight: float = 0.5, bm25_weight: float = 0.5, enable_reranking:bool=False
+        self,
+        dataset: InformationRetrievalDataset,
+        load_if_exists: bool = True,
+        lancedb_index_dir: str = "lancedb",
+        top_k: int = 5,
+        language: str = "english",
+        retrieval_mode: str = "hybrid",
+        dense_weight: float = 0.5,
+        bm25_weight: float = 0.5,
+        enable_reranking: bool = False,
     ):
         super().__init__()
         self.dataset = dataset
@@ -96,29 +90,38 @@ class RetrievalWorkflow(Workflow):
         self.bm25_weight = bm25_weight
         self.enable_reranking = enable_reranking
         self._index: BaseIndex = None
+        self._embed_model: BaseEmbedding = None
+        self._reranker: CohereRerank | None = None
 
-
-        assert retrieval_mode in ['dense', 'hybrid'], f"Retriever mode must be 'dense' or 'hybrid', but got '{retrieval_mode}'"
-        assert dense_weight + bm25_weight == 1, f"Dense and BM25 weights must sum to 1, but got {dense_weight} + {bm25_weight}"
+        assert retrieval_mode in ["dense", "hybrid"], (
+            f"Retriever mode must be 'dense' or 'hybrid', but got '{retrieval_mode}'"
+        )
+        assert dense_weight + bm25_weight == 1, (
+            f"Dense and BM25 weights must sum to 1, but got {dense_weight} + {bm25_weight}"
+        )
 
     def _get_embed_model(self) -> BaseEmbedding:
-        if getattr(self, "embed_model", None) is not None:
-            return self.embed_model
-        return OpenAIEmbedding(
+        if self._embed_model is not None:
+            return self._embed_model
+        self._embed_model = OpenAIEmbedding(
             model_name=settings.EMBEDDING_MODEL,
             api_base=settings.EMBEDDING_BASE_URL,
             api_key=settings.EMBEDDING_API_KEY,
         )
+        return self._embed_model
 
     def _get_reranker(self) -> CohereRerank | None:
+        if self._reranker is not None:
+            return self._reranker
         if not self.enable_reranking:
             return None
-        return CohereRerank(
+        self._reranker = CohereRerank(
             model=settings.COHERE_MODEL,
             top_n=self.top_k,
             api_key=settings.COHERE_API_KEY,
             base_url=settings.COHERE_BASE_URL,
         )
+        return self._reranker
 
     def _get_vector_store(self) -> BasePydanticVectorStore:
 
@@ -129,7 +132,9 @@ class RetrievalWorkflow(Workflow):
             if settings.S3_ACCESS_KEY_ID:
                 storage_options["aws_access_key_id"] = str(settings.S3_ACCESS_KEY_ID)
             if settings.S3_SECRET_ACCESS_KEY:
-                storage_options["aws_secret_access_key"] = str(settings.S3_SECRET_ACCESS_KEY)
+                storage_options["aws_secret_access_key"] = str(
+                    settings.S3_SECRET_ACCESS_KEY
+                )
             if settings.S3_REGION:
                 storage_options["region"] = str(settings.S3_REGION)
             if settings.S3_ENDPOINT_URL:
@@ -161,7 +166,9 @@ class RetrievalWorkflow(Workflow):
                 if table_name is None:
                     return False
                 tables_res = (
-                    conn.list_tables() if hasattr(conn, "list_tables") else conn.table_names()
+                    conn.list_tables()
+                    if hasattr(conn, "list_tables")
+                    else conn.table_names()
                 )
                 tables = getattr(tables_res, "tables", tables_res)
                 tables = list(tables) if not isinstance(tables, list) else tables
@@ -182,7 +189,9 @@ class RetrievalWorkflow(Workflow):
             embed_model=self._get_embed_model(),
         )
 
-    def _build_index(self, documents: list[Document], storage_context=None, **kwargs) -> BaseIndex:
+    def _build_index(
+        self, documents: list[Document], storage_context=None, **kwargs
+    ) -> BaseIndex:
         if storage_context is None:
             storage_context = self._get_storage_context()
 
@@ -194,7 +203,8 @@ class RetrievalWorkflow(Workflow):
         return index
 
     def _get_bm25_retriever(
-        self, index: BaseIndex,
+        self,
+        index: BaseIndex,
     ) -> BaseRetriever:
         """Construct a BM25 sparse lexical retriever."""
         bm25_kwargs = {}
@@ -207,7 +217,9 @@ class RetrievalWorkflow(Workflow):
                 Document(
                     text=doc.get("text") or doc.get("body") or "",
                     doc_id=str(doc.get("docno") or doc.get("doc_id") or ""),
-                    metadata={"doc_id": str(doc.get("docno") or doc.get("doc_id") or "")},
+                    metadata={
+                        "doc_id": str(doc.get("docno") or doc.get("doc_id") or "")
+                    },
                 )
                 for doc in self.dataset.get_corpus_iter()
             ]
@@ -222,7 +234,6 @@ class RetrievalWorkflow(Workflow):
         )
         return bm25
 
-
     def _build_retriever(
         self,
         index: BaseIndex,
@@ -232,10 +243,10 @@ class RetrievalWorkflow(Workflow):
 
         retrieval_k = max(self.top_k * 4, 20) if self.enable_reranking else self.top_k
 
-        if backend == 'dense':
+        if backend == "dense":
             return index.as_retriever(similarity_top_k=retrieval_k)
 
-        elif backend == 'hybrid':
+        elif backend == "hybrid":
             dense_retriever = index.as_retriever(similarity_top_k=retrieval_k)
             bm25_retriever = self._get_bm25_retriever(index)
             from llama_index.core.llms.mock import MockLLM
@@ -269,7 +280,9 @@ class RetrievalWorkflow(Workflow):
                     Document(
                         text=doc.get("text") or doc.get("body") or "",
                         doc_id=str(doc.get("docno") or doc.get("doc_id") or ""),
-                        metadata={"doc_id": str(doc.get("docno") or doc.get("doc_id") or "")},
+                        metadata={
+                            "doc_id": str(doc.get("docno") or doc.get("doc_id") or "")
+                        },
                     )
                     for doc in self.dataset.get_corpus_iter()
                 ]
@@ -320,12 +333,16 @@ class RetrievalWorkflow(Workflow):
 
         return RerankEvent(nodes=nodes)
 
-    def convert_nodes_to_results(self, nodes: list[NodeWithScore]) -> list[RetrievalResult]:
+    def convert_nodes_to_results(
+        self, nodes: list[NodeWithScore]
+    ) -> list[RetrievalResult]:
         """Convert a list of NodeWithScore objects to standardized RetrievalResult models."""
         results = []
         for node in nodes:
             doc_id_val = node.node.metadata.get("doc_id", node.node.node_id)
-            embedding = getattr(node.node, "embedding", getattr(node, "embedding", None))
+            embedding = getattr(
+                node.node, "embedding", getattr(node, "embedding", None)
+            )
             if embedding is not None and not isinstance(embedding, list):
                 embedding = list(embedding)
             results.append(
@@ -343,54 +360,6 @@ class RetrievalWorkflow(Workflow):
         """Synthesize response using CompactAndRefine."""
         response_model = self.convert_nodes_to_results(ev.nodes)
         return StopEvent(result=response_model)
-
-
-class _AsyncLoopThread:
-    """Persistent background event loop thread for executing async workflows synchronously."""
-
-    _instance: Optional["_AsyncLoopThread"] = None
-    _lock = threading.Lock()
-
-    def __init__(self):
-        self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(
-            target=self.loop.run_forever,
-            daemon=True,
-            name="llamaindex-workflow-runner",
-        )
-        self.thread.start()
-
-    @classmethod
-    def get_instance(cls) -> "_AsyncLoopThread":
-        with cls._lock:
-            if cls._instance is None or not cls._instance.thread.is_alive():
-                cls._instance = cls()
-            return cls._instance
-
-    def run(self, coro_or_fn: Any) -> Any:
-        future: concurrent.futures.Future = concurrent.futures.Future()
-
-        def _schedule():
-            async def _coro():
-                try:
-                    res = coro_or_fn() if callable(coro_or_fn) else coro_or_fn
-                    if inspect.isawaitable(res):
-                        res = await res
-                    future.set_result(res)
-                except BaseException as exc:
-                    future.set_exception(exc)
-
-            asyncio.create_task(_coro())
-
-        self.loop.call_soon_threadsafe(_schedule)
-        return future.result()
-
-
-def _run_async(coro_or_fn: Any) -> Any:
-    """Run an async coroutine or callable synchronously using the persistent background event loop."""
-    return _AsyncLoopThread.get_instance().run(coro_or_fn)
-
-
 
 
 class LlamaindexModel(BaseEstimator, ClassifierMixin):
@@ -417,7 +386,9 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         score_threshold: Optional[float] = None,
     ):
         self.workflow = workflow
-        self.dataset = dataset or (getattr(workflow, "dataset", None) if workflow is not None else None)
+        self.dataset = dataset or (
+            getattr(workflow, "dataset", None) if workflow is not None else None
+        )
         self.top_k = top_k
         self.retrieval_mode = retrieval_mode
         self.dense_weight = dense_weight
@@ -428,10 +399,23 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         self.language = language
         self.classes = classes
         self.score_threshold = score_threshold
-    
+        self.embed_model = OpenAIEmbedding(
+            model_name=settings.EMBEDDING_MODEL,
+            api_base=settings.EMBEDDING_BASE_URL,
+            api_key=settings.EMBEDDING_API_KEY,
+        )
+        self.index_ = None
+
     def get_params(self, deep=False) -> dict:
         """Override get_params to avoid serializing the datasets."""
-        return {"classes": self.classes,"dense_weight": self.dense_weight,"bm25_weight": self.bm25_weight, "retrieval_mode": self.retrieval_mode, "top_k": self.top_k, "enable_reranking": self.enable_reranking}
+        return {
+            "classes": self.classes,
+            "dense_weight": self.dense_weight,
+            "bm25_weight": self.bm25_weight,
+            "retrieval_mode": self.retrieval_mode,
+            "top_k": self.top_k,
+            "enable_reranking": self.enable_reranking,
+        }
 
     def fit(self, X: Any = None, y: Any = None) -> "LlamaindexModel":
         """Fit the estimator by initializing the workflow and building or loading the index.
@@ -444,7 +428,10 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             self.dataset_ = X
         elif self.dataset is not None:
             self.dataset_ = self.dataset
-        elif self.workflow is not None and getattr(self.workflow, "dataset", None) is not None:
+        elif (
+            self.workflow is not None
+            and getattr(self.workflow, "dataset", None) is not None
+        ):
             self.dataset_ = self.workflow.dataset
         else:
             self.dataset_ = None
@@ -470,7 +457,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
 
         # Ingest or load existing index
         if getattr(self.workflow_, "_index", None) is None:
-            self.index_ = _run_async(lambda: self.workflow_.run(ingest=True))
+            self.index_ = run_async(lambda: self.workflow_.run(ingest=True))
         else:
             self.index_ = self.workflow_._index
 
@@ -482,7 +469,13 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         if self.dataset_ is not None:
             try:
                 topics = self.dataset_.get_topics()
-                qid_col = "qid" if "qid" in topics.columns else "query_id" if "query_id" in topics.columns else None
+                qid_col = (
+                    "qid"
+                    if "qid" in topics.columns
+                    else "query_id"
+                    if "query_id" in topics.columns
+                    else None
+                )
                 q_col = (
                     "query"
                     if "query" in topics.columns
@@ -513,7 +506,9 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             return []
         if query_str in self._retrieval_cache:
             return self._retrieval_cache[query_str]
-        results = _run_async(lambda: self.workflow_.run(query=query_str, index=self.index_))
+        results = run_async(
+            lambda: self.workflow_.run(query=query_str, index=self.index_)
+        )
         if results is None:
             results = []
         self._retrieval_cache[query_str] = results
@@ -537,21 +532,13 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         self._retrieval_cache[query] = results
         return results
 
-    @staticmethod
-    def get_embedding(text: str, embed_model: Optional[BaseEmbedding] = None) -> np.ndarray:
+    def get_embedding(self, text: str) -> np.ndarray:
         """Compute an embedding vector for a given text using the model's embedding model."""
-        if embed_model is None:
-            embed_model = OpenAIEmbedding(
-                model_name=settings.EMBEDDING_MODEL,
-                api_base=settings.EMBEDDING_BASE_URL,
-                api_key=settings.EMBEDDING_API_KEY,
-            )
-        return np.array(embed_model.get_text_embedding(text))
+        return np.array(self.embed_model.get_text_embedding(text))
 
     def embed(self, text: str) -> np.ndarray:
         """Compute an embedding vector for a given text using the model's embedding model."""
         return self.get_embedding(text)
-
 
     @staticmethod
     def _score_to_proba(score: float) -> tuple[float, float]:
@@ -582,9 +569,13 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
                 or item.get("query_text")
                 or self.topic_map_.get(qid, "")
             )
-            doc_text = str(item.get("document") or item.get("doc_text") or item.get("body") or "")
+            doc_text = str(
+                item.get("document") or item.get("doc_text") or item.get("body") or ""
+            )
             if "text" in item and "<query>" in str(item["text"]):
-                q_parsed, d_parsed = InformationRetrievalDataset.parse_pair(str(item["text"]))
+                q_parsed, d_parsed = InformationRetrievalDataset.parse_pair(
+                    str(item["text"])
+                )
                 query_text = query_text or q_parsed
                 doc_text = doc_text or d_parsed
             return str(query_text), doc_id, doc_text
@@ -608,14 +599,28 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
 
         # If X is a DataFrame with precomputed cosine similarity (e.g. from to_tabular())
         assert isinstance(X, pd.DataFrame), f"X must be a DataFrame, got {type(X)}"
-        
-        if "cosine_sim" in X.columns and not ("query_id" in X.columns or "qid" in X.columns):
+
+        if "cosine_sim" in X.columns and not (
+            "query_id" in X.columns or "qid" in X.columns
+        ):
             sims = np.clip(X["cosine_sim"].to_numpy(dtype=float), 0.0, 1.0)
             return np.column_stack([1.0 - sims, sims])
 
         # Optimized batch retrieval for DataFrames with query_id/qid and doc_id/docno
-        qid_col = "query_id" if "query_id" in X.columns else "qid" if "qid" in X.columns else None
-        doc_col = "doc_id" if "doc_id" in X.columns else "docno" if "docno" in X.columns else None
+        qid_col = (
+            "query_id"
+            if "query_id" in X.columns
+            else "qid"
+            if "qid" in X.columns
+            else None
+        )
+        doc_col = (
+            "doc_id"
+            if "doc_id" in X.columns
+            else "docno"
+            if "docno" in X.columns
+            else None
+        )
 
         if qid_col and doc_col:
             unique_qids = X[qid_col].astype(str).unique()
@@ -644,7 +649,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             return np.array(probas, dtype=float)
 
         items = [row for _, row in X.iterrows()]
-        
+
         # For text pairs, lists of strings, or custom dicts
         embed_cache: dict[str, np.ndarray] = {}
 
@@ -711,7 +716,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         columns, ready to be passed to dataset.set_predictions().
         """
         self._ensure_fitted()
-        
+
         if not isinstance(dataset, InformationRetrievalDataset):
             raise ValueError("An InformationRetrievalDataset must be provided.")
 
@@ -745,5 +750,3 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
                 )
 
         return pd.DataFrame(rows)
-
-

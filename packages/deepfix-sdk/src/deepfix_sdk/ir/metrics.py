@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 import pyterrier as pt
-from pyterrier.measures import P, R, RR, nDCG
+from pyterrier.measures import RR, P, R, nDCG
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,15 @@ def compute_ir_ranking_metrics(
         f"R@{k}": 0.0,
     }
 
-    if qrels_df is None or qrels_df.empty or retrievals_df is None or retrievals_df.empty:
-        logger.warning("Empty qrels or retrievals provided to compute_ir_ranking_metrics.")
+    if (
+        qrels_df is None
+        or qrels_df.empty
+        or retrievals_df is None
+        or retrievals_df.empty
+    ):
+        logger.warning(
+            "Empty qrels or retrievals provided to compute_ir_ranking_metrics."
+        )
         return default_metrics
 
     # 1. Standardize qrels DataFrame: qid, docno, label
@@ -82,6 +89,7 @@ def compute_ir_ranking_metrics(
 
     # Standardize score to a single float per row
     if "score" in res.columns:
+
         def _extract_score(val: Any) -> float:
             if isinstance(val, (list, tuple, np.ndarray)):
                 if len(val) > 1:
@@ -136,7 +144,9 @@ def compute_ir_ranking_metrics(
         return 0.0
 
     return {
-        f"nDCG@{k}": _get_metric_val(measure_ndcg, [f"nDCG@{k}", f"ndcg_cut_{k}", f"NDCG@{k}"]),
+        f"nDCG@{k}": _get_metric_val(
+            measure_ndcg, [f"nDCG@{k}", f"ndcg_cut_{k}", f"NDCG@{k}"]
+        ),
         "MRR": _get_metric_val(measure_rr, ["RR", "MRR", "recip_rank"]),
         f"P@{k}": _get_metric_val(measure_p, [f"P@{k}", f"P_{k}", f"precision_{k}"]),
         f"R@{k}": _get_metric_val(measure_r, [f"R@{k}", f"recall_{k}", f"R_{k}"]),

@@ -244,7 +244,11 @@ class DeepchecksParsedResult(BaseModel):
             Dictionary representation of the parsed result.
         """
         dumped_dict = self.model_dump()
-        if exclude_images and "result" in dumped_dict and isinstance(dumped_dict["result"], dict):
+        if (
+            exclude_images
+            and "result" in dumped_dict
+            and isinstance(dumped_dict["result"], dict)
+        ):
             dumped_dict["result"].pop("display_images", None)
         return dumped_dict
 
@@ -324,7 +328,9 @@ class DeepchecksArtifacts(Artifacts):
     results: Dict[str, List[DeepchecksParsedResult]] = Field(
         description="Results of the artifact"
     )
-    config: Optional[DeepchecksConfig] = Field(default=None, description="Config of the artifact")
+    config: Optional[DeepchecksConfig] = Field(
+        default=None, description="Config of the artifact"
+    )
 
     def to_dict(self, exclude_images: bool = False) -> Dict[str, Any]:
         """Convert Deepchecks artifacts to a dictionary.
@@ -334,7 +340,8 @@ class DeepchecksArtifacts(Artifacts):
         """
         dumped_dict = self.model_dump()
         dumped_dict["results"] = {
-            k: [r.to_dict(exclude_images=exclude_images) for r in v] for k, v in self.results.items()
+            k: [r.to_dict(exclude_images=exclude_images) for r in v]
+            for k, v in self.results.items()
         }
         dumped_dict["config"] = self.config.to_dict() if self.config else None
         return dumped_dict

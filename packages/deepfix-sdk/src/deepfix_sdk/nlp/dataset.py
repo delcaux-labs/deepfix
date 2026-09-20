@@ -21,6 +21,7 @@ class NLPDataset(BaseDataset):
         text_data_cls = None
         try:
             from deepchecks.nlp import TextData
+
             text_data_cls = TextData
         except (ImportError, Exception):
             pass

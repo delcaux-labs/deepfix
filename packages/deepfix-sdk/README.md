@@ -67,7 +67,7 @@ from deepfix_sdk import DeepFixClient
 # Create client pointing to your DeepFix server
 client = DeepFixClient(
     api_url="http://localhost:8844",  # Default server address
-    timeout=30  # Request timeout in seconds
+    timeout=30,  # Request timeout in seconds
 )
 ```
 
@@ -77,7 +77,7 @@ client = DeepFixClient(
 # Analyze an existing dataset
 response = client.diagnose_dataset(
     dataset_name="my-dataset",
-    language="english"  # Analysis language
+    language="english",  # Analysis language
 )
 
 # Display results
@@ -98,20 +98,15 @@ client = DeepFixClient(api_url="http://localhost:8844", timeout=120)
 
 # Load image classification dataset
 train_data, val_data = load_train_and_val_datasets(
-    image_size=448,
-    batch_size=8,
-    num_workers=4,
-    pin_memory=False
+    image_size=448, batch_size=8, num_workers=4, pin_memory=False
 )
 
 # Wrap datasets
 train_dataset = ImageClassificationDataset(
-    dataset_name="foodwaste-classification",
-    dataset=train_data
+    dataset_name="foodwaste-classification", dataset=train_data
 )
 val_dataset = ImageClassificationDataset(
-    dataset_name="foodwaste-classification",
-    dataset=val_data
+    dataset_name="foodwaste-classification", dataset=val_data
 )
 
 # Ingest dataset with quality checks
@@ -123,7 +118,7 @@ client.ingest(
     train_test_validation=True,
     data_integrity=True,
     batch_size=8,
-    overwrite=False
+    overwrite=False,
 )
 
 # Run diagnosis
@@ -148,14 +143,8 @@ df_train = pd.read_csv("train_data.csv")
 df_test = pd.read_csv("test_data.csv")
 
 # Wrap datasets
-train_dataset = TabularDataset(
-    dataset_name="my-tabular-dataset",
-    data=df_train
-)
-test_dataset = TabularDataset(
-    dataset_name="my-tabular-dataset",
-    data=df_test
-)
+train_dataset = TabularDataset(dataset_name="my-tabular-dataset", data=df_train)
+test_dataset = TabularDataset(dataset_name="my-tabular-dataset", data=df_test)
 
 # Ingest dataset
 client.ingest(
@@ -165,7 +154,7 @@ client.ingest(
     test_data=test_dataset,
     train_test_validation=True,
     data_integrity=True,
-    overwrite=False
+    overwrite=False,
 )
 
 # Diagnose
@@ -188,14 +177,8 @@ train_data = load_dataset("imdb", split="train")
 test_data = load_dataset("imdb", split="test")
 
 # Wrap datasets
-train_dataset = NLPDataset(
-    dataset_name="imdb-sentiment",
-    dataset=train_data
-)
-test_dataset = NLPDataset(
-    dataset_name="imdb-sentiment",
-    dataset=test_data
-)
+train_dataset = NLPDataset(dataset_name="imdb-sentiment", dataset=train_data)
+test_dataset = NLPDataset(dataset_name="imdb-sentiment", dataset=test_data)
 
 # Ingest and diagnose
 client.ingest(
@@ -203,7 +186,7 @@ client.ingest(
     data_type="nlp",
     train_data=train_dataset,
     test_data=test_dataset,
-    batch_size=16
+    batch_size=16,
 )
 
 result = client.diagnose_dataset(dataset_name="imdb-sentiment")
@@ -309,13 +292,10 @@ from deepfix_sdk import DeepFixClient
 mlflow_config = MLflowConfig(
     tracking_uri="http://localhost:5000",
     experiment_name="my-ml-experiment",
-    run_name="baseline-run"
+    run_name="baseline-run",
 )
 
-client = DeepFixClient(
-    api_url="http://localhost:8844",
-    mlflow_config=mlflow_config
-)
+client = DeepFixClient(api_url="http://localhost:8844", mlflow_config=mlflow_config)
 ```
 
 ### Artifact Configuration
@@ -327,7 +307,7 @@ artifact_config = ArtifactConfig(
     load_dataset_metadata=True,
     load_checks=True,
     load_model_checkpoint=False,
-    load_training=False
+    load_training=False,
 )
 ```
 
@@ -408,7 +388,7 @@ os.environ["DEEPFIX_API_KEY"] = "your-api-key"
 # Solution: Increase timeout for large datasets
 client = DeepFixClient(
     api_url="http://localhost:8844",
-    timeout=120  # Increase to 120 seconds
+    timeout=120,  # Increase to 120 seconds
 )
 ```
 

@@ -17,8 +17,10 @@ dependencies = [
 [tool.ruff]
 target-version = "py311"
 line-length = 88
-lint.select = ["I", "E", "F", "W", "C90"]
-lint.ignore = ["E501"]
+
+[tool.ruff.lint]
+select = ["I", "E", "F", "W", "C90"]
+ignore = ["E501"]
 
 [build-system]
 requires = ["uv_build>=0.9.5,<0.10.0"]

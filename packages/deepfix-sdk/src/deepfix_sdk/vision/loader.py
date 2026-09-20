@@ -8,10 +8,11 @@ try:
     from supervision.dataset.core import DetectionDataset
     from torch.utils.data import DataLoader, Dataset
 except ImportError:
-        raise ImportError(
-            "Vision dependencies are required for this module. "
-            "Install with: pip install deepfix-sdk[vision]"
-        ) from None
+    raise ImportError(
+        "Vision dependencies are required for this module. "
+        "Install with: pip install deepfix-sdk[vision]"
+    ) from None
+
 
 def classification_collate(data):
     images = np.stack([np.array(x[0]) for x in data])
@@ -89,7 +90,6 @@ def segmentation_collate_without_model(data):
 
 
 class ClassificationVisionDataLoader:
-
     @classmethod
     def load_from_dataset(
         cls,
@@ -132,7 +132,6 @@ class ClassificationVisionDataLoader:
 
 
 class DetectionVisionDataLoader:
-
     @classmethod
     def load_from_dataset(
         cls,
@@ -159,9 +158,7 @@ class DetectionVisionDataLoader:
         return cls.load_from_dataloader(dataloader, label_map=label_map)
 
     @classmethod
-    def load_from_dataloader(
-        cls, dataloader, label_map: Dict[int, str]
-    ) -> VisionData:
+    def load_from_dataloader(cls, dataloader, label_map: Dict[int, str]) -> VisionData:
 
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(
@@ -176,8 +173,6 @@ class DetectionVisionDataLoader:
 
 
 class SegmentationVisionDataLoader:
-
-
     @classmethod
     def load_from_dataset(
         cls,
@@ -197,9 +192,7 @@ class SegmentationVisionDataLoader:
         return cls.load_from_dataloader(dataloader, label_map=label_map)
 
     @classmethod
-    def load_from_dataloader(
-        cls, dataloader, label_map: Dict[int, str]
-    ) -> VisionData:
+    def load_from_dataloader(cls, dataloader, label_map: Dict[int, str]) -> VisionData:
 
         assert isinstance(dataloader, DataLoader), (
             "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(

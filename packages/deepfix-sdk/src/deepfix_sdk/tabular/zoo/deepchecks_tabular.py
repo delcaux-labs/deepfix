@@ -126,7 +126,5 @@ def load_california_housing_regression(
         )
         return train_data, test_data
     except Exception as e:
-        LOGGER.error(
-            "Failed to load California Housing regression dataset: %s", str(e)
-        )
+        LOGGER.error("Failed to load California Housing regression dataset: %s", str(e))
         raise e

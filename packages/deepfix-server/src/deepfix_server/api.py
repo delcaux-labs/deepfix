@@ -6,13 +6,12 @@ from agno.db.sqlite import SqliteDb
 from agno.os import AgentOS
 from agno.tools import Toolkit
 from fastapi import FastAPI
+from starlette.formparsers import FormParser, MultiPartParser
+from starlette.requests import Request
 
 from .agents.workflow import AnalysisWorkflow
 from .config import LLMConfig, settings
 from .logging import get_logger
-
-from starlette.formparsers import FormParser, MultiPartParser
-from starlette.requests import Request
 
 LOGGER = get_logger(__name__)
 
@@ -22,9 +21,15 @@ if hasattr(Request.form, "__kwdefaults__") and Request.form.__kwdefaults__:
     Request.form.__kwdefaults__["max_part_size"] = DEFAULT_MAX_PART_SIZE
 if hasattr(Request._get_form, "__kwdefaults__") and Request._get_form.__kwdefaults__:
     Request._get_form.__kwdefaults__["max_part_size"] = DEFAULT_MAX_PART_SIZE
-if hasattr(FormParser.__init__, "__kwdefaults__") and FormParser.__init__.__kwdefaults__:
+if (
+    hasattr(FormParser.__init__, "__kwdefaults__")
+    and FormParser.__init__.__kwdefaults__
+):
     FormParser.__init__.__kwdefaults__["max_part_size"] = DEFAULT_MAX_PART_SIZE
-if hasattr(MultiPartParser.__init__, "__kwdefaults__") and MultiPartParser.__init__.__kwdefaults__:
+if (
+    hasattr(MultiPartParser.__init__, "__kwdefaults__")
+    and MultiPartParser.__init__.__kwdefaults__
+):
     MultiPartParser.__init__.__kwdefaults__["max_part_size"] = DEFAULT_MAX_PART_SIZE
 MultiPartParser.max_part_size = DEFAULT_MAX_PART_SIZE
 

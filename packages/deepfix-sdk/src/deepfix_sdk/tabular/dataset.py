@@ -240,8 +240,7 @@ class TabularDataset(BaseDataset):
         else:
             meta = {}
             dataset_name = (
-                kwargs.get("dataset_name")
-                or os.path.splitext(os.path.basename(key))[0]
+                kwargs.get("dataset_name") or os.path.splitext(os.path.basename(key))[0]
             )
             label = (
                 kwargs.get("label")
@@ -257,4 +256,3 @@ class TabularDataset(BaseDataset):
             cat_features=cat_features,
             metadata=meta,
         )
-

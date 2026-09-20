@@ -175,9 +175,7 @@ async def run_artifact_analyzer(
                     "The model may have exhausted its token limit or failed to output structured content."
                 )
             else:
-                msg = (
-                    f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
-                )
+                msg = f"Unexpected content type from Agno agent {agent_name}: {type(content)}"
             LOGGER.error(msg)
             raise ValueError(msg)
 

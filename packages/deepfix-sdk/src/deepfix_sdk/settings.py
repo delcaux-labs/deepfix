@@ -5,7 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-
     MLFLOW_TRACKING_URI: str | None = None
     MLFLOW_DEV_WORKSPACE: str | None = None
 
@@ -31,7 +30,9 @@ class Settings(BaseSettings):
     DEEPFIX_HOME: str = os.path.join(Path(__file__).parents[3], ".deepfix")
     DEEPFIX_API_KEY: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
 
 settings = Settings()
-

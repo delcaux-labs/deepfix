@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from io import StringIO
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -14,11 +14,13 @@ from rich.text import Text
 
 from .analysis import AgentResult, Severity
 from .artifacts import (
+    Artifacts,
     DatasetArtifacts,
     DeepchecksArtifacts,
     ModelCheckpointArtifacts,
     TrainingArtifacts,
 )
+
 
 class AnalysisJobStatus(StrEnum):
     PENDING = "PENDING"
@@ -57,7 +59,6 @@ class APIResponse(BaseModel):
     job_id: Optional[str] = Field(
         default=None, description="Unique identifier for the fix job"
     )
-    
 
     def get_results_as_dataframe(self) -> pd.DataFrame:
         """Convert all agent results to a single pandas DataFrame.
@@ -65,7 +66,11 @@ class APIResponse(BaseModel):
         Returns:
             DataFrame containing all findings and recommendations from all agents.
         """
-        dfs = [result.to_dataframe() for result in self.agent_results.values() if hasattr(result, "to_dataframe")]
+        dfs = [
+            result.to_dataframe()
+            for result in self.agent_results.values()
+            if hasattr(result, "to_dataframe")
+        ]
         if not dfs:
             return pd.DataFrame()
         return pd.concat(dfs).reset_index(drop=True)
@@ -422,7 +427,9 @@ class APIRequest(BaseModel):
     model_name: Optional[str] = Field(default=None, description="Name of the model")
     language: str = Field(default="english", description="Language of the analysis")
 
-    def to_agent_context(self,):
+    def to_agent_context(
+        self,
+    ):
         dataset_artifacts = self.dataset_artifacts
         if isinstance(dataset_artifacts, dict):
             try:
@@ -433,7 +440,9 @@ class APIRequest(BaseModel):
         deepchecks_artifacts = self.deepchecks_artifacts
         if isinstance(deepchecks_artifacts, dict):
             try:
-                deepchecks_artifacts = DeepchecksArtifacts.from_dict(deepchecks_artifacts)
+                deepchecks_artifacts = DeepchecksArtifacts.from_dict(
+                    deepchecks_artifacts
+                )
             except Exception:
                 pass
 
@@ -442,14 +451,18 @@ class APIRequest(BaseModel):
             for category, parsed_list in deepchecks_artifacts.results.items():
                 clean_list = []
                 for pr in parsed_list:
-                    if getattr(pr, "result", None) and getattr(pr.result, "display_images", None):
+                    if getattr(pr, "result", None) and getattr(
+                        pr.result, "display_images", None
+                    ):
                         pr_copy = pr.model_copy(deep=True)
                         pr_copy.result.display_images = None
                         clean_list.append(pr_copy)
                     else:
                         clean_list.append(pr)
                 clean_results[category] = clean_list
-            deepchecks_artifacts = deepchecks_artifacts.model_copy(update={"results": clean_results})
+            deepchecks_artifacts = deepchecks_artifacts.model_copy(
+                update={"results": clean_results}
+            )
 
         return AgentContext(
             dataset_artifacts=dataset_artifacts,
@@ -460,7 +473,7 @@ class APIRequest(BaseModel):
             model_name=self.model_name,
             language=self.language,
             agent_results={},
-            knowledge_cache={}
+            knowledge_cache={},
         )
 
 
@@ -480,6 +493,7 @@ class AgentContext(APIRequest):
         agent_results: Dictionary of results from previously run agents.
         knowledge_cache: Dictionary for caching knowledge retrieval results.
     """
+
     agent_results: Dict[str, AgentResult] = Field(
         default={}, description="Results of the agents"
     )
@@ -522,4 +536,3 @@ class AgentContext(APIRequest):
             self.model_checkpoint_artifacts = artifact
         else:
             raise ValueError(f"Invalid artifact type: {type(artifact)}")
-

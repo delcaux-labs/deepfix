@@ -48,14 +48,20 @@ def get_search_tools(
 
     if provider == "tavily":
         if api_key is None:
-            LOGGER.error("Tavily search provider requested but TAVILY_API_KEY is not set.")
+            LOGGER.error(
+                "Tavily search provider requested but TAVILY_API_KEY is not set."
+            )
             raise ValueError("Tavily API key is not set.")
         LOGGER.info("Configuring TavilyTools for web search")
-        return [TavilyTools(api_key=api_key,
-            enable_search=True,
-            enable_extract=True,
-            extract_depth="basic",
-            extract_format="text",)]
+        return [
+            TavilyTools(
+                api_key=api_key,
+                enable_search=True,
+                enable_extract=True,
+                extract_depth="basic",
+                extract_format="text",
+            )
+        ]
 
     LOGGER.info("Configuring DuckDuckGoTools for web search")
     return [DuckDuckGoTools()]

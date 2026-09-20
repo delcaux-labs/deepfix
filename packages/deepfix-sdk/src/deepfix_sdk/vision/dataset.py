@@ -83,7 +83,6 @@ class VisionDataset(BaseDataset):
         return f"s3://{s3_bucket}/{s3_key}"
 
 
-
 class ImageClassificationDataset(VisionDataset):
     def __init__(self, dataset_name: str, dataset: VisionData | Iterable):
         super().__init__(dataset_name=dataset_name, dataset=dataset)
@@ -191,8 +190,12 @@ class SemanticSegmentationDataset(VisionDataset):
 
     def __getitem__(self, idx) -> Dict[str, Union[np.ndarray, np.ndarray]]:
         image, annotation = self.dataset[idx]
-        assert isinstance(image,np.ndarray), f'image must be numpy array but got {type(image)}'
-        assert isinstance(annotation,np.ndarray), f'annotation must be numpy array but got {type(annotation)}'
+        assert isinstance(image, np.ndarray), (
+            f"image must be numpy array but got {type(image)}"
+        )
+        assert isinstance(annotation, np.ndarray), (
+            f"annotation must be numpy array but got {type(annotation)}"
+        )
         c = image.shape[0]
         if c in [1, 3]:
             image = image.transpose(1, 2, 0)  # (c,h,w) -> (h,w,c)
@@ -211,7 +214,9 @@ class SemanticSegmentationDataset(VisionDataset):
         label_map = set()
         for idx in range(self.__len__()):
             label = self.dataset[idx]["label"]
-            assert isinstance(label,np.ndarray), f'annotation must be numpy array but got {type(label)}'
+            assert isinstance(label, np.ndarray), (
+                f"annotation must be numpy array but got {type(label)}"
+            )
             label_map = label_map.union(set(label.flatten()))
         return {int(i): f"class_{i}" for i in label_map}
 
@@ -231,4 +236,3 @@ class SemanticSegmentationDataset(VisionDataset):
                 batch_size=batch_size,
                 shuffle=shuffle,
             )
-

@@ -37,7 +37,7 @@ asyncio_mode = "auto"
 target-version = "py311"
 line-length = 88
 lint.select = ["I", "E", "F", "W", "C90"]
-lint.ignore = ["E501"]
+lint.ignore = ["E501", "C901"]
 
 [build-system]
 requires = ["uv_build>=0.7.19,<0.8.0"]

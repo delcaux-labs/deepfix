@@ -6,11 +6,11 @@ from .analysis import (
     Severity,
 )
 from .api import (
+    AgentContext,
     AnalysisJobStatus,
     APIJobResponse,
     APIRequest,
     APIResponse,
-    AgentContext,
 )
 from .artifacts import (
     ArtifactPath,

@@ -1,11 +1,8 @@
 import subprocess
 import sys
-from typing import Any, Optional
 
 import typer
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
 from .config import DefaultPaths
 
@@ -16,6 +13,7 @@ app = typer.Typer(
     help="DeepFix SDK",
     add_completion=False,
 )
+
 
 @app.command(name="version")
 def version() -> None:
@@ -65,7 +63,6 @@ def launch_mlflow_server(
     except Exception as e:
         typer.echo(f"❌ Unexpected error: {e}", err=True)
         sys.exit(1)
-
 
 
 def main():

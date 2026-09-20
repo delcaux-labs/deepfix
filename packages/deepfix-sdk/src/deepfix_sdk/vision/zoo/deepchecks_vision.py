@@ -16,6 +16,7 @@ import torch  # noqa: F811
 
 LOGGER = logging.getLogger(__name__)
 
+
 # Classification Datasets
 def load_mnist_classification(
     n_samples: Optional[int] = None,

@@ -142,6 +142,7 @@ class NLPDataStatistics(BaseDataStatistics):
                 class_distribution = dict(zip(unique_labels.tolist(), counts.tolist()))
             else:
                 from collections import Counter
+
                 class_distribution = dict(Counter(dataset.label))
 
             stats["class_distribution"] = class_distribution
@@ -152,9 +153,7 @@ class NLPDataStatistics(BaseDataStatistics):
 
         return stats
 
-    def _compute_properties_statistics(
-        self, dataset
-    ) -> Optional[Dict[str, Any]]:
+    def _compute_properties_statistics(self, dataset) -> Optional[Dict[str, Any]]:
         properties = dataset.properties
 
         if properties is None or len(properties) == 0:

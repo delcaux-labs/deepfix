@@ -159,9 +159,7 @@ class VisionDataStatistics(BaseDataStatistics):
 
             image_flat = image.permute(2, 0, 1).reshape(C, -1)
 
-            sum_pixels += image_flat.sum(dim=1).to(
-                torch.float64
-            )
+            sum_pixels += image_flat.sum(dim=1).to(torch.float64)
             count += image_flat.shape[1]
             sum_squared_pixels += (image_flat**2).sum(dim=1).to(torch.float64)
 

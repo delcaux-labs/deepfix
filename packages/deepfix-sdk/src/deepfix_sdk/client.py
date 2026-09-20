@@ -1,18 +1,11 @@
 import asyncio
 import concurrent.futures
-import json
-import os
-import pathlib
-import urllib.parse
 import time
+import urllib.parse
 from typing import Any, Callable, Optional, Union
 
 import requests
 from deepfix_core.models import (
-    AgentResult,
-    Analysis,
-    AnalysisJobStatus,
-    APIJobResponse,
     APIRequest,
     APIResponse,
     ArtifactPath,
@@ -21,14 +14,6 @@ from deepfix_core.models import (
 from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
-from tenacity import (
-    RetryError,
-    Retrying,
-    retry_if_exception_type,
-    retry_if_result,
-    stop_after_delay,
-    wait_fixed,
-)
 
 from .artifacts import ArtifactRepository, ArtifactStatus
 from .config import ArtifactConfig, MLflowConfig
@@ -396,8 +381,8 @@ class DeepFixClient:
         on_chunk: Optional[Callable[[str], None]] = None,
     ) -> APIResponse:
         """Execute diagnosis via Agno workflow execution with REST fallback."""
-        
-        #headers = self._get_auth_headers()
+
+        # headers = self._get_auth_headers()
         workflow_id = "analysisworkflow"
         url = urllib.parse.urljoin(self.api_url, f"/workflows/{workflow_id}/runs")
 
@@ -406,9 +391,7 @@ class DeepFixClient:
             "stream": "false",
             "background": "true",
         }
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
         response = requests.post(url, data=payload, headers=headers)
         if not response.ok:
@@ -423,7 +406,9 @@ class DeepFixClient:
         session_id = out["session_id"]
         status = out["status"]
 
-        run_url = urllib.parse.urljoin(self.api_url, f"/workflows/{workflow_id}/runs/{run_id}")        
+        run_url = urllib.parse.urljoin(
+            self.api_url, f"/workflows/{workflow_id}/runs/{run_id}"
+        )
 
         start = time.time()
         current_status = (status or "PENDING").upper()
@@ -438,7 +423,12 @@ class DeepFixClient:
             )
             return spinner
 
-        with Live(get_renderable=_render_spinner, console=console, refresh_per_second=10, transient=True):
+        with Live(
+            get_renderable=_render_spinner,
+            console=console,
+            refresh_per_second=10,
+            transient=True,
+        ):
             while True:
                 r = requests.get(run_url, params={"session_id": session_id})
                 r.raise_for_status()
@@ -462,11 +452,13 @@ class DeepFixClient:
                     raise RuntimeError(f"Workflow failed: {out.get('content') or out}")
 
                 if time.time() - start > self.timeout:
-                    raise TimeoutError(f"Workflow timed out after {self.timeout} seconds")
+                    raise TimeoutError(
+                        f"Workflow timed out after {self.timeout} seconds"
+                    )
 
-                time.sleep(5)  # Adjust polling interval as needed   
-             
-        raise RuntimeError("Workflow did not complete")        
+                time.sleep(5)  # Adjust polling interval as needed
+
+        raise RuntimeError("Workflow did not complete")
 
     def _get_data_type(
         self, train_data: BaseDataset, test_data: Optional[BaseDataset] = None

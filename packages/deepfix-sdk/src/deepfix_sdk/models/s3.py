@@ -49,9 +49,7 @@ def push_model_to_s3(
         import torch
 
         if isinstance(model, torch.nn.Module):
-            s3_key = (
-                f"{prefix}/{model_name}.pt" if prefix else f"{model_name}.pt"
-            )
+            s3_key = f"{prefix}/{model_name}.pt" if prefix else f"{model_name}.pt"
             buffer = io.BytesIO()
             torch.save(model.state_dict(), buffer)
             buffer.seek(0)
@@ -60,9 +58,7 @@ def push_model_to_s3(
         elif isinstance(model, dict) and any(
             isinstance(v, torch.Tensor) for v in model.values()
         ):
-            s3_key = (
-                f"{prefix}/{model_name}.pt" if prefix else f"{model_name}.pt"
-            )
+            s3_key = f"{prefix}/{model_name}.pt" if prefix else f"{model_name}.pt"
             buffer = io.BytesIO()
             torch.save(model, buffer)
             buffer.seek(0)
@@ -84,9 +80,7 @@ def push_model_to_s3(
         pickle.dump(model, buffer)
         ext = "pkl"
 
-    s3_key = (
-        f"{prefix}/{model_name}.{ext}" if prefix else f"{model_name}.{ext}"
-    )
+    s3_key = f"{prefix}/{model_name}.{ext}" if prefix else f"{model_name}.{ext}"
     buffer.seek(0)
     s3_client.upload_fileobj(buffer, s3_bucket, s3_key)
     return f"s3://{s3_bucket}/{s3_key}"

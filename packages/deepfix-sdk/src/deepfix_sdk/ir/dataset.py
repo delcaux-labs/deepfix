@@ -1,26 +1,30 @@
-import re
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 import io
 import json
 import os
+import re
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
+
 import tiktoken
+
 try:
     import boto3
 except ImportError:
     boto3 = None
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import TruncatedSVD
 from deepfix_core.models import DataType
+from sklearn.decomposition import TruncatedSVD
 from tqdm import tqdm
+
 from ..data.base import BaseDataset
 from ..logging import get_logger
 from ..nlp.dataset import NLPDataset
 from ..tabular.dataset import TabularDataset
 
 logger = get_logger(__name__)
+
 
 class InformationRetrievalDataset(BaseDataset):
     """An IR dataset backed by PyTerrier's Dataset interface.
@@ -178,7 +182,12 @@ class InformationRetrievalDataset(BaseDataset):
             )
 
         self._metadata = pd.DataFrame(rows)
-        self._categorical_metadata=["query_token_count", "doc_token_count","query_id","doc_id"]
+        self._categorical_metadata = [
+            "query_token_count",
+            "doc_token_count",
+            "query_id",
+            "doc_id",
+        ]
         # create dataset instance from deepchecks
         self._text_data = TextData(
             raw_text=pairs,
@@ -186,7 +195,7 @@ class InformationRetrievalDataset(BaseDataset):
             name=self.dataset_name,
             task_type="text_classification",
             metadata=self._metadata.copy(),
-            categorical_metadata=self._categorical_metadata[:]
+            categorical_metadata=self._categorical_metadata[:],
         )
         self.calculate_text_properties()
         return self._text_data
@@ -195,8 +204,9 @@ class InformationRetrievalDataset(BaseDataset):
         self._text_data.calculate_builtin_properties()
         if self._text_data.properties is not None:
             self._categorical_metadata.extend(self._text_data.categorical_properties)
-            self._metadata = pd.concat([self._metadata, self._text_data.properties], axis=1).reset_index(drop=True)
-
+            self._metadata = pd.concat(
+                [self._metadata, self._text_data.properties], axis=1
+            ).reset_index(drop=True)
 
     @property
     def qrels(self) -> pd.DataFrame:
@@ -208,13 +218,13 @@ class InformationRetrievalDataset(BaseDataset):
     @property
     def metadata(self) -> pd.DataFrame:
         if self._metadata is None:
-            self.dataset # triggers metadata calculation
+            self.dataset  # triggers metadata calculation
         return self._metadata
 
     @property
     def categorical_metadata(self) -> list[str]:
         if self._categorical_metadata is None:
-            self.dataset # triggers metadata calculation
+            self.dataset  # triggers metadata calculation
         return list(self._categorical_metadata)
 
     @property
@@ -391,9 +401,7 @@ class InformationRetrievalDataset(BaseDataset):
         return q_text, d_text
 
     @staticmethod
-    def get_tokens(
-        text: str, tokenizer=None
-    ) -> np.ndarray:
+    def get_tokens(text: str, tokenizer=None) -> np.ndarray:
         if tokenizer is None:
             tokenizer = tiktoken.get_encoding("o200k_base")
         return tokenizer.encode(text)
@@ -420,9 +428,7 @@ class InformationRetrievalDataset(BaseDataset):
             suffixes=("_gt", ""),
         )
         # Predictions are binary relevance from the model
-        self.predictions = (
-            pairs_df["relevance"].fillna(0).astype(int).tolist()
-        )
+        self.predictions = pairs_df["relevance"].fillna(0).astype(int).tolist()
 
         # Probabilities: Use retrieved score or default to [1.0, 0.0] for false positives
         self.probabilities = (
@@ -443,7 +449,7 @@ class InformationRetrievalDataset(BaseDataset):
         The embedder is applied concurrently across unique queries and documents,
         and the resulting pair embedding is the difference (query - document).
         """
-        
+
         logger.info("Computing embeddings for '%s' ...", self.dataset_name)
 
         self.dataset  # ensure properties are computed
@@ -452,7 +458,9 @@ class InformationRetrievalDataset(BaseDataset):
         parsed_pairs = [self.parse_pair(text) for text in self._text_data.text]
 
         # 2. Collect unique non-empty texts across all queries and documents
-        unique_texts = list({text for pair in parsed_pairs for text in pair if text and text.strip()})
+        unique_texts = list(
+            {text for pair in parsed_pairs for text in pair if text and text.strip()}
+        )
 
         # 3. Embed unique texts concurrently using thread pool
         num_workers = min(max_workers, max(1, len(unique_texts)))
@@ -500,7 +508,7 @@ class InformationRetrievalDataset(BaseDataset):
 
     def to_tabular(self) -> TabularDataset:
         """Convert the IR dataset to a TabularDataset view for Deepchecks Tabular suites."""
-        self.dataset # ensure properties are computed
+        self.dataset  # ensure properties are computed
 
         df = self.metadata.copy()
         label_name = "relevance"
@@ -515,17 +523,29 @@ class InformationRetrievalDataset(BaseDataset):
         # Remove id columns from categorical features
         cat_features = list(self.categorical_metadata)
         if "query_id" in df.columns:
-            df.drop(columns=["query_id",], inplace=True)
-            cat_features.remove('query_id')
+            df.drop(
+                columns=[
+                    "query_id",
+                ],
+                inplace=True,
+            )
+            cat_features.remove("query_id")
         if "doc_id" in df.columns:
-            df.drop(columns=["doc_id",], inplace=True)
-            cat_features.remove('doc_id')
+            df.drop(
+                columns=[
+                    "doc_id",
+                ],
+                inplace=True,
+            )
+            cat_features.remove("doc_id")
 
         if isinstance(self._embeddings, np.ndarray):
             try:
                 if self.enable_embedding_pca:
-                    n_samples, n_features = self._embeddings.shape            
-                    n_components = min(self.embedding_pca_components, n_features, max(1, n_samples - 1))            
+                    n_samples, n_features = self._embeddings.shape
+                    n_components = min(
+                        self.embedding_pca_components, n_features, max(1, n_samples - 1)
+                    )
                     svd = TruncatedSVD(n_components=n_components, random_state=42)
                     reduced = svd.fit_transform(self._embeddings)
                     emb_cols = [f"emb_pca_{i}" for i in range(n_components)]
@@ -534,13 +554,21 @@ class InformationRetrievalDataset(BaseDataset):
                 else:
                     n_features = self._embeddings.shape[1]
                     emb_cols = [f"emb_{i}" for i in range(n_features)]
-                    emb_df = pd.DataFrame(self._embeddings, columns=emb_cols, index=df.index)
+                    emb_df = pd.DataFrame(
+                        self._embeddings, columns=emb_cols, index=df.index
+                    )
                     df = pd.concat([df, emb_df], axis=1)
             except Exception as e:
-                logger.warning("Skipping embedding feature extraction for dataset '%s'. Error: %s", self.dataset_name, e)
+                logger.warning(
+                    "Skipping embedding feature extraction for dataset '%s'. Error: %s",
+                    self.dataset_name,
+                    e,
+                )
         else:
-            logger.warning("Skipping embedding feature extraction for dataset '%s'. Embeddings are not available.", self.dataset_name)
-        
+            logger.warning(
+                "Skipping embedding feature extraction for dataset '%s'. Embeddings are not available.",
+                self.dataset_name,
+            )
 
         return TabularDataset(
             dataset_name=f"{self.dataset_name}_tabular",
@@ -564,7 +592,7 @@ class InformationRetrievalDataset(BaseDataset):
         **kwargs,
     ) -> str:
         """Push IR dataset metadata and queries/qrels to S3 bucket and return canonical S3 URI."""
-        
+
         prefix = s3_prefix.strip("/") if s3_prefix else f"datasets/{self.dataset_name}"
         s3_key = (
             f"{prefix}/{self.dataset_name}_ir.json"
@@ -608,7 +636,6 @@ class InformationRetrievalDataset(BaseDataset):
         **kwargs,
     ) -> "InformationRetrievalDataset":
         """Load IR dataset from an S3 URI (JSON format)."""
-        
 
         parsed = urlparse(s3_uri)
         bucket = parsed.netloc
@@ -648,5 +675,3 @@ class InformationRetrievalDataset(BaseDataset):
             qrels=qrels_df,
             corpus_iter=corpus_iter,
         )
-
-

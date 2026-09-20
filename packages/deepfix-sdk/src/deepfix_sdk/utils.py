@@ -9,6 +9,10 @@ from typing import Any
 
 from deepfix_core.models import ModelCheckpointArtifacts
 
+from .async_utils import AsyncLoopThread, run_async
+
+__all__ = ["get_model_metadata", "AsyncLoopThread", "run_async"]
+
 
 # TODO: extend to PyTorch models
 def get_model_metadata(model: Any) -> ModelCheckpointArtifacts:

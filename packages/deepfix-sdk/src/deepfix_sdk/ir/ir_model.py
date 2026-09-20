@@ -15,7 +15,12 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
     from the IR dataset when Deepchecks evaluates it.
     """
 
-    def __init__(self, train_dataset: InformationRetrievalDataset, test_dataset: Optional[InformationRetrievalDataset] = None, classes: List[str] = None):
+    def __init__(
+        self,
+        train_dataset: InformationRetrievalDataset,
+        test_dataset: Optional[InformationRetrievalDataset] = None,
+        classes: List[str] = None,
+    ):
         """Initialize the lookup model.
 
         Args:
@@ -29,25 +34,31 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
         self.classes_ = np.array(self.classes)
 
         lookup_data = []
-        datasets = [ds for ds in [self.train_dataset, self.test_dataset] if ds is not None]
+        datasets = [
+            ds for ds in [self.train_dataset, self.test_dataset] if ds is not None
+        ]
         for ds in datasets:
             # predictions and probabilities are aligned with ds.qrels
             qrels = ds.qrels.copy()
-            qrels['relevance_pred'] = ds.predictions
-            qrels['score_pred'] = ds.probabilities
-            lookup_data.append(qrels[['query_id', 'doc_id', 'relevance_pred', 'score_pred']])
+            qrels["relevance_pred"] = ds.predictions
+            qrels["score_pred"] = ds.probabilities
+            lookup_data.append(
+                qrels[["query_id", "doc_id", "relevance_pred", "score_pred"]]
+            )
 
         retrievals_df = pd.concat(lookup_data, ignore_index=True)
 
         # Ensure query_id and doc_id are strings for consistent lookup
-        retrievals_df['query_id'] = retrievals_df['query_id'].astype(str)
-        retrievals_df['doc_id'] = retrievals_df['doc_id'].astype(str)
+        retrievals_df["query_id"] = retrievals_df["query_id"].astype(str)
+        retrievals_df["doc_id"] = retrievals_df["doc_id"].astype(str)
 
         # Drop duplicates just in case (keep first occurrence)
-        retrievals_df = retrievals_df.drop_duplicates(subset=['query_id', 'doc_id'], keep='first')
+        retrievals_df = retrievals_df.drop_duplicates(
+            subset=["query_id", "doc_id"], keep="first"
+        )
 
         # Set index for O(1) lookup
-        self._lookup = retrievals_df.set_index(['query_id', 'doc_id'])
+        self._lookup = retrievals_df.set_index(["query_id", "doc_id"])
 
     def fit(self, X, y=None):
         """Mock fit method to satisfy scikit-learn estimator requirements."""
@@ -57,30 +68,34 @@ class IRLookupModel(BaseEstimator, ClassifierMixin):
         """Predict relevance for query-document pairs in X."""
         preds = []
         for _, row in X.iterrows():
-            q_id = str(row['query_id'])
-            e_id = str(row['doc_id'])
+            q_id = str(row["query_id"])
+            e_id = str(row["doc_id"])
             try:
-                rel = self._lookup.loc[(q_id, e_id), 'relevance_pred']
+                rel = self._lookup.loc[(q_id, e_id), "relevance_pred"]
                 if isinstance(rel, pd.Series):
                     rel = rel.iloc[0]
                 preds.append(rel)
             except KeyError:
-                raise KeyError(f"Query {q_id} and entity {e_id} not found in lookup table")
+                raise KeyError(
+                    f"Query {q_id} and entity {e_id} not found in lookup table"
+                )
         return np.array(preds)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """Return prediction probabilities for query-document pairs in X."""
         probas = []
         for _, row in X.iterrows():
-            q_id = str(row['query_id'])
-            e_id = str(row['doc_id'])
+            q_id = str(row["query_id"])
+            e_id = str(row["doc_id"])
             try:
-                score = self._lookup.loc[(q_id, e_id), 'score_pred']
+                score = self._lookup.loc[(q_id, e_id), "score_pred"]
                 if isinstance(score, pd.Series):
                     score = score.iloc[0]
                 probas.append(score)
             except KeyError:
-                raise KeyError(f"Query {q_id} and entity {e_id} not found in lookup table")
+                raise KeyError(
+                    f"Query {q_id} and entity {e_id} not found in lookup table"
+                )
         return np.array(probas)
 
     def get_params(self, deep=False) -> dict:
