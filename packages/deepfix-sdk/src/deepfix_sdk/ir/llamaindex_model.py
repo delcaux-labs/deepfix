@@ -383,13 +383,10 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         lancedb_index_dir: str = "lancedb",
         load_if_exists: bool = True,
         language: str = "english",
-        classes: Optional[List[Any]] = None,
+        classes: Optional[np.ndarray] = None,
         score_threshold: Optional[float] = None,
     ):
-        self.workflow = workflow
-        self.dataset = dataset or (
-            getattr(workflow, "dataset", None) if workflow is not None else None
-        )
+        
         self.top_k = top_k
         self.retrieval_mode = retrieval_mode
         self.dense_weight = dense_weight
@@ -398,7 +395,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         self.lancedb_index_dir = lancedb_index_dir
         self.load_if_exists = load_if_exists
         self.language = language
-        self.classes = classes
+        self.classes = classes or np.array([0,1])
         self.score_threshold = score_threshold
         self.embed_model = OpenAIEmbedding(
             model_name=settings.EMBEDDING_MODEL,
@@ -406,6 +403,21 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             api_key=settings.EMBEDDING_API_KEY,
         )
         self.index_ = None
+
+        self.workflow = workflow or RetrievalWorkflow(
+                dataset=self.dataset,
+                load_if_exists=self.load_if_exists,
+                lancedb_index_dir=self.lancedb_index_dir,
+                top_k=self.top_k,
+                language=self.language,
+                retrieval_mode=self.retrieval_mode,
+                dense_weight=self.dense_weight,
+                bm25_weight=self.bm25_weight,
+                enable_reranking=self.enable_reranking,
+            )
+        self.dataset = dataset or (
+            getattr(self.workflow, "dataset", None) 
+        )
 
     def get_params(self, deep=False) -> dict:
         """Override get_params to avoid serializing the datasets."""
@@ -425,70 +437,35 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             X: Optional InformationRetrievalDataset or DataFrame.
             y: Ignored.
         """
-        if isinstance(X, InformationRetrievalDataset):
-            self.dataset_ = X
-        elif self.dataset is not None:
-            self.dataset_ = self.dataset
-        elif (
-            self.workflow is not None
-            and getattr(self.workflow, "dataset", None) is not None
-        ):
-            self.dataset_ = self.workflow.dataset
-        else:
-            self.dataset_ = None
-
-        if self.workflow is None:
-            if self.dataset_ is None:
-                raise ValueError(
-                    "A dataset must be provided either in __init__ or to fit()."
-                )
-            self.workflow = RetrievalWorkflow(
-                dataset=self.dataset_,
-                load_if_exists=self.load_if_exists,
-                lancedb_index_dir=self.lancedb_index_dir,
-                top_k=self.top_k,
-                language=self.language,
-                retrieval_mode=self.retrieval_mode,
-                dense_weight=self.dense_weight,
-                bm25_weight=self.bm25_weight,
-                enable_reranking=self.enable_reranking,
-            )
 
         # Ingest or load existing index
         if self.workflow._index is None:
             run_async(lambda: self.workflow.run(ingest=True))
 
-        raw_classes = self.classes if self.classes is not None else [0, 1]
-        self.classes_ = np.array(raw_classes)
-
         # Build topic lookup mapping
         self.topic_map_: dict[str, str] = {}
-        if self.dataset_ is not None:
-            try:
-                topics = self.dataset_.get_topics()
-                qid_col = (
-                    "qid"
-                    if "qid" in topics.columns
-                    else "query_id"
-                    if "query_id" in topics.columns
-                    else None
-                )
-                q_col = (
-                    "query"
-                    if "query" in topics.columns
-                    else "title"
-                    if "title" in topics.columns
-                    else "text"
-                    if "text" in topics.columns
-                    else None
-                )
-                if qid_col and q_col:
-                    self.topic_map_ = {
-                        str(row[qid_col]): str(row[q_col])
-                        for _, row in topics.iterrows()
-                    }
-            except Exception as e:
-                LOGGER.debug("Failed to build topic map from dataset: %s", e)
+        try:
+            topics = self.dataset.get_topics()
+            qid_col = (
+                "qid"
+                if "qid" in topics.columns
+                else "query_id"
+                if "query_id" in topics.columns
+                else None
+            )
+            q_col = (
+                "query"
+                if "query" in topics.columns
+                if "text" in topics.columns
+                else None
+            )
+            if qid_col and q_col:
+                self.topic_map_ = {
+                    str(row[qid_col]): str(row[q_col])
+                    for _, row in topics.iterrows()
+                }
+        except Exception as e:
+            LOGGER.warning("Failed to build topic map from dataset: %s", e)
 
         self._retrieval_cache: dict[str, list[RetrievalResult]] = {}
         self.is_fitted_ = True
@@ -700,7 +677,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         else:
             pred_indices = np.argmax(probas, axis=1)
 
-        return self.classes_[pred_indices]
+        return self.classes[pred_indices]
 
     def retrieve_dataframe(
         self,
