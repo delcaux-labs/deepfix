@@ -403,9 +403,13 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             api_key=settings.EMBEDDING_API_KEY,
         )
         self.index_ = None
-
-        self.workflow = workflow or RetrievalWorkflow(
-                dataset=self.dataset,
+        if workflow is not None:
+            self.workflow = workflow
+        else:
+            if dataset is None:
+                raise ValueError("Dataset is required when workflow is not provided")
+            self.workflow = RetrievalWorkflow(
+                dataset=dataset,
                 load_if_exists=self.load_if_exists,
                 lancedb_index_dir=self.lancedb_index_dir,
                 top_k=self.top_k,
@@ -456,6 +460,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             q_col = (
                 "query"
                 if "query" in topics.columns
+                else "text"
                 if "text" in topics.columns
                 else None
             )
