@@ -321,7 +321,7 @@ class RetrievalWorkflow(Workflow):
     @step
     async def rerank(self, ctx: Context, ev: RetrieverEvent) -> RerankEvent:
         """Rerank candidate nodes using CohereRerank with custom base_url."""
-        query = await ctx.get("query")
+        query = await ctx.store.get("query")
         nodes = ev.nodes
         reranker = self._get_reranker()
 
