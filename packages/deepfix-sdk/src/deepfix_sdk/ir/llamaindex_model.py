@@ -437,14 +437,12 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         else:
             self.dataset_ = None
 
-        if self.workflow is not None:
-            self.workflow_ = self.workflow
-        else:
+        if self.workflow is None:
             if self.dataset_ is None:
                 raise ValueError(
                     "A dataset must be provided either in __init__ or to fit()."
                 )
-            self.workflow_ = RetrievalWorkflow(
+            self.workflow = RetrievalWorkflow(
                 dataset=self.dataset_,
                 load_if_exists=self.load_if_exists,
                 lancedb_index_dir=self.lancedb_index_dir,
@@ -457,10 +455,8 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             )
 
         # Ingest or load existing index
-        if getattr(self.workflow_, "_index", None) is None:
-            self.index_ = run_async(lambda: self.workflow_.run(ingest=True))
-        else:
-            self.index_ = self.workflow_._index
+        if self.workflow._index is None:
+            run_async(lambda: self.workflow.run(ingest=True))
 
         raw_classes = self.classes if self.classes is not None else [0, 1]
         self.classes_ = np.array(raw_classes)
@@ -508,7 +504,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
         if query_str in self._retrieval_cache:
             return self._retrieval_cache[query_str]
         results = run_async(
-            lambda: self.workflow_.run(query=query_str, index=self.index_)
+            lambda: self.workflow.run(query=query_str)
         )
         if results is None:
             results = []
@@ -527,7 +523,7 @@ class LlamaindexModel(BaseEstimator, ClassifierMixin):
             return []
         if query in self._retrieval_cache:
             return self._retrieval_cache[query]
-        results = await self.workflow_.run(query=query, index=self.index_)
+        results = await self.workflow.run(query=query)
         if results is None:
             results = []
         self._retrieval_cache[query] = results
