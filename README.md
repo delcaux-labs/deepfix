@@ -50,6 +50,19 @@ uv pip install -e .
 
 See the [Installation Guide](docs/getting-started/installation.md) for detailed instructions and Docker deployment.
 
+### Environment Setup
+
+DeepFix uses environment files for configuration:
+
+- **Server Environment (`.env`)**: Copied from [`packages/deepfix-server/.env.example`](packages/deepfix-server/.env.example) to configure server LLM providers, database, and tracing:
+  ```bash
+  cp packages/deepfix-server/.env.example .env
+  ```
+- **SDK / Test Environment (`test.env`)**: Copied from [`packages/deepfix-sdk/.env.example`](packages/deepfix-sdk/.env.example) to configure client endpoints, embeddings, reranker, and test credentials:
+  ```bash
+  cp packages/deepfix-sdk/.env.example test.env
+  ```
+
 ### Basic Usage
 
 ```python
@@ -58,7 +71,7 @@ from deepfix_sdk.zoo.datasets.foodwaste import load_train_and_val_datasets
 from deepfix_sdk.data.datasets import ImageClassificationDataset
 
 # Start server (in separate terminal)
-# uv run deepfix-server launch -e deepfix-server/.env -port 8844
+# uv run --env-file .env deepfix-server launch
 
 # Initialize client
 client = DeepFixClient(api_url="http://localhost:8844", timeout=120)
@@ -98,7 +111,12 @@ See the [Architecture Documentation](docs/architecture/overview.md) for details.
 
 ### Initial Deployment
 
+Ensure your root `.env` is configured (copied from [`packages/deepfix-server/.env.example`](packages/deepfix-server/.env.example)):
+
 ```bash
+# Setup environment
+cp packages/deepfix-server/.env.example .env
+
 # Build images
 docker compose -f docker-compose.prod.yml build
 
@@ -111,9 +129,13 @@ docker compose -f docker-compose.prod.yml ps
 
 ## 🧪 Testing
 
-The tests are written using `pytest`. It is preferable to run them using `uv` with the test environment configuration:
+The tests are written using `pytest`. Ensure `test.env` is configured (copied from [`packages/deepfix-sdk/.env.example`](packages/deepfix-sdk/.env.example)) before running tests:
 
 ```bash
+# Setup test environment
+cp packages/deepfix-sdk/.env.example test.env
+
+# Run tests
 uv run --env-file test.env pytest tests/ -v -s
 ```
 

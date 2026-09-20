@@ -36,9 +36,9 @@ def minimal_deepchecks_config() -> DeepchecksConfig:
 @pytest.fixture
 def api_url():
     """Fixture providing the DeepFix API URL for tests."""
-    url = os.getenv("DEEPFIX_TEST_API_URL")
+    url = os.getenv("DEEPFIX_SERVER_URL")
     if url is None:
-        raise ValueError("DEEPFIX_TEST_API_URL is not set")
+        raise ValueError("DEEPFIX_SERVER_URL is not set")
     return url
 
 
