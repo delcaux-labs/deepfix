@@ -302,10 +302,11 @@ class RetrievalWorkflow(Workflow):
             return None
 
         if index is None:
+            LOGGER.warning("Query provided but no index available. Skipping ...")
             return None
 
         LOGGER.debug(f"Query: {query}")
-        await ctx.set("query", query)
+        await ctx.store.set("query", query)
 
         retriever = self._build_retriever(
             index=index,
