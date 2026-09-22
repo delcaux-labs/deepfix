@@ -104,7 +104,6 @@ print(result.to_text())
 ```
 
 ### How It Works (High-Level)
-- The API endpoint receives an `APIRequest`, decodes it into an `AgentContext` and runs the `DiagnosticSystem`.
 - The coordinator dispatches artifacts to specialized analyzer agents in parallel via LangGraph:
   - `DeepchecksArtifactsAnalyzer`: data quality, drift, integrity
   - `DatasetArtifactsAnalyzer`: dataset stats, class balance, anomalies

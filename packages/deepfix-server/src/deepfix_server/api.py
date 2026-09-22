@@ -61,7 +61,7 @@ def create_agent_os(
     config = llm_config or settings.get_llm_config()
     db = SqliteDb(db_url=settings.database_url)
 
-    analysis_workflow = AnalysisWorkflow(llm_config=config, tools=tools, db=db)
+    analysis_workflow = AnalysisWorkflow(llm_config=config, tools=tools, db=db,num_chains=settings.num_reasoning_chains)
 
     workflows = [analysis_workflow]
 

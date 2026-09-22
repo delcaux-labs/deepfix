@@ -10,7 +10,6 @@ from deepfix_server.agents.reasoning import (
     create_cross_artifact_reasoning_workflow,
 )
 from deepfix_server.agents.workflow import AnalysisWorkflow
-from deepfix_server.engine import DiagnosticSystem
 from deepfix_server.tools.search import get_search_tools
 
 
@@ -75,19 +74,4 @@ class TestCrossArtifactReasoningToolsIntegration:
         assert isinstance(workflow.reasoner.tools[0], DuckDuckGoTools)
         assert workflow.reasoning_workflow.reasoner.tools == workflow.reasoner.tools
 
-    def test_diagnostic_system_initialization_without_knowledge_bridge(self):
-        """Verify DiagnosticSystem initializes workflow and tools cleanly without knowledge_bridge."""
-        system = DiagnosticSystem(num_chains=2)
-        assert system.workflow is not None
-        assert not hasattr(system, "knowledge_bridge")
-        assert not hasattr(system.workflow, "knowledge_bridge")
-        assert system.workflow.reasoner.tools is not None
-        assert len(system.workflow.reasoner.tools) == 1
-        assert isinstance(system.workflow.reasoner.tools[0], DuckDuckGoTools)
 
-    def test_diagnostic_system_custom_tools_passed(self):
-        """Verify DiagnosticSystem forwards explicit tools to workflow and reasoner."""
-        custom_tool = DuckDuckGoTools()
-        system = DiagnosticSystem(tools=[custom_tool], num_chains=2)
-        assert system.workflow.reasoner.tools == [custom_tool]
-        assert system.workflow.reasoning_workflow.reasoner.tools == [custom_tool]

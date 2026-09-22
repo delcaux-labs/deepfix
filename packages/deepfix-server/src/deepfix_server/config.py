@@ -102,6 +102,8 @@ class Settings(BaseSettings):
     llm_cache: bool = Field(default=True, alias="DEEPFIX_LLM_CACHE")
     llm_track_usage: bool = Field(default=True, alias="DEEPFIX_LLM_TRACK_USAGE")
 
+    num_reasoning_chains: int = Field(default=1,alias="NUM_REASONING_CHAINS")
+
     # Embedder Settings (OpenAI-compatible)
     embedder_api_key: Optional[str] = Field(
         default=None, alias="DEEPFIX_EMBEDDER_API_KEY"

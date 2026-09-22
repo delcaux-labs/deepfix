@@ -344,9 +344,10 @@ class DeepchecksRunnerForIR(BaseDeepchecksRunner):
         assert isinstance(train_data, InformationRetrievalDataset), (
             f"Expected InformationRetrievalDataset but got {type(train_data).__name__}"
         )
-        assert isinstance(test_data, InformationRetrievalDataset), (
-            f"Expected InformationRetrievalDataset but got {type(test_data).__name__}"
-        )
+        if test_data is not None:
+            assert isinstance(test_data, InformationRetrievalDataset), (
+                f"Expected InformationRetrievalDataset but got {type(test_data).__name__}"
+            )
         LOGGER.info("Running unified IR validation for %s", dataset_name)
 
         # 1. Run NLP suites (wrap as NLPDataset since IR no longer inherits from it)
