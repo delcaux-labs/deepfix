@@ -17,29 +17,6 @@ services:
       - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-http://mlflow:5000}
       - MLFLOW_EXP_NAME=${MLFLOW_EXP_NAME:-Deepfix-server}
     restart: unless-stopped
-    volumes:
-      - ./packages:/app/packages
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1"]
     #ports:
     #  - "8844:8844"
-      
-  deepfix-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: deepfix-admin
-      POSTGRES_PASSWORD: deepfix-admin
-      POSTGRES_DB: deepfix_portal
-    ports:
-      - "5444:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deepfix-admin -d deepfix_portal"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-
-volumes:
-  postgres-data:
