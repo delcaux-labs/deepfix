@@ -39,7 +39,7 @@ def get_search_tools(
     api_key = tavily_api_key or cfg.tavily_api_key
 
     if provider == "none":
-        LOGGER.debug("Search tools disabled (search_provider='none')")
+        LOGGER.info("Search tools disabled (search_provider='none')")
         return []
 
     if provider == "duckduckgo":

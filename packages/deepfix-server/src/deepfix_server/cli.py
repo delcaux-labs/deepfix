@@ -56,9 +56,7 @@ def display_settings():
     # Search Settings Table
     search_table = Table(show_header=False, box=box.SIMPLE_HEAD)
     search_table.add_column("Property", style="bold magenta", width=20)
-    active_provider = settings.search_provider or (
-        "tavily" if settings.tavily_api_key else "duckduckgo"
-    )
+    active_provider = settings.search_provider
     search_table.add_row("Provider", active_provider)
     tavily_key_display = "[dim]None[/dim]"
     if settings.tavily_api_key:
