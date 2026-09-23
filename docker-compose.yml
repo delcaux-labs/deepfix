@@ -20,8 +20,8 @@ services:
     volumes:
       - ./packages:/app/packages
     command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1"]
-    ports:
-      - "8844:8844"
+    #ports:
+    #  - "8844:8844"
       
   deepfix-db:
     image: postgres:16-alpine
@@ -33,7 +33,7 @@ services:
     ports:
       - "5444:5432"
     volumes:
-      - ./server_data/postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U deepfix-admin -d deepfix_portal"]
       interval: 10s
@@ -42,4 +42,4 @@ services:
 
 
 volumes:
-  rustfs-data:
+  postgres-data:
