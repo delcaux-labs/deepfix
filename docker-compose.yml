@@ -14,30 +14,15 @@ services:
       - DEEPFIX_LLM_CACHE=${DEEPFIX_LLM_CACHE:-1}
       - DEEPFIX_LLM_TRACK_USAGE=${DEEPFIX_LLM_TRACK_USAGE:-1}
       - DEEPFIX_SERVER_DATABASE_URL=sqlite:////app/.deepfix/deepfix_server.db
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MLFLOW_EXP_NAME=Deepfix-server
-      - OPENHANDS_SUPPRESS_BANNER=1
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-http://mlflow:5000}
+      - MLFLOW_EXP_NAME=${MLFLOW_EXP_NAME:-Deepfix-server}
     restart: unless-stopped
-    depends_on:
-      - mlflow
     volumes:
       - ./packages:/app/packages
-    command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1", "--reload"]
+    command: ["deepfix-server", "launch", "-port", "8844", "-host", "0.0.0.0", "-workers", "1"]
     ports:
       - "8844:8844"
-    develop:
-      watch:
-        - action: sync
-          path: ./packages/deepfix-server/src
-          target: /app/packages/deepfix-server/src
-        - action: sync
-          path: ./packages/deepfix-core/src
-          target: /app/packages/deepfix-core/src
-        - action: rebuild
-          path: ./packages/deepfix-server/pyproject.toml
-        - action: rebuild
-          path: ./packages/deepfix-core/pyproject.toml
-  
+      
   deepfix-db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -55,27 +40,6 @@ services:
       timeout: 5s
       retries: 5
 
-  mlflow:
-    build:
-      context: .
-      dockerfile: Dockerfile.mlflow
-    ports:
-      - "5000:5000"
-    environment:
-      - MLFLOW_SERVER_ALLOWED_HOSTS="mlflow:*,localhost:*"
-      - MLFLOW_SERVER_CORS_ALLOWED_ORIGINS="*"
-      - MLFLOW_SERVER_DISABLE_SECURITY_MIDDLEWARE=true
-    volumes:
-      - ./server_data/mlflow:/app
-    depends_on:
-      - deepfix-db
-    command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 5000
-      --backend-store-uri postgresql+psycopg2://deepfix-admin:deepfix-admin@deepfix-db:5432/deepfix_portal
-
-    restart: unless-stopped
 
 volumes:
   rustfs-data:
