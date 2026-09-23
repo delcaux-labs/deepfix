@@ -12,7 +12,6 @@ from .base import BasePromptBuilder
 from .checkpoint_prompt import CheckpointPromptBuilder
 from .dataset_prompt import DatasetPromptBuilder
 from .deepchecks_prompt import DeepchecksPromptBuilder
-from .training_prompt import TrainingPromptBuilder
 
 
 class PromptBuilderError(Exception):
@@ -88,7 +87,6 @@ class PromptBuilder:
         """Initialize prompt builders based on configuration."""
         builders = [
             DeepchecksPromptBuilder(),
-            TrainingPromptBuilder(),
             DatasetPromptBuilder(),
             CheckpointPromptBuilder(),
         ]
