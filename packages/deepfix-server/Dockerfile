@@ -24,8 +24,6 @@ COPY packages/deepfix-server ./packages/deepfix-server
 
 # Install Python deps into a project-local venv
 RUN uv venv --python 3.12
-RUN uv pip install opentelemetry-distro opentelemetry-exporter-otlp
-RUN . .venv/bin/activate && opentelemetry-bootstrap -a requirements > /tmp/otel-reqs.txt && uv pip install -r /tmp/otel-reqs.txt
 RUN uv pip install -e /app/packages/deepfix-core
 RUN uv pip install -e /app/packages/deepfix-server
 # Create .deepfix and .cache directories with proper permissions for the deepfix user
