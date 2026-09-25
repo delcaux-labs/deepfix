@@ -20,6 +20,7 @@ dependencies = [
     "tavily-python>=0.7.27",
     "ddgs>=9.16.0",
     "lancedb>=0.38.0",
+    "sqlalchemy[asyncio]>=2.0.52",
 ]
 
 [project.optional-dependencies]
