@@ -13,7 +13,16 @@ DeepFix Server provides an HTTP API and CLI to analyze ML experiment artifacts (
 - Python 3.11
 
 ### Install
-You can install the server in editable mode from the monorepo root or from this package directory.
+
+Install as a tool using `uv`:
+
+```bash
+uv tool install "git+https://github.com/delcaux-labs/deepfix.git#subdirectory=packages/deepfix-server"
+deepfix-server version
+deepfix-server launch -host 0.0.0.0 -port 8844
+```
+
+You can also install the server in editable mode from the monorepo root or from this package directory:
 
 ```bash
 # From repo root using pip
@@ -143,9 +152,6 @@ Local development install:
 uv pip install -e .
 ```
 
-### Notes and Limitations
-- `TrainingArtifactsAnalyzer` exists as a scaffold and includes detailed analysis primitives, but its main `_run` method is not finalized. The server will still run and process other artifact types.
-- The LLM configuration is required for best results; without it, DSPy will need to be configured globally, otherwise some agents will warn or operate in limited mode.
 
 ### License
 This project is licensed under the terms specified in the repository LICENSE.

@@ -13,7 +13,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "rich>=14.1.0",
     "typer",
-    "deepfix-core",
+    "deepfix-core @ git+https://github.com/delcaux-labs/deepfix.git#subdirectory=packages/deepfix-core",
     "pydantic-settings>=2.11.0",
     "agno[os,openai]>=3.0.6",
     "duckduckgo-search>=8.1.1",
@@ -23,13 +23,6 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.52",
 ]
 
-[project.optional-dependencies]
-openhands = [
-    "openhands-sdk",
-    "openhands-tools",
-    "openhands-workspace",
-    "openhands-agent-server"
-]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -49,9 +42,6 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
-
-[tool.uv.sources]
-deepfix-core = {workspace = true}
 
 [project.scripts]
 deepfix-server = "deepfix_server.cli:main"

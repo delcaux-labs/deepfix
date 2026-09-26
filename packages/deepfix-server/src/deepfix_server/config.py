@@ -104,20 +104,6 @@ class Settings(BaseSettings):
 
     num_reasoning_chains: int = Field(default=1,alias="NUM_REASONING_CHAINS")
 
-    # Embedder Settings (OpenAI-compatible)
-    embedder_api_key: Optional[str] = Field(
-        default=None, alias="DEEPFIX_EMBEDDER_API_KEY"
-    )
-    embedder_base_url: Optional[str] = Field(
-        default=None, alias="DEEPFIX_EMBEDDER_BASE_URL"
-    )
-    embedder_model_name: str = Field(
-        default="text-embedding-3-small", alias="DEEPFIX_EMBEDDER_MODEL_NAME"
-    )
-    embedder_dimensions: Optional[int] = Field(
-        default=1536, alias="DEEPFIX_EMBEDDER_DIMENSIONS"
-    )
-
     # Search Settings
     search_provider: Optional[Literal["duckduckgo", "tavily", "none"]] = Field(
         default=None,
@@ -152,17 +138,7 @@ class Settings(BaseSettings):
     aws_endpoint_url: Optional[str] = Field(default=None, alias="AWS_ENDPOINT_URL")
     s3_bucket: Optional[str] = Field(default=None, alias="DEEPFIX_S3_BUCKET")
 
-    # OTEL Settings
-    otel_exporter_otlp_endpoint: Optional[str] = Field(
-        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
-    )
-    otel_exporter_otlp_headers: Optional[str] = Field(
-        default=None, alias="OTEL_EXPORTER_OTLP_HEADERS"
-    )
-    otel_exporter_otlp_traces_protocol: str = Field(
-        default="http/protobuf", alias="OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
-    )
-
+    
     def get_llm_config(self) -> LLMConfig:
         """Create an LLMConfig instance from current settings."""
         return LLMConfig(
@@ -173,15 +149,6 @@ class Settings(BaseSettings):
             max_tokens=self.llm_max_tokens,
             cache=self.llm_cache,
             track_usage=self.llm_track_usage,
-        )
-
-    def get_embedder_config(self) -> EmbedderConfig:
-        """Create an EmbedderConfig instance from current settings."""
-        return EmbedderConfig(
-            api_key=self.embedder_api_key or self.llm_api_key,
-            base_url=self.embedder_base_url or self.llm_base_url,
-            model_name=self.embedder_model_name,
-            dimensions=self.embedder_dimensions,
         )
 
 
