@@ -92,10 +92,10 @@ class Settings(BaseSettings):
     # LLM Settings
     llm_api_key: Optional[str] = Field(default=None, alias="DEEPFIX_LLM_API_KEY")
     llm_base_url: Optional[str] = Field(
-        default="https://api.tensorix.ai/v1", alias="DEEPFIX_LLM_BASE_URL"
+        default="https://openrouter.ai/api/v1", alias="DEEPFIX_LLM_BASE_URL"
     )
     llm_model_name: str = Field(
-        default="openai/deepseek/deepseek-v4-flash-0731", alias="DEEPFIX_LLM_MODEL_NAME"
+        default="qwen/qwen3.8-flash", alias="DEEPFIX_LLM_MODEL_NAME"
     )
     llm_temperature: float = Field(default=0.7, alias="DEEPFIX_LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=8000, alias="DEEPFIX_LLM_MAX_TOKENS")
